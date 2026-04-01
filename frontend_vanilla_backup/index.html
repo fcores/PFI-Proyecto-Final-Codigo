@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Nuevo paciente - Alleanza Tracking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <a href="index.html">
+        <img src="scienza-logo.svg" alt="Scienza Argentina" class="logo-img" />
+      </a>
+      <span class="sidebar-brand">Alleanza Tracking</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="acuerdo.html"><span class="nav-emoji">📋</span> Acuerdos</a>
+      <a href="index.html" class="active"><span class="nav-emoji">🧑‍⚕️</span> Pacientes</a>
+      <a href="#"><span class="nav-emoji">💊</span> Consumos</a>
+      <a href="#"><span class="nav-emoji">🔍</span> Auditorías</a>
+      <a href="#"><span class="nav-emoji">📊</span> Reportes</a>
+      <a href="#"><span class="nav-emoji">💬</span> Soporte</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">G</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name">Usuario</span>
+          <span class="sidebar-user-role">Administrador</span>
+        </div>
+        <button class="icon-btn" title="Configuración">⚙</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido principal -->
+  <div class="main-wrapper">
+    <header class="top-bar">
+      <h1 class="page-title">🧑‍⚕️ Nuevo paciente</h1>
+      <div class="user-actions">
+        <button class="icon-btn" title="Configuración">⚙</button>
+        <button class="icon-btn" title="Usuario">G</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="layout">
+        <!-- Columna izquierda: formulario principal -->
+        <section class="left-column">
+          <form id="patient-form" class="card" enctype="multipart/form-data">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="sap_id">ID Paciente SAP <span class="required">*</span></label>
+                <input id="sap_id" name="sap_id" type="text" required />
+              </div>
+
+              <div class="form-group">
+                <label for="credential_id">ID Credencial</label>
+                <input id="credential_id" name="credential_id" type="text" />
+              </div>
+
+              <div class="form-group">
+                <label for="provider_id">ID Prestador</label>
+                <input id="provider_id" name="provider_id" type="text" />
+              </div>
+
+              <div class="form-group">
+                <label for="provider">Prestador</label>
+                <select id="provider" name="provider">
+                  <option value="">Seleccionar...</option>
+                  <option value="hospital_central">Hospital Central</option>
+                  <option value="clinica_norte">Clínica del Norte</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="first_name">Nombre <span class="required">*</span></label>
+                <input id="first_name" name="first_name" type="text" required />
+              </div>
+
+              <div class="form-group">
+                <label for="last_name">Apellido <span class="required">*</span></label>
+                <input id="last_name" name="last_name" type="text" required />
+              </div>
+
+              <div class="form-group">
+                <label for="birth_date">Fecha de nacimiento <span class="required">*</span></label>
+                <input id="birth_date" name="birth_date" type="date" required />
+              </div>
+
+              <div class="form-group">
+                <label for="gender">Género <span class="required">*</span></label>
+                <select id="gender" name="gender" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="femenino">Femenino</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="treatment">Tratamiento</label>
+                <select id="treatment" name="treatment">
+                  <option value="">Seleccionar...</option>
+                  <option value="onco">Oncológico</option>
+                  <option value="reuma">Reumatológico</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="medications">Medicamentos</label>
+                <select id="medications" name="medications" multiple size="3">
+                  <option value="medicamento_a">Medicamento A</option>
+                  <option value="medicamento_b">Medicamento B</option>
+                  <option value="medicamento_c">Medicamento C</option>
+                  <option value="medicamento_d">Medicamento D</option>
+                </select>
+                <small class="muted">Mantener presionada Ctrl para seleccionar varios.</small>
+              </div>
+            </div>
+
+            <section class="sub-card">
+              <header class="sub-card-header">
+                <h2>📄 Documentación</h2>
+              </header>
+
+              <div class="accordion">
+                <button class="accordion-header" type="button" data-accordion="hc">Historia clínica</button>
+                <div class="accordion-panel" id="panel-hc">
+                  <div class="accordion-panel-content">
+                    <textarea name="hc_notes" placeholder="Detalle de la historia clínica..."></textarea>
+                    <label class="upload-btn">
+                      📎 Subir
+                      <input type="file" name="hc_file" accept=".pdf,.jpg,.jpeg,.png" />
+                    </label>
+                  </div>
+                </div>
+
+                <button class="accordion-header" type="button" data-accordion="ap">Anatomía patológica</button>
+                <div class="accordion-panel" id="panel-ap">
+                  <div class="accordion-panel-content">
+                    <textarea name="ap_notes" placeholder="Detalle de anatomía patológica..."></textarea>
+                    <label class="upload-btn">
+                      📎 Subir
+                      <input type="file" name="ap_file" accept=".pdf,.jpg,.jpeg,.png" />
+                    </label>
+                  </div>
+                </div>
+
+                <button class="accordion-header" type="button" data-accordion="img">Estudios por imágenes</button>
+                <div class="accordion-panel" id="panel-img">
+                  <div class="accordion-panel-content">
+                    <textarea name="img_notes" placeholder="Detalle de estudios por imágenes..."></textarea>
+                    <label class="upload-btn">
+                      📎 Subir
+                      <input type="file" name="img_file" accept=".pdf,.jpg,.jpeg,.png" />
+                    </label>
+                  </div>
+                </div>
+
+                <button class="accordion-header" type="button" data-accordion="lab">Laboratorios</button>
+                <div class="accordion-panel" id="panel-lab">
+                  <div class="accordion-panel-content">
+                    <textarea name="lab_notes" placeholder="Detalle de laboratorios..."></textarea>
+                    <label class="upload-btn">
+                      📎 Subir
+                      <input type="file" name="lab_file" accept=".pdf,.jpg,.jpeg,.png" />
+                    </label>
+                  </div>
+                </div>
+
+                <button class="accordion-header" type="button" data-accordion="receta">Receta</button>
+                <div class="accordion-panel" id="panel-receta">
+                  <div class="accordion-panel-content">
+                    <textarea name="receta_notes" placeholder="Detalle de la receta..."></textarea>
+                    <label class="upload-btn">
+                      📎 Subir
+                      <input type="file" name="receta_file" accept=".pdf,.jpg,.jpeg,.png" />
+                    </label>
+                  </div>
+                </div>
+
+                <button class="accordion-header" type="button" data-accordion="otros">Otros</button>
+                <div class="accordion-panel" id="panel-otros">
+                  <div class="accordion-panel-content">
+                    <textarea name="otros_notes" placeholder="Otros detalles..."></textarea>
+                    <label class="upload-btn">
+                      📎 Subir
+                      <input type="file" name="otros_file" accept=".pdf,.jpg,.jpeg,.png" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <footer class="form-actions">
+              <div class="status" id="form-status"></div>
+              <div class="buttons">
+                <button type="button" class="btn-secondary" id="btn-cancel">Cancelar</button>
+                <button type="submit" class="btn-primary">✅ Agregar</button>
+              </div>
+            </footer>
+          </form>
+        </section>
+
+        <!-- Columna derecha: acuerdos / listado de pacientes -->
+        <section class="right-column card">
+          <header class="agreements-header">
+            <div>
+              <h2>📋 Acuerdos</h2>
+              <p class="muted">Pacientes creados en esta sesión</p>
+            </div>
+            <div class="agreements-search">
+              <input type="text" placeholder="🔎 Buscar" disabled />
+            </div>
+          </header>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Paciente</th>
+                  <th>Laboratorio</th>
+                  <th>Prestador</th>
+                  <th>Medicamento</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="patients-table-body">
+                <tr class="empty-row">
+                  <td colspan="6">No hay datos</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Copyright © 2024 Alleanza Tracking — Droguería Scienza Argentina
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

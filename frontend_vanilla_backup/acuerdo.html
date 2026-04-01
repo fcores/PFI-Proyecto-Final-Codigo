@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Nuevo acuerdo - Alleanza Tracking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <a href="index.html">
+        <img src="scienza-logo.svg" alt="Scienza Argentina" class="logo-img" />
+      </a>
+      <span class="sidebar-brand">Alleanza Tracking</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="acuerdo.html" class="active"><span class="nav-emoji">📋</span> Acuerdos</a>
+      <a href="index.html"><span class="nav-emoji">🧑‍⚕️</span> Pacientes</a>
+      <a href="#"><span class="nav-emoji">💊</span> Consumos</a>
+      <a href="#"><span class="nav-emoji">🔍</span> Auditorías</a>
+      <a href="#"><span class="nav-emoji">📊</span> Reportes</a>
+      <a href="#"><span class="nav-emoji">💬</span> Soporte</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">G</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name">Usuario</span>
+          <span class="sidebar-user-role">Administrador</span>
+        </div>
+        <button class="icon-btn" title="Configuración">⚙</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenido principal -->
+  <div class="main-wrapper">
+    <header class="top-bar">
+      <h1 class="page-title">📋 Nuevo acuerdo</h1>
+      <div class="user-actions">
+        <button class="icon-btn" title="Configuración">⚙</button>
+        <button class="icon-btn" title="Usuario">G</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="layout layout-acuerdo">
+        <form id="agreement-form" class="card card-acuerdo-form" enctype="multipart/form-data">
+          <div class="form-stack">
+            <div class="form-group">
+              <label for="laboratorio">Laboratorio <span class="required">*</span></label>
+              <select id="laboratorio" name="laboratorio" required>
+                <option value="">Seleccionar...</option>
+                <option value="lab_a">Laboratorio A</option>
+                <option value="lab_b">Laboratorio B</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="prestador">Prestador <span class="required">*</span></label>
+              <select id="prestador" name="prestador" required>
+                <option value="">Seleccionar...</option>
+                <option value="hospital_central">Hospital Central</option>
+                <option value="clinica_norte">Clínica del Norte</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="medicamento">Medicamento <span class="required">*</span></label>
+              <select id="medicamento" name="medicamento" required>
+                <option value="">Seleccionar...</option>
+                <option value="med_a">Medicamento A</option>
+                <option value="med_b">Medicamento B</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="medicamento_sap">Medicamento SAP <span class="required">*</span></label>
+              <input id="medicamento_sap" name="medicamento_sap" type="text" required />
+            </div>
+
+            <div class="form-group">
+              <label for="medico_auditor">Médico auditor</label>
+              <input id="medico_auditor" name="medico_auditor" type="text" />
+            </div>
+
+            <div class="form-group">
+              <label>Rango de fecha</label>
+              <div class="date-range">
+                <div class="form-group-inline">
+                  <label for="fecha_inicial" class="sr-only">Fecha inicial</label>
+                  <input id="fecha_inicial" name="fecha_inicial" type="date" placeholder="Fecha inicial" />
+                </div>
+                <div class="form-group-inline">
+                  <label for="fecha_final" class="sr-only">Fecha final</label>
+                  <input id="fecha_final" name="fecha_final" type="date" placeholder="Fecha final" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="condicion_recupero">Condición de recupero <span class="required">*</span></label>
+              <textarea id="condicion_recupero" name="condicion_recupero" rows="4" required placeholder="Describa la condición de recupero..."></textarea>
+            </div>
+          </div>
+
+          <footer class="form-actions">
+            <div class="status" id="form-status"></div>
+            <div class="buttons">
+              <button type="button" class="btn-secondary" id="btn-cancel">Cancelar</button>
+              <button type="submit" class="btn-primary">✅ Agregar</button>
+            </div>
+          </footer>
+        </form>
+
+        <section class="card card-contrato">
+          <h2 class="contrato-title">📎 Contrato</h2>
+          <div class="contrato-upload-zone" id="contrato-zone">
+            <input type="file" id="contrato_file" name="contrato_file" accept=".pdf,.doc,.docx" class="contrato-file-input" />
+            <label for="contrato_file" class="contrato-upload-btn">
+              <span class="contrato-upload-icon">⬆️</span>
+              Subir contrato
+            </label>
+            <p class="contrato-hint" id="contrato-filename">Arrastrá o hacé clic para subir</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Copyright © 2024 Alleanza Tracking — Droguería Scienza Argentina
+    </footer>
+  </div>
+
+  <script src="acuerdo.js"></script>
+</body>
+
+</html>
