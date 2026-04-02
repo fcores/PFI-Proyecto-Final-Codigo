@@ -12,6 +12,8 @@
 8. [Flujo completo: que pasa cuando se crea un paciente](#8-flujo-completo-que-pasa-cuando-se-crea-un-paciente)
 9. [Proximo paso: conectar el backend con la blockchain](#9-proximo-paso-conectar-el-backend-con-la-blockchain)
 10. [Glosario de terminos](#10-glosario-de-terminos)
+11. [Como apagar todo en AWS para no pagar](#11-como-apagar-todo-en-aws-para-no-pagar)
+12. [Como levantar todo de nuevo en AWS](#12-como-levantar-todo-de-nuevo-en-aws)
 
 ---
 
@@ -977,3 +979,414 @@ El siguiente paso es crear un `BlockchainService` en Python que se comunique con
 | `could not find config file` | `FABRIC_CFG_PATH` no apunta a donde esta `core.yaml` | Exportar `FABRIC_CFG_PATH=/home/ec2-user/config/` |
 | `SyntaxError: Unexpected token '='` (Node.js chaincode) | Runtime de Fabric usa Node.js 12, incompatible con sintaxis moderna | Usar chaincode en Go en vez de Node.js |
 | `docker-compose: command not found` | Amazon Linux 2023 no tiene docker-compose v1 | Usar `docker run` directamente en vez de docker-compose |
+
+---
+
+## 11. Como apagar todo en AWS para no pagar
+
+AWS Managed Blockchain **no tiene un boton de "pausar"**. Los recursos cobran por hora mientras existen. Para dejar de pagar, hay que eliminar los recursos y recrearlos cuando se necesiten.
+
+### Que se elimino y cuanto costaba
+
+| # | Recurso | Accion realizada | Costo que se ahorra |
+|---|---------|-----------------|-------------------|
+| 1 | **Peer Node** (bc.t3.small) | Eliminado | ~$33/mes ($0.046/hora) |
+| 2 | **EC2 Instance** (t2.micro) | **Detenida** (Stop, no Terminate) | ~$8.5/mes en compute (el disco EBS cobra ~$0.10/GB/mes, centavos) |
+| 3 | **VPC Endpoint** | Eliminado | ~$7.3/mes ($0.01/hora) |
+| 4 | **Member + Network** | Eliminados (al borrar el unico miembro, la red se elimina sola) | ~$218/mes ($0.30/hora del orderer) |
+
+### Costo residual despues de apagar todo
+
+| Recurso | Costo estimado | Nota |
+|---------|---------------|------|
+| Disco EBS de la EC2 (detenida) | ~$0.80/mes (8 GB x $0.10) | Es el disco de la instancia. Conserva todo lo instalado (Docker, Go, certificados, chaincode). |
+| VPC | $0 | La VPC en si no tiene costo. |
+
+**Total residual: menos de $1/mes** (solo el almacenamiento del disco de la EC2 detenida).
+
+### Verificacion extra: otros recursos que podrian cobrar
+
+Ir a la consola de AWS y revisar que no quede nada activo:
+
+1. **EC2 > Elastic IPs**: Si hay alguna IP elastica **no asociada** a una instancia corriendo, cobra ~$3.6/mes. Si existe una, liberarla: **Actions > Release Elastic IP address**.
+
+2. **EC2 > Volumes**: Verificar que no haya volumenes EBS huerfanos (sin instancia asociada). Si hay alguno que no se use, eliminarlo.
+
+3. **CloudWatch > Log Groups**: Puede haber logs de Managed Blockchain. No cobran significativamente, pero se pueden eliminar: **Actions > Delete log group**.
+
+4. **EC2 > Snapshots**: Si se crearon snapshots del disco, eliminarloss. Cobran $0.05/GB/mes.
+
+5. **AWS Cost Explorer**: Ir a **Billing and Cost Management > Cost Explorer** para verificar que no haya cargos inesperados en los dias siguientes.
+
+---
+
+## 12. Como levantar todo de nuevo en AWS
+
+Cuando necesites volver a usar la blockchain, segui estos pasos en orden. La EC2 ya tiene todo instalado (Docker, Go, fabric-ca-client, binarios de Fabric, core.yaml), asi que no hay que reinstalar nada.
+
+### Tiempo estimado total: ~45 minutos
+
+```
+Paso 1: Crear red + miembro ............. 20-30 min (espera de AWS)
+Paso 2: Crear peer node ................. 10-15 min (espera de AWS)
+Paso 3: Recrear VPC Endpoint ............ 2-3 min
+Paso 4: Iniciar la EC2 .................. 1 min
+Paso 5: Enrollar admin con Fabric CA .... 2 min
+Paso 6: Crear canal y unir peer ......... 5 min
+Paso 7: Desplegar chaincode ............. 5 min
+Paso 8: Probar .......................... 2 min
+```
+
+---
+
+### Paso 1: Crear la red y el miembro
+
+1. Ir a **AWS Console** > **Managed Blockchain** > **Create network**
+2. Configurar:
+   - **Framework**: Hyperledger Fabric 2.2
+   - **Network name**: el nombre que quieras (ej: `medchain-network`)
+   - **Member name**: nombre de tu organizacion (ej: `MedChainOrg`)
+   - **Admin username**: `admin`
+   - **Admin password**: elegir una contrasena segura y **anotarla** (la vas a necesitar en el Paso 5)
+3. Confirmar y esperar **20-30 minutos** hasta que el estado sea **"Available"**
+
+> **Anotar el Member ID** (tiene formato `m-XXXXXX...`). Lo vas a necesitar en varios pasos.
+
+---
+
+### Paso 2: Crear el Peer Node
+
+1. Ir a **Managed Blockchain** > tu red > **Members** > tu miembro
+2. Click **Create peer node**
+3. Configurar:
+   - **Instance type**: `bc.t3.small`
+   - **Availability zone**: cualquiera
+4. Esperar **10-15 minutos** hasta estado **"Available"**
+
+> **Anotar el Peer Node endpoint** (tiene formato `nd-ZZZZZZ.m-XXXXXX.n-YYYYYY.managedblockchain.us-east-1.amazonaws.com:30003`). Copiarlo **exacto** desde la consola.
+
+---
+
+### Paso 3: Recrear el VPC Endpoint
+
+1. Ir a **VPC** > **Endpoints** > **Create endpoint**
+2. En el buscador de servicios, filtrar por `managedblockchain`
+3. Seleccionar el servicio de tu red (contiene el Network ID)
+4. Seleccionar la **misma VPC** donde esta tu EC2
+5. Seleccionar las subredes
+6. **Habilitar "Private DNS names"** (Enable DNS name = checked)
+7. Security group: usar el grupo `default` de la VPC
+8. Crear el endpoint
+
+**Verificar configuracion de la VPC:**
+- VPC > tu VPC > **Actions > Edit VPC settings**
+  - **DNS hostnames**: `Enabled`
+  - **DNS resolution**: `Enabled`
+
+**Verificar Security Group del VPC Endpoint (grupo `default`):**
+- Debe tener una regla inbound que permita **All traffic** desde el CIDR de la VPC (ej: `172.31.0.0/16`)
+
+---
+
+### Paso 4: Iniciar la EC2
+
+1. Ir a **EC2** > **Instances**
+2. Seleccionar tu instancia (esta en estado **Stopped**)
+3. **Instance state** > **Start instance**
+4. Esperar ~1 minuto hasta estado **Running**
+5. Conectarse por **EC2 Instance Connect** o SSH
+
+**Verificar que todo sigue instalado:**
+
+```bash
+docker --version
+go version
+fabric-ca-client version
+ls /home/ec2-user/config/core.yaml
+ls /home/ec2-user/chaincode-go/main.go
+```
+
+Todo deberia estar ahi porque solo detuvimos la instancia, no la terminamos.
+
+---
+
+### Paso 5: Enrollar el admin con el nuevo Fabric CA
+
+Cada vez que se crea una red nueva, el CA es nuevo y necesita un enrollment nuevo.
+
+```bash
+# Borrar credenciales anteriores (del CA anterior que ya no existe)
+rm -rf /home/ec2-user/admin-msp
+
+# Obtener el nuevo endpoint del CA desde la consola de AWS:
+# Managed Blockchain > tu red > Members > tu miembro > "Certificate authority endpoint"
+# Formato: ca.m-XXXXXX.n-YYYYYY.managedblockchain.us-east-1.amazonaws.com:30002
+
+# Descargar certificado TLS (si no lo tenes ya)
+ls /home/ec2-user/managedblockchain-tls-chain/managedblockchain-tls-chain.pem
+# Si no existe:
+# wget https://s3.us-east-1.amazonaws.com/us-east-1.managedblockchain/etc/managedblockchain-tls-chain.pem \
+#     -O /home/ec2-user/managedblockchain-tls-chain/managedblockchain-tls-chain.pem
+
+# Enrollar el admin (usar comillas simples para la URL)
+# Reemplazar CA_ENDPOINT y TU_PASSWORD con los valores reales
+fabric-ca-client enroll \
+    -u 'https://admin:TU_PASSWORD@ca.m-XXXXXX.n-YYYYYY.managedblockchain.us-east-1.amazonaws.com:30002' \
+    --tls.certfiles /home/ec2-user/managedblockchain-tls-chain/managedblockchain-tls-chain.pem \
+    -M /home/ec2-user/admin-msp
+```
+
+> **Si da error `no such host`**: esperar 2-3 minutos a que el DNS del VPC Endpoint se propague.
+>
+> **Si da error `connection timed out`**: revisar el Security Group del VPC Endpoint (paso 3).
+>
+> **Si da error `Authentication failure`**: verificar username (`admin`) y password. Borrar `admin-msp/` y reintentar.
+
+---
+
+### Paso 6: Crear el canal y unir el peer
+
+**Definir variables de entorno** (reemplazar con los valores nuevos de la consola de AWS):
+
+```bash
+# Estos valores cambian con cada red nueva. Copiarlos de la consola de AWS.
+export MSP_ID=m-XXXXXX                    # Tu Member ID
+export ORDERER_ENDPOINT=orderer.n-YYYYYY.managedblockchain.us-east-1.amazonaws.com:30001
+export PEER_ENDPOINT=nd-ZZZZZZ.m-XXXXXX.n-YYYYYY.managedblockchain.us-east-1.amazonaws.com:30003
+export TLS_CERT=/home/ec2-user/managedblockchain-tls-chain/managedblockchain-tls-chain.pem
+export FABRIC_CFG_PATH=/home/ec2-user/config/
+```
+
+#### 6a. Actualizar configtx.yaml con el nuevo Member ID
+
+```bash
+# Editar configtx.yaml y reemplazar el Member ID anterior por el nuevo
+# El Member ID aparece en los campos Name, ID, y en las Rules de Policies
+nano /home/ec2-user/configtx.yaml
+
+# En todas las lineas que digan m-VIEJO, cambiar por m-NUEVO
+# Hay ~6 ocurrencias que cambiar
+```
+
+#### 6b. Generar el bloque genesis del canal
+
+```bash
+export FABRIC_CFG_PATH=/home/ec2-user/
+
+configtxgen \
+    -profile OneOrgChannel \
+    -outputCreateChannelTx /home/ec2-user/patient-channel.pb \
+    -channelID patient-channel
+```
+
+#### 6c. Crear el canal
+
+```bash
+export FABRIC_CFG_PATH=/home/ec2-user/config/
+
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    hyperledger/fabric-tools:2.2 \
+    peer channel create \
+        -c patient-channel \
+        -f /home/ec2-user/patient-channel.pb \
+        -o $ORDERER_ENDPOINT \
+        --tls --cafile $TLS_CERT
+```
+
+#### 6d. Unir el peer al canal
+
+```bash
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    hyperledger/fabric-tools:2.2 \
+    peer channel join -b /home/ec2-user/patient-channel.block
+```
+
+> **Si da error `x509: certificate is valid for X, not Y`**: verificar que el PEER_ENDPOINT sea exactamente el que muestra la consola de AWS. Un solo caracter diferente causa este error.
+
+---
+
+### Paso 7: Desplegar el chaincode
+
+El codigo del chaincode ya esta en `/home/ec2-user/chaincode-go/` desde la vez anterior.
+
+#### 7a. Empaquetar
+
+```bash
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    hyperledger/fabric-tools:2.2 \
+    peer lifecycle chaincode package /home/ec2-user/patient-cc.tar.gz \
+        --path /home/ec2-user/chaincode-go \
+        --lang golang \
+        --label patient-cc_1.0
+```
+
+#### 7b. Instalar
+
+```bash
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    hyperledger/fabric-tools:2.2 \
+    peer lifecycle chaincode install /home/ec2-user/patient-cc.tar.gz
+```
+
+> **Anotar el Package ID** que devuelve (formato: `patient-cc_1.0:abc123def456...`). Se necesita en el siguiente paso.
+
+#### 7c. Aprobar
+
+```bash
+# Reemplazar CC_PACKAGE_ID con el valor real del paso anterior
+export CC_PACKAGE_ID=patient-cc_1.0:abc123def456...
+
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    hyperledger/fabric-tools:2.2 \
+    peer lifecycle chaincode approveformyorg \
+        --channelID patient-channel \
+        --name patient-cc \
+        --version 1.0 \
+        --package-id $CC_PACKAGE_ID \
+        --sequence 1 \
+        --tls --cafile $TLS_CERT \
+        -o $ORDERER_ENDPOINT
+```
+
+#### 7d. Commit
+
+```bash
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    hyperledger/fabric-tools:2.2 \
+    peer lifecycle chaincode commit \
+        --channelID patient-channel \
+        --name patient-cc \
+        --version 1.0 \
+        --sequence 1 \
+        --tls --cafile $TLS_CERT \
+        -o $ORDERER_ENDPOINT
+```
+
+> **Nota sobre version y sequence**: Como es una red nueva, usamos `--version 1.0` y `--sequence 1`. Si en el futuro actualizas el chaincode en la misma red, incrementa ambos valores (2.0/2, 3.0/3, etc.).
+
+---
+
+### Paso 8: Probar que todo funciona
+
+#### Crear un paciente de prueba
+
+```bash
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    hyperledger/fabric-tools:2.2 \
+    peer chaincode invoke \
+        -C patient-channel \
+        -n patient-cc \
+        -c '{"function":"CreatePatient","Args":["PAT-001","{\"sapId\":\"SAP-001\",\"firstName\":\"Juan\",\"lastName\":\"Perez\",\"birthDate\":\"1990-01-15\",\"gender\":\"M\",\"tipoEmpadronamiento\":\"biologico\",\"fechaInicio\":\"2025-01-01\"}"]}' \
+        --tls --cafile $TLS_CERT \
+        -o $ORDERER_ENDPOINT
+```
+
+#### Consultar el paciente
+
+```bash
+docker run --rm \
+    -v /home/ec2-user:/home/ec2-user \
+    -e FABRIC_CFG_PATH=/home/ec2-user/config/ \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$TLS_CERT \
+    -e CORE_PEER_LOCALMSPID=$MSP_ID \
+    -e CORE_PEER_MSPCONFIGPATH=/home/ec2-user/admin-msp \
+    -e CORE_PEER_ADDRESS=$PEER_ENDPOINT \
+    hyperledger/fabric-tools:2.2 \
+    peer chaincode query \
+        -C patient-channel \
+        -n patient-cc \
+        -c '{"function":"QueryPatient","Args":["PAT-001"]}' \
+        --tls --cafile $TLS_CERT
+```
+
+Si el query devuelve el JSON del paciente, **todo esta funcionando correctamente**.
+
+---
+
+### Checklist rapido para levantar todo
+
+```
+[ ] 1. Crear red + miembro en Managed Blockchain (anotar Member ID y password)
+[ ] 2. Esperar 20-30 min a que este "Available"
+[ ] 3. Crear Peer Node (anotar endpoint exacto)
+[ ] 4. Esperar 10-15 min a que este "Available"
+[ ] 5. Crear VPC Endpoint (habilitar Private DNS, DNS hostnames en VPC)
+[ ] 6. Verificar Security Group del VPC Endpoint (All traffic desde CIDR de VPC)
+[ ] 7. Iniciar EC2 (Start instance)
+[ ] 8. Conectarse a la EC2
+[ ] 9. Borrar admin-msp anterior: rm -rf /home/ec2-user/admin-msp
+[ ] 10. Enrollar admin con el nuevo CA endpoint
+[ ] 11. Actualizar configtx.yaml con el nuevo Member ID
+[ ] 12. Generar bloque genesis (configtxgen)
+[ ] 13. Crear canal (peer channel create)
+[ ] 14. Unir peer al canal (peer channel join)
+[ ] 15. Empaquetar chaincode (peer lifecycle chaincode package)
+[ ] 16. Instalar chaincode (peer lifecycle chaincode install)
+[ ] 17. Aprobar chaincode (peer lifecycle chaincode approveformyorg)
+[ ] 18. Commit chaincode (peer lifecycle chaincode commit)
+[ ] 19. Probar con invoke + query
+```
+
+---
+
+### Como volver a apagar todo
+
+Seguir el mismo orden que la primera vez:
+
+```
+1. Eliminar Peer Node        (Managed Blockchain > tu red > Members > Peer nodes > Delete)
+2. Eliminar Member           (Managed Blockchain > tu red > Members > Delete member)
+   -> La red se elimina sola si eras el unico miembro
+3. Eliminar VPC Endpoint     (VPC > Endpoints > Actions > Delete)
+4. Detener EC2               (EC2 > Instances > Instance state > Stop instance)
+```
