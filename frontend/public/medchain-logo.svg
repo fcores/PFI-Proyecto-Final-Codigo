@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 56" fill="none">
+  <!-- Shield / Hexagon shape -->
+  <path d="M28 4L48 15.5V38.5L28 50L8 38.5V15.5L28 4Z" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5"/>
+  <!-- Medical cross inside -->
+  <rect x="23" y="14" width="10" height="28" rx="2" fill="white"/>
+  <rect x="16" y="21" width="24" height="10" rx="2" fill="white"/>
+  <!-- Chain link dots (blockchain) -->
+  <circle cx="28" cy="28" r="2.5" fill="rgba(0,210,180,0.9)"/>
+  <circle cx="10" cy="27" r="1.8" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="46" cy="27" r="1.8" fill="rgba(255,255,255,0.5)"/>
+  <line x1="12" y1="27" x2="25" y2="28" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="2 2"/>
+  <line x1="31" y1="28" x2="44" y2="27" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="2 2"/>
+  <!-- Circuit node top -->
+  <circle cx="28" cy="6" r="1.5" fill="rgba(0,210,180,0.7)"/>
+  <circle cx="28" cy="50" r="1.5" fill="rgba(0,210,180,0.7)"/>
+  <!-- Text: MedChain -->
+  <text x="60" y="30" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="white" letter-spacing="-0.5">Med</text>
+  <text x="103" y="30" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="rgba(0,210,180,1)" letter-spacing="-0.5">Chain</text>
+  <!-- Text: AI -->
+  <text x="163" y="30" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="300" fill="rgba(255,255,255,0.7)" letter-spacing="1">AI</text>
+  <!-- Pulse line decoration -->
+  <path d="M60 42 L80 42 L85 36 L90 48 L95 38 L100 42 L185 42" stroke="rgba(0,210,180,0.4)" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

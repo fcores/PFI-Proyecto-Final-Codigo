@@ -11,7 +11,7 @@ from backend.routers import (
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Alleanza Tracking", version="0.2.0")
+    app = FastAPI(title="MedChain AI", version="0.3.0")
 
     app.add_middleware(
         CORSMiddleware,
@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     async def root():
-        return {"message": "API de Alleanza Tracking funcionando"}
+        return {"message": "API de MedChain AI funcionando"}
 
     return app
 

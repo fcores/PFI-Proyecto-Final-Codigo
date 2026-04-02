@@ -38,12 +38,12 @@ export default function Sidebar() {
       <div className="sidebar-logo">
         <NavLink to="/pacientes/alta">
           <img
-            src="/scienza-logo.svg"
-            alt="Scienza Argentina"
+            src="/medchain-logo.svg"
+            alt="MedChain AI"
             className="logo-img"
           />
         </NavLink>
-        <span className="sidebar-brand">Alleanza Tracking</span>
+        <span className="sidebar-brand">MedChain AI</span>
       </div>
 
       <nav className="sidebar-nav">

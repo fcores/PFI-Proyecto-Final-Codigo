@@ -1,18 +1,19 @@
 /* ===== Design tokens ===== */
 
 :root {
-  --brand-red: #e50019;
-  --brand-red-dark: #c00014;
-  --bg-main: #f5f5f5;
+  --brand-primary: #0d9488;
+  --brand-primary-dark: #0f766e;
+  --brand-accent: #00d2b4;
+  --bg-main: #f0fdf9;
   --bg-soft: #fcfcfd;
   --card-bg: #ffffff;
-  --border-color: #dddddd;
-  --border-strong: #d5dbe5;
-  --text-main: #333333;
-  --text-muted: #777777;
+  --border-color: #d1dde5;
+  --border-strong: #c7d5e0;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
   --text-soft: #8d96a4;
-  --accent: #0077c8;
-  --danger: #d32f2f;
+  --accent: #0891b2;
+  --danger: #dc2626;
   --radius-sm: 6px;
   --radius-md: 14px;
   --radius-lg: 22px;
@@ -44,9 +45,9 @@ body {
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-main);
   background:
-    radial-gradient(circle at top left, rgba(229, 0, 25, 0.06), transparent 28%),
-    radial-gradient(circle at top right, rgba(0, 119, 200, 0.08), transparent 24%),
-    linear-gradient(180deg, #f9fafc 0%, #f3f5f9 100%);
+    radial-gradient(circle at top left, rgba(13, 148, 136, 0.06), transparent 28%),
+    radial-gradient(circle at top right, rgba(0, 210, 180, 0.06), transparent 24%),
+    linear-gradient(180deg, #f0fdfa 0%, #f0f9ff 100%);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -62,7 +63,7 @@ body {
 .sidebar {
   width: var(--sidebar-width);
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--brand-red) 0%, var(--brand-red-dark) 100%);
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -89,7 +90,7 @@ body {
 }
 
 .logo-img {
-  height: 36px;
+  height: 42px;
   width: auto;
   display: block;
   object-fit: contain;
@@ -142,10 +143,10 @@ body {
 }
 
 .sidebar-nav a.active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 210, 180, 0.12);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: inset 3px 0 0 #ffffff;
+  box-shadow: inset 3px 0 0 var(--brand-accent);
 }
 
 .nav-emoji {
@@ -188,10 +189,10 @@ body {
 }
 
 .nav-group-toggle.active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 210, 180, 0.12);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: inset 3px 0 0 #ffffff;
+  box-shadow: inset 3px 0 0 var(--brand-accent);
 }
 
 .nav-group-label {
@@ -241,10 +242,10 @@ body {
 }
 
 .nav-subitem.active {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(0, 210, 180, 0.1);
   color: #ffffff;
   font-weight: 600;
-  border-left-color: #ffffff;
+  border-left-color: var(--brand-accent);
 }
 
 /* Sidebar footer (user) */
@@ -344,8 +345,8 @@ body {
   width: fit-content;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(229, 0, 25, 0.08);
-  color: var(--brand-red-dark);
+  background: rgba(13, 148, 136, 0.08);
+  color: var(--brand-primary-dark);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -490,7 +491,7 @@ body {
   inset: 0 auto auto 0;
   width: 100%;
   height: 4px;
-  background: linear-gradient(90deg, var(--brand-red) 0%, rgba(229, 0, 25, 0.28) 60%, transparent 100%);
+  background: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-accent) 60%, transparent 100%);
   pointer-events: none;
 }
 
@@ -544,9 +545,9 @@ body {
   width: fit-content;
   padding: 10px 14px;
   border-radius: 999px;
-  background: #fff6f7;
-  border: 1px solid rgba(229, 0, 25, 0.12);
-  color: var(--brand-red-dark);
+  background: #f0fdfa;
+  border: 1px solid rgba(13, 148, 136, 0.12);
+  color: var(--brand-primary-dark);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -962,20 +963,20 @@ select[multiple] {
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--brand-red) 0%, var(--brand-red-dark) 100%);
+  background: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
   color: #ffffff;
-  box-shadow: 0 10px 24px rgba(229, 0, 25, 0.24);
+  box-shadow: 0 10px 24px rgba(13, 148, 136, 0.24);
 }
 
 .btn-primary:hover {
-  background: var(--brand-red-dark);
-  box-shadow: 0 4px 12px rgba(229, 0, 25, 0.3);
+  background: var(--brand-primary-dark);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
   transform: translateY(-1px);
 }
 
 .btn-primary:active {
   transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(229, 0, 25, 0.2);
+  box-shadow: 0 1px 4px rgba(13, 148, 136, 0.2);
 }
 
 .btn-secondary {
@@ -1027,15 +1028,15 @@ select[multiple] {
   align-items: flex-end;
   padding: 14px 16px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #fff8f8 0%, #fff 100%);
-  border: 1px solid rgba(229, 0, 25, 0.1);
+  background: linear-gradient(180deg, #f0fdfa 0%, #fff 100%);
+  border: 1px solid rgba(13, 148, 136, 0.12);
   min-width: 112px;
 }
 
 .panel-stat strong {
   font-size: 24px;
   line-height: 1;
-  color: var(--brand-red-dark);
+  color: var(--brand-primary-dark);
 }
 
 .panel-stat span {
@@ -1243,8 +1244,8 @@ tbody tr:last-child td {
 
 .contrato-upload-zone:has(.contrato-file-input:focus) .contrato-upload-btn,
 .contrato-upload-zone:hover .contrato-upload-btn {
-  background: var(--brand-red);
-  box-shadow: 0 4px 12px rgba(229, 0, 25, 0.25);
+  background: var(--brand-primary);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
   transform: translateY(-1px);
 }
 
@@ -1286,7 +1287,7 @@ tbody tr:last-child td {
 /* ===== Selection ===== */
 
 ::selection {
-  background: rgba(229, 0, 25, 0.12);
+  background: rgba(13, 148, 136, 0.15);
   color: var(--text-main);
 }
 
@@ -1524,8 +1525,8 @@ tbody tr:last-child td {
   align-items: center;
   padding: 5px 10px;
   border-radius: 8px;
-  background: rgba(229, 0, 25, 0.07);
-  color: var(--brand-red-dark);
+  background: rgba(13, 148, 136, 0.08);
+  color: var(--brand-primary-dark);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;

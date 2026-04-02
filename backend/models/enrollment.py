@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,6 +14,7 @@ class Enrollment(EnrollmentBase):
     enrollment_code: str = Field(..., title="ID de empadronamiento")
     tipo: str = Field(..., title="Tipo de empadronamiento")
     created_at: datetime = Field(..., title="Fecha de creación")
+    blockchain_tx_id: Optional[str] = Field(None, title="ID de transacción en blockchain")
 
 
 class EnrollmentList(BaseModel):

@@ -8,7 +8,7 @@ export default function Layout() {
       <div className="main-wrapper">
         <Outlet />
         <footer className="page-footer">
-          Copyright © 2024 Alleanza Tracking — Droguería Scienza Argentina
+          Copyright © 2025 MedChain AI — Salud, Tecnología e Inteligencia Artificial
         </footer>
       </div>
     </>
