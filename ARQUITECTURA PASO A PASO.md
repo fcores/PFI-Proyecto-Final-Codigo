@@ -90,16 +90,12 @@ I2961-SwissEmpadronamiento/
 |   |   |-- hooks/              <-- Hooks personalizados de React
 |   |   |-- pages/              <-- Paginas de la aplicacion
 |
-|-- chaincode-go/               <-- Smart Contract en Go (el que esta desplegado)
+|-- ml-models/                  <-- Modulo de inteligencia artificial
+|   |-- datosSinteticos.py      <-- Generacion de datasets sinteticos de diabetes
+|
+|-- blockchain/                 <-- Smart Contract en Go (desplegado en AWS)
 |   |-- main.go                 <-- Codigo del contrato inteligente
 |   |-- go.mod                  <-- Dependencias de Go
-|
-|-- chaincode/                  <-- Smart Contract en Node.js (descartado, ver seccion 6)
-|   |-- index.js
-|   |-- package.json
-|   |-- lib/
-|       |-- patientContract.js
-|       |-- enrollmentContract.js
 |
 |-- requirements.txt            <-- Dependencias de Python
 |-- .gitignore                  <-- Archivos ignorados por Git
@@ -336,7 +332,7 @@ La solucion fue reescribir el chaincode en **Go**, que:
 
 ### Estructura del chaincode (main.go)
 
-El archivo `chaincode-go/main.go` define tres funciones principales:
+El archivo `blockchain/main.go` define tres funciones principales:
 
 #### CreatePatient - Crear un paciente
 

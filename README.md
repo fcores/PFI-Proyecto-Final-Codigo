@@ -8,8 +8,9 @@ Sistema de gestión de empadronamiento de pacientes con registro inmutable en bl
 |------|-----------|
 | **Frontend** | React + Vite (puerto 5500) |
 | **Backend** | Python 3.11 + FastAPI (puerto 9999) |
+| **Modelo IA** | Python — generación de datos sintéticos para clasificación de diabetes |
 | **Blockchain** | AWS Managed Blockchain — Hyperledger Fabric 2.2 |
-| **Smart Contract** | Go (chaincode-go) |
+| **Smart Contract** | Go |
 
 ## Estructura del proyecto
 
@@ -27,10 +28,11 @@ Sistema de gestión de empadronamiento de pacientes con registro inmutable en bl
 │   │   ├── hooks/           Hooks personalizados
 │   │   └── pages/           Páginas de la aplicación
 │   └── vite.config.js       Dev server + proxy al backend
-├── chaincode-go/            Smart contract en Go (desplegado)
+├── ml-models/               Módulo de inteligencia artificial
+│   └── datosSinteticos.py   Generación de datasets sintéticos de diabetes
+├── blockchain/              Smart contract en Go (desplegado en AWS)
 │   ├── main.go              CreatePatient, QueryPatient, GetPatientHistory
 │   └── go.mod               Dependencias (fabric-contract-api-go)
-├── chaincode/               Smart contract en Node.js (descartado)
 ├── requirements.txt         Dependencias de Python
 └── ARQUITECTURA PASO A PASO.md   Documentación detallada de la arquitectura
 ```
@@ -86,7 +88,7 @@ Vite actúa como proxy, redirigiendo las peticiones API al backend automáticame
 
 ## Blockchain
 
-El chaincode en Go (`chaincode-go/main.go`) está desplegado en AWS Managed Blockchain y expone tres funciones:
+El chaincode en Go (`blockchain/main.go`) está desplegado en AWS Managed Blockchain y expone tres funciones:
 
 - **CreatePatient** — Registra un paciente de forma inmutable en el ledger.
 - **QueryPatient** — Consulta los datos actuales de un paciente.
@@ -98,4 +100,4 @@ Para la guía paso a paso de configuración de la blockchain en AWS, ver [`ARQUI
 
 - Los datos del backend se almacenan **en memoria**; se pierden al reiniciar el servidor.
 - El campo `blockchain_tx_id` en los modelos de paciente y empadronamiento está preparado para vincular cada registro con su transacción en blockchain (pendiente de integración).
-- La carpeta `chaincode/` (Node.js) fue descartada por incompatibilidad de versiones con el runtime de Fabric 2.2. Se usa `chaincode-go/` (Go) en su lugar.
+- La carpeta `ml-models/` contiene los scripts de generación de datos sintéticos y será el módulo donde se implementen los modelos de IA del proyecto.
