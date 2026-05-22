@@ -205,3 +205,33 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ──────────────────────────────────────────────────────────────
+# Hyperledger Fabric
+# ──────────────────────────────────────────────────────────────
+
+# Binarios de Fabric descargados (peer, orderer, configtxgen, cryptogen...)
+fabric/bin/
+# Config base descargada (core.yaml, orderer.yaml, configtx.yaml de muestra)
+fabric/config/
+# Imágenes/artefactos generados en runtime
+fabric/network/organizations/
+fabric/network/channel-artifacts/
+fabric/network/system-genesis-block/
+*.block
+*.tx
+
+# Material criptográfico (NUNCA versionar claves privadas)
+**/msp/keystore/
+**/*_sk
+**/priv_sk
+
+# Chaincode empaquetado
+*.tar.gz
+
+# Go
+chaincode/**/vendor/
+
+# Logs y temporales
+*.log
+fabric/network/log.txt
