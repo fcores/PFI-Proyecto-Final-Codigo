@@ -11,7 +11,7 @@ Esta primera etapa levanta una red de prueba mínima y reproducible:
 - **Chaincode** de ejemplo (`asset-transfer-basic`) escrito en **Go**.
 - **Canal** de aplicación: `mychannel`.
 
-> La app cliente (Fabric Gateway SDK) se sumará en una etapa posterior.
+> La app cliente (React + FastAPI + Fabric Gateway SDK) se sumará en una etapa posterior.
 
 ---
 
@@ -21,37 +21,34 @@ Esta primera etapa levanta una red de prueba mínima y reproducible:
 PFI-Proyecto-Final/
 ├── README.md
 ├── .gitignore
-├── docs/                          # Documentación de prerequisitos y arquitectura
+├── docs/
 │   ├── 01-prerequisitos.md
 │   ├── 02-arquitectura.md
 │   ├── 03-uso.md
-│   └── 04-aws-ec2-setup.md     # Levantar la red en una EC2
+│   └── 04-aws-ec2-setup.md
 ├── chaincode/
-│   └── asset-transfer-basic/      # Smart contract en Go
+│   └── asset-transfer-basic/
 │       ├── go.mod
+│       ├── go.sum
+│       ├── main.go
 │       └── chaincode/
 │           └── smartcontract.go
-│       └── main.go
 └── fabric/
-    ├── network.sh                 # ⭐ Punto de entrada (up | down | createChannel | deployCC ...)
-    ├── bin/                        # Binarios de Fabric (descargados, gitignored)
-    ├── config/                     # core.yaml / orderer.yaml base (descargado, gitignored)
+    ├── network.sh
     ├── network/
-    │   ├── .env                    # Versiones de imágenes y variables comunes
-    │   ├── crypto-config.yaml      # Definición de identidades para cryptogen
-    │   ├── configtx.yaml           # Perfiles de canal / genesis (Raft)
-    │   ├── compose/
-    │   │   └── compose-net.yaml    # orderer, peers, CLI
-    │   ├── organizations/          # (generado) certificados y MSP
-    │   └── channel-artifacts/      # (generado) bloques de génesis del canal
+    │   ├── .env
+    │   ├── crypto-config.yaml
+    │   ├── configtx.yaml
+    │   └── compose/
+    │       └── compose-net.yaml
     └── scripts/
-        ├── bootstrap.sh            # Provisiona Ubuntu/EC2 (Docker + Go)
-        ├── install-fabric.sh       # Descarga binarios + imágenes Docker
-        ├── envVar.sh               # Helpers de variables de entorno por org
-        ├── utils.sh                # Funciones de logging
-        ├── generateArtifacts.sh    # cryptogen + bloque génesis
-        ├── createChannel.sh        # crear canal y unir peers
-        └── deployChaincode.sh      # package / install / approve / commit
+        ├── bootstrap.sh
+        ├── install-fabric.sh
+        ├── envVar.sh
+        ├── utils.sh
+        ├── generateArtifacts.sh
+        ├── createChannel.sh
+        └── deployChaincode.sh
 ```
 
 ---
@@ -87,9 +84,19 @@ Más detalle en [docs/03-uso.md](docs/03-uso.md).
 
 ## Versiones
 
-| Componente            | Versión   |
-|-----------------------|-----------|
-| Hyperledger Fabric    | 2.5.x LTS |
-| Fabric CA             | 1.5.x     |
-| Chaincode (Go)        | Go 1.21+  |
-| Consenso del orderer  | etcdraft  |
+| Componente            | Versión    |
+|-----------------------|------------|
+| Hyperledger Fabric    | 2.5.15 LTS |
+| Fabric CA             | 1.5.13     |
+| Chaincode (Go)        | Go 1.22+   |
+| Docker Engine         | 29.x       |
+| Consenso del orderer  | etcdraft   |
+
+---
+
+## Notas de compatibilidad
+
+- **Docker Engine v29+**: requiere Fabric >= 2.5.15 (fix para broken pipe en chaincode build, ver [issue #5350](https://github.com/hyperledger/fabric/issues/5350)).
+- **TLS**: los certificados incluyen SANs para `localhost` y `127.0.0.1` para permitir acceso desde el host a los contenedores.
+- **go.sum**: debe estar commiteado junto con `go.mod` para que el chaincode compile correctamente dentro de `fabric-ccenv`.
+- **configtx.yaml**: las rutas a `organizations/` son relativas a `FABRIC_CFG_PATH` (`fabric/network/`), por lo que usan `./organizations/`.
