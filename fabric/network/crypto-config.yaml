@@ -1,36 +1,32 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# crypto-config.yaml
-#
-# Entrada para la herramienta `cryptogen`. Define las identidades (certificados
-# x509 + MSP) de cada organización de la red.
-#
-#   cryptogen generate --config=./crypto-config.yaml --output=organizations
-#
-# - OrdererOrgs: organizaciones que corren nodos orderer (el servicio de ordenamiento).
-# - PeerOrgs:    organizaciones que corren peers (mantienen el ledger y ejecutan chaincode).
-# ─────────────────────────────────────────────────────────────────────────────
-
 OrdererOrgs:
   - Name: Orderer
     Domain: example.com
     EnableNodeOUs: true
-    # Un único nodo orderer: orderer.example.com
     Specs:
       - Hostname: orderer
+        SANS:
+          - localhost
+          - 127.0.0.1
 
 PeerOrgs:
   - Name: Org1
     Domain: org1.example.com
     EnableNodeOUs: true
     Template:
-      Count: 1          # peer0.org1.example.com
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
     Users:
-      Count: 1          # User1@org1.example.com (además del Admin que se crea siempre)
+      Count: 1
 
   - Name: Org2
     Domain: org2.example.com
     EnableNodeOUs: true
     Template:
-      Count: 1          # peer0.org2.example.com
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
     Users:
-      Count: 1          # User1@org2.example.com
+      Count: 1

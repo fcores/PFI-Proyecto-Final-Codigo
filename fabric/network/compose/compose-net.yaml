@@ -97,6 +97,7 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.org1.example.com:9444
       - CORE_METRICS_PROVIDER=prometheus
       - CORE_LEDGER_STATE_STATEDATABASE=goleveldb
+      - DOCKER_API_VERSION=1.41 
     working_dir: /root
     command: peer node start
     volumes:
@@ -140,6 +141,7 @@ services:
       - CORE_OPERATIONS_LISTENADDRESS=peer0.org2.example.com:9445
       - CORE_METRICS_PROVIDER=prometheus
       - CORE_LEDGER_STATE_STATEDATABASE=goleveldb
+      - DOCKER_API_VERSION=1.41
     working_dir: /root
     command: peer node start
     volumes:

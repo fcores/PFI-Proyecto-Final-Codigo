@@ -19,7 +19,7 @@ Organizations:
   - &OrdererOrg
     Name: OrdererOrg
     ID: OrdererMSP
-    MSPDir: ../organizations/ordererOrganizations/example.com/msp
+    MSPDir: ./organizations/ordererOrganizations/example.com/msp
     Policies:
       Readers:
         Type: Signature
@@ -36,7 +36,7 @@ Organizations:
   - &Org1
     Name: Org1MSP
     ID: Org1MSP
-    MSPDir: ../organizations/peerOrganizations/org1.example.com/msp
+    MSPDir: ./organizations/peerOrganizations/org1.example.com/msp
     Policies:
       Readers:
         Type: Signature
@@ -54,7 +54,7 @@ Organizations:
   - &Org2
     Name: Org2MSP
     ID: Org2MSP
-    MSPDir: ../organizations/peerOrganizations/org2.example.com/msp
+    MSPDir: ./organizations/peerOrganizations/org2.example.com/msp
     Policies:
       Readers:
         Type: Signature
@@ -115,8 +115,8 @@ Orderer: &OrdererDefaults
     Consenters:
       - Host: orderer.example.com
         Port: 7050
-        ClientTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-        ServerTLSCert: ../organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+        ClientTLSCert: ./organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+        ServerTLSCert: ./organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
   # Tamaño de bloque y tiempos de batch
   BatchTimeout: 2s
   BatchSize:
