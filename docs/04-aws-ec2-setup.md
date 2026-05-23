@@ -12,7 +12,7 @@ En la consola de AWS → **EC2 → Launch instance**:
 | Campo | Valor |
 |-------|-------|
 | Name | `pfi-fabric` |
-| AMI | **Ubuntu Server 22.04 LTS** (64-bit x86) |
+| AMI | **Ubuntu Server 24.04 LTS** (64-bit x86) — también sirve 22.04. **NO** elegir variantes "with SQL Server" ni "Ubuntu Pro" |
 | Tipo de instancia | **t3.large** (2 vCPU, 8 GB RAM) |
 | Key pair | Crear o usar uno existente (`.pem`) — lo necesitás para SSH |
 | Storage | **30 GB** gp3 |
