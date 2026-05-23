@@ -39,10 +39,11 @@ cd "${NETWORK_DIR}"
 export ORG_DIR="${NETWORK_DIR}/organizations"
 source "${SCRIPT_DIR}/envVar.sh"
 
-# ── 0. Resolver dependencias Go (vendor) para que el peer pueda compilar ─────
+# ── 0. Resolver dependencias Go (tidy + vendor) para que el peer pueda compilar ─
 if command -v go >/dev/null 2>&1; then
-  infoln "Resolviendo dependencias Go (go mod vendor)..."
-  ( cd "${CC_SRC_PATH}" && GO111MODULE=on go mod vendor ) || warnln "go mod vendor falló; continúo igual"
+  infoln "Resolviendo dependencias Go (go mod tidy + vendor)..."
+  ( cd "${CC_SRC_PATH}" && GO111MODULE=on go mod tidy && GO111MODULE=on go mod vendor ) \
+    || fatalln "Fallaron las dependencias Go. Revisá la conectividad y el go.mod del chaincode."
 else
   warnln "Go no está instalado en el host; se asume que el chaincode ya tiene vendor/."
 fi
