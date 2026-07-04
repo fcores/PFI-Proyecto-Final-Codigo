@@ -1,6 +1,8 @@
 # MedChain AI
 
-Sistema de gestión de empadronamiento de pacientes con registro inmutable en blockchain privada (Hyperledger Fabric en AWS).
+Sistema de gestión de empadronamiento de pacientes con registro inmutable en blockchain privada (Hyperledger Fabric).
+
+Proyecto Final de Ingeniería Informática (UADE).
 
 ## Stack tecnológico
 
@@ -9,7 +11,7 @@ Sistema de gestión de empadronamiento de pacientes con registro inmutable en bl
 | **Frontend** | React + Vite (puerto 5500) |
 | **Backend** | Python 3.11 + FastAPI (puerto 9999) |
 | **Modelo IA** | Python — generación de datos sintéticos para clasificación de diabetes |
-| **Blockchain** | AWS Managed Blockchain — Hyperledger Fabric 2.2 |
+| **Blockchain** | Hyperledger Fabric 2.5 LTS (red propia, ver `fabric/`) |
 | **Smart Contract** | Go |
 
 ## Estructura del proyecto
@@ -30,14 +32,25 @@ Sistema de gestión de empadronamiento de pacientes con registro inmutable en bl
 │   └── vite.config.js       Dev server + proxy al backend
 ├── ml-models/               Módulo de inteligencia artificial
 │   └── datosSinteticos.py   Generación de datasets sintéticos de diabetes
-├── blockchain/              Smart contract en Go (desplegado en AWS)
+├── blockchain/              Smart contract PatientContract en Go
 │   ├── main.go              CreatePatient, QueryPatient, GetPatientHistory
 │   └── go.mod               Dependencias (fabric-contract-api-go)
+├── chaincode/               Chaincode de ejemplo desplegado por la red Fabric
+│   └── asset-transfer-basic/
+├── fabric/                  Infraestructura de la red Hyperledger Fabric
+│   ├── network.sh
+│   ├── network/             crypto-config, configtx, compose
+│   └── scripts/             bootstrap, createChannel, deployChaincode, etc.
+├── docs/                    Documentación de la red Fabric
+│   ├── 01-prerequisitos.md
+│   ├── 02-arquitectura.md
+│   ├── 03-uso.md
+│   └── 04-aws-ec2-setup.md
 ├── requirements.txt         Dependencias de Python
 └── ARQUITECTURA PASO A PASO.md   Documentación detallada de la arquitectura
 ```
 
-## Instalación y ejecución
+## Instalación y ejecución (app: frontend + backend)
 
 ### Requisitos previos
 
@@ -88,13 +101,69 @@ Vite actúa como proxy, redirigiendo las peticiones API al backend automáticame
 
 ## Blockchain
 
-El chaincode en Go (`blockchain/main.go`) está desplegado en AWS Managed Blockchain y expone tres funciones:
+### Smart contract del dominio (`blockchain/`)
+
+El chaincode en Go (`blockchain/main.go`) implementa el `PatientContract` y expone tres funciones:
 
 - **CreatePatient** — Registra un paciente de forma inmutable en el ledger.
 - **QueryPatient** — Consulta los datos actuales de un paciente.
 - **GetPatientHistory** — Devuelve el historial completo de cambios de un paciente.
 
-Para la guía paso a paso de configuración de la blockchain en AWS, ver [`ARQUITECTURA PASO A PASO.md`](ARQUITECTURA%20PASO%20A%20PASO.md).
+### Red Hyperledger Fabric (`fabric/`)
+
+La carpeta `fabric/` contiene una red **Hyperledger Fabric 2.5 LTS** reproducible desde cero:
+
+- **2 organizaciones** (`Org1`, `Org2`), cada una con 1 peer.
+- **1 orderer** (consenso Raft / etcdraft), usando la *Channel Participation API* (sin system channel).
+- **Material criptográfico** generado con `cryptogen`.
+- **Chaincode** de ejemplo (`asset-transfer-basic`) escrito en **Go**.
+- **Canal** de aplicación: `mychannel`.
+
+#### Quickstart de la red
+
+> **Requisito:** Docker + Docker Compose corriendo.
+> - En **AWS EC2** (recomendado, sin fricción): ver [docs/04-aws-ec2-setup.md](docs/04-aws-ec2-setup.md).
+> - En **Windows** local: **WSL2 + Docker Desktop**, ver [docs/01-prerequisitos.md](docs/01-prerequisitos.md).
+
+```bash
+cd fabric
+
+# 1. Descargar binarios de Fabric e imágenes Docker (una sola vez)
+./network.sh install
+
+# 2. Levantar la red (genera cripto + arranca contenedores)
+./network.sh up
+
+# 3. Crear el canal 'mychannel' y unir los peers
+./network.sh createChannel
+
+# 4. Desplegar el chaincode de ejemplo
+./network.sh deployCC
+
+# Apagar y limpiar todo
+./network.sh down
+```
+
+Más detalle en [docs/03-uso.md](docs/03-uso.md).
+
+#### Versiones
+
+| Componente            | Versión    |
+|-----------------------|------------|
+| Hyperledger Fabric    | 2.5.15 LTS |
+| Fabric CA             | 1.5.13     |
+| Chaincode (Go)        | Go 1.22+   |
+| Docker Engine         | 29.x       |
+| Consenso del orderer  | etcdraft   |
+
+#### Notas de compatibilidad
+
+- **Docker Engine v29+**: requiere Fabric >= 2.5.15 (fix para broken pipe en chaincode build, ver [issue #5350](https://github.com/hyperledger/fabric/issues/5350)).
+- **TLS**: los certificados incluyen SANs para `localhost` y `127.0.0.1` para permitir acceso desde el host a los contenedores.
+- **go.sum**: debe estar commiteado junto con `go.mod` para que el chaincode compile correctamente dentro de `fabric-ccenv`.
+- **configtx.yaml**: las rutas a `organizations/` son relativas a `FABRIC_CFG_PATH` (`fabric/network/`), por lo que usan `./organizations/`.
+
+Para la guía paso a paso de configuración de la blockchain, ver [`ARQUITECTURA PASO A PASO.md`](ARQUITECTURA%20PASO%20A%20PASO.md).
 
 ## Notas
 
