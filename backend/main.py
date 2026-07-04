@@ -7,6 +7,9 @@ from backend.routers import (
     enrollment_router,
     medication_router,
     monodrug_router,
+    prescription_router,
+    ledger_router,
+    auth_router,
 )
 
 
@@ -26,6 +29,9 @@ def create_app() -> FastAPI:
     app.include_router(enrollment_router)
     app.include_router(medication_router)
     app.include_router(monodrug_router)
+    app.include_router(prescription_router)
+    app.include_router(ledger_router)
+    app.include_router(auth_router)
 
     @app.get("/")
     async def root():

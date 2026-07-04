@@ -11,6 +11,9 @@ export default defineConfig({
       "/enrollments": "http://127.0.0.1:9999",
       "/medications": "http://127.0.0.1:9999",
       "/monodrugs": "http://127.0.0.1:9999",
+      "/prescriptions": "http://127.0.0.1:9999",
+      "/ledger": "http://127.0.0.1:9999",
+      "/auth": "http://127.0.0.1:9999",
     },
   },
 });

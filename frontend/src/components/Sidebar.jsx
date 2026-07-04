@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 const PACIENTES_SUBTYPES = [
   { to: "/pacientes/alta", label: "Alta de Pacientes" },
@@ -22,16 +23,24 @@ const EMPADRONAMIENTO_SUBTYPES = [
   { to: "/empadronamientos/historial", label: "Historial Empadronamientos" },
 ];
 
+const PRESCRIPCIONES_SUBTYPES = [
+  { to: "/prescripciones/alta", label: "Alta de Prescripciones" },
+  { to: "/prescripciones/historial", label: "Historial de Prescripciones" },
+];
+
 export default function Sidebar() {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const pacientesActive = location.pathname.startsWith("/pacientes");
   const medicamentosActive = location.pathname.startsWith("/medicamentos");
   const monodrogasActive = location.pathname.startsWith("/monodrogas");
   const empadronamientoActive = location.pathname.startsWith("/empadronamientos");
+  const prescripcionesActive = location.pathname.startsWith("/prescripciones");
   const [pacientesOpen, setPacientesOpen] = useState(pacientesActive);
   const [medicamentosOpen, setMedicamentosOpen] = useState(medicamentosActive);
   const [monodrogasOpen, setMonodrogasOpen] = useState(monodrogasActive);
   const [empadronamientoOpen, setEmpadronamientoOpen] = useState(empadronamientoActive);
+  const [prescripcionesOpen, setPrescripcionesOpen] = useState(prescripcionesActive);
 
   return (
     <aside className="sidebar">
@@ -77,6 +86,35 @@ export default function Sidebar() {
                   className={({ isActive }) =>
                     `nav-subitem${isActive ? " active" : ""}`
                   }
+                >
+                  {sub.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Prescripciones con submenú */}
+        <div className="nav-group">
+          <button
+            className={`nav-group-toggle${prescripcionesActive ? " active" : ""}`}
+            onClick={() => setPrescripcionesOpen((o) => !o)}
+            type="button"
+          >
+            <span className="nav-emoji">🧬</span>
+            <span className="nav-group-label">Prescripciones</span>
+            <span className={`nav-group-chevron${prescripcionesOpen ? " open" : ""}`}>
+              ›
+            </span>
+          </button>
+
+          {prescripcionesOpen && (
+            <div className="nav-subnav">
+              {PRESCRIPCIONES_SUBTYPES.map((sub) => (
+                <NavLink
+                  key={sub.to}
+                  to={sub.to}
+                  className={({ isActive }) => `nav-subitem${isActive ? " active" : ""}`}
                 >
                   {sub.label}
                 </NavLink>
@@ -169,9 +207,12 @@ export default function Sidebar() {
           )}
         </div>
 
-        <a href="#">
-          <span className="nav-emoji">🔍</span> Auditorías
-        </a>
+        <NavLink
+          to="/trazabilidad"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          <span className="nav-emoji">🔗</span> Auditorías
+        </NavLink>
         <a href="#">
           <span className="nav-emoji">📊</span> Reportes
         </a>
@@ -182,13 +223,15 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <div className="sidebar-avatar">G</div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">Usuario</span>
-            <span className="sidebar-user-role">Administrador</span>
+          <div className="sidebar-avatar">
+            {(user?.display_name || user?.username || "U").charAt(0).toUpperCase()}
           </div>
-          <button className="icon-btn" title="Configuración">
-            ⚙
+          <div className="sidebar-user-info">
+            <span className="sidebar-user-name">{user?.display_name || user?.username || "Usuario"}</span>
+            <span className="sidebar-user-role">Sesión activa</span>
+          </div>
+          <button className="icon-btn" title="Cerrar sesión" onClick={logout}>
+            ⎋
           </button>
         </div>
       </div>

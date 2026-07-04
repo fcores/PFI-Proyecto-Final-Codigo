@@ -1,0 +1,125 @@
+import { useState } from "react";
+import { useLocation, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+
+export default function LoginPage() {
+  const { isAuthenticated, login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const redirectTo = location.state?.from?.pathname || "/prescripciones/alta";
+
+  if (isAuthenticated) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await login(username.trim(), password);
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      setError(err.message || "No se pudo iniciar sesión.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="login-screen">
+      <div className="login-split">
+        <aside className="login-aside">
+          <div className="login-aside-top">
+            <div className="login-brand">
+              <img src="/medchain-logo.svg" alt="MedChain AI" className="login-logo" />
+              <span className="login-brand-name">MedChain AI</span>
+            </div>
+          </div>
+
+          <div className="login-aside-body">
+            <h2 className="login-aside-title">
+              Plataforma para la gestión de prescripciones
+            </h2>
+            <p className="login-aside-text">
+              Empadronamiento y auditoría de prescripciones de alta complejidad,
+              con validación asistida y trazabilidad inmutable en blockchain.
+            </p>
+            <ul className="login-aside-features">
+              <li>🧬 Prescripciones oncológicas de alta complejidad</li>
+              <li>🔍 Validación y auditoría de concordancia</li>
+              <li>🔗 Trazabilidad inmutable en blockchain</li>
+            </ul>
+          </div>
+
+          <div className="login-aside-footer">
+            Salud, Tecnología e Inteligencia Artificial
+          </div>
+        </aside>
+
+        <section className="login-panel">
+          <div className="login-panel-inner">
+            <div className="login-heading">
+              <span className="login-eyebrow">Bienvenido</span>
+              <h1>Iniciar sesión</h1>
+              <p>Ingresá tus credenciales para acceder a la plataforma.</p>
+            </div>
+
+            <form className="login-form" onSubmit={handleSubmit}>
+              <div className="login-field">
+                <label htmlFor="login_username">Usuario</label>
+                <input
+                  id="login_username"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="Ingresá tu usuario"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="login_password">Contraseña</label>
+                <input
+                  id="login_password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Ingresá tu contraseña"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </div>
+
+              {error && <div className="login-error">{error}</div>}
+
+              <button type="submit" className="btn-primary login-submit" disabled={loading}>
+                {loading ? "Ingresando..." : "Ingresar"}
+              </button>
+            </form>
+
+            <div className="login-divider"><span>Acceso seguro</span></div>
+
+            <div className="login-hint">
+              <span className="login-hint-icon">🔒</span>
+              <p>
+                Tu sesión se protege con un token temporal. Al finalizar, cerrá sesión
+                desde el menú lateral.
+              </p>
+            </div>
+
+            <p className="login-footer">
+              Copyright © 2025 MedChain AI — Salud, Tecnología e IA
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
