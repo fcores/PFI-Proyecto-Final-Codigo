@@ -49,7 +49,7 @@ export default function PacientesPage() {
               />
 
               <div className="form-grid form-grid--patient">
-                <FormField label="ID Paciente SAP" htmlFor="sap_id" required span={3}>
+                <FormField label="ID Paciente" htmlFor="sap_id" required span={3}>
                   <input id="sap_id" name="sap_id" type="text" required />
                 </FormField>
 
