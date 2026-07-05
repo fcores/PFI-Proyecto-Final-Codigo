@@ -250,16 +250,20 @@ El repositorio tiene un workflow automatico que despliega a AWS cada vez que se 
 **Que despliega:**
 - Si cambia `backend/`, `Dockerfile` o `requirements.txt` -> reconstruye la imagen Docker, la sube a ECR y fuerza un nuevo deploy en ECS Fargate.
 - Si cambia `frontend/` -> hace build del frontend, lo sube a S3 e invalida el cache de CloudFront.
-- Ambos jobs corren en paralelo si hay cambios en los dos.
+- Si cambia `blockchain/` o `fabric/` -> se conecta por SSH a la EC2, hace git pull y redesplega el chaincode con la nueva version.
+- Los tres jobs corren en paralelo si hay cambios en multiples componentes.
 
 **Configuracion necesaria (una sola vez):**
 
-Ir a **GitHub > Settings > Secrets and variables > Actions** y crear dos secrets:
+Ir a **GitHub > Settings > Secrets and variables > Actions** y crear estos secrets:
 
 | Secret | Valor |
 |--------|-------|
 | `AWS_ACCESS_KEY_ID` | Access Key del usuario IAM `medchain-admin` |
 | `AWS_SECRET_ACCESS_KEY` | Secret Key del usuario IAM `medchain-admin` |
+| `EC2_SSH_KEY` | Contenido completo del archivo `prueba-blockchain.pem` |
+| `EC2_HOST` | `34.199.204.55` (Elastic IP de la EC2 blockchain) |
+| `EC2_USER` | `ubuntu` |
 
 El workflow se encuentra en `.github/workflows/deploy.yml`.
 

@@ -7,6 +7,8 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "blockchain/**"
+      - "fabric/**"
       - "Dockerfile"
       - "requirements.txt"
 
@@ -18,6 +20,8 @@ env:
   S3_BUCKET: medchain-frontend-007072540405-007072540405-us-east-1-an
   CLOUDFRONT_DISTRIBUTION_ID: E3UXMQZNKANQDB
   AWS_ACCOUNT_ID: "007072540405"
+  EC2_SG_ID: sg-0c6d00bf321b64291
+  EC2_INSTANCE_ID: i-0331b3fbeaadee294
 
 jobs:
   changes:
@@ -26,6 +30,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      blockchain: ${{ steps.filter.outputs.blockchain }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,6 +44,9 @@ jobs:
               - 'requirements.txt'
             frontend:
               - 'frontend/**'
+            blockchain:
+              - 'blockchain/**'
+              - 'fabric/**'
 
   deploy-backend:
     name: Deploy Backend (ECR + ECS)
@@ -114,3 +122,92 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --paths "/*"
+
+  deploy-blockchain:
+    name: Deploy Blockchain (EC2 chaincode)
+    needs: changes
+    if: needs.changes.outputs.blockchain == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure EC2 is running
+        run: |
+          STATE=$(aws ec2 describe-instances \
+            --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text)
+          if [ "$STATE" = "stopped" ]; then
+            echo "Starting EC2 instance..."
+            aws ec2 start-instances --instance-ids "${{ env.EC2_INSTANCE_ID }}"
+            aws ec2 wait instance-running --instance-ids "${{ env.EC2_INSTANCE_ID }}"
+            echo "Waiting 30s for SSH to be ready..."
+            sleep 30
+          fi
+
+      - name: Get runner public IP
+        id: runner-ip
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
+
+      - name: Open SSH access in Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id "${{ env.EC2_SG_ID }}" \
+            --protocol tcp --port 22 \
+            --cidr "${{ steps.runner-ip.outputs.ip }}/32" \
+            --tag-specifications 'ResourceType=security-group-rule,Tags=[{Key=Source,Value=github-actions}]' \
+          || echo "Rule may already exist, continuing..."
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Pull latest code and redeploy chaincode
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no \
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'REMOTE_SCRIPT'
+          set -e
+          cd ~/PFI-Proyecto-Final
+          git fetch origin desarrollo
+          git checkout desarrollo
+          git pull origin desarrollo
+
+          cd fabric
+
+          CURRENT_SEQ=$(./bin/peer lifecycle chaincode querycommitted \
+            --channelID mychannel --name basic \
+            --output json 2>/dev/null \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('sequence',0))" \
+            2>/dev/null || echo "0")
+          NEW_SEQ=$((CURRENT_SEQ + 1))
+          NEW_VERSION="1.${NEW_SEQ}"
+
+          echo "Current sequence: ${CURRENT_SEQ}, deploying sequence: ${NEW_SEQ}, version: ${NEW_VERSION}"
+
+          export CC_SEQUENCE="${NEW_SEQ}"
+          export CC_VERSION="${NEW_VERSION}"
+          ./network.sh deployCC
+          REMOTE_SCRIPT
+
+      - name: Revoke SSH access from Security Group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "${{ env.EC2_SG_ID }}" \
+            --protocol tcp --port 22 \
+            --cidr "${{ steps.runner-ip.outputs.ip }}/32" \
+          || echo "Rule already removed or not found"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/ec2_key.pem
