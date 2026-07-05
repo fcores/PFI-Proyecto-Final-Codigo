@@ -17,7 +17,7 @@ from backend.routers import (
 
 def create_app() -> FastAPI:
     """Crea y configura la instancia FastAPI con routers bajo /api."""
-    app = FastAPI(title="MedChain AI", version="0.4.0")
+    app = FastAPI(title="MedChain AI", version="0.5.0")
 
     raw_origins = os.getenv("CORS_ORIGINS")
     origins = [o.strip() for o in raw_origins.split(",") if o.strip()] if raw_origins else ["*"]
