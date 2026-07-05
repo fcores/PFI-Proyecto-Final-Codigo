@@ -207,3 +207,6 @@ chaincode/**/vendor/
 
 # Logs y temporales
 fabric/network/log.txt
+
+# Deploy state (IDs de recursos AWS generados por los scripts)
+deploy/.env.deploy

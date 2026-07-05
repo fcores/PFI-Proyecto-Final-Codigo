@@ -1,7 +1,10 @@
 import hmac
+import logging
 import os
 import secrets
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -19,14 +22,23 @@ class AuthService:
     """
 
     def __init__(self) -> None:
-        self._tokens: Dict[str, UserInfo] = {}
+        """Inicializa el almacén de tokens en memoria."""
+        try:
+            self._tokens: Dict[str, UserInfo] = {}
+        except Exception as exc:
+            logger.error("Error al inicializar AuthService: %s", exc, exc_info=True)
+            raise
 
-    @staticmethod
-    def _config():
-        username = os.getenv("AUTH_USERNAME")
-        password = os.getenv("AUTH_PASSWORD")
-        display_name = os.getenv("AUTH_DISPLAY_NAME")
-        return username, password, display_name
+    def _config(self):
+        """Lee las credenciales desde variables de entorno."""
+        try:
+            username = os.getenv("AUTH_USERNAME")
+            password = os.getenv("AUTH_PASSWORD")
+            display_name = os.getenv("AUTH_DISPLAY_NAME")
+            return username, password, display_name
+        except Exception as exc:
+            logger.error("Error al leer config de auth: %s", exc, exc_info=True)
+            raise
 
     def login(self, username: str, password: str) -> LoginResponse:
         cfg_user, cfg_password, cfg_display = self._config()

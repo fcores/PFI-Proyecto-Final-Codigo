@@ -6,14 +6,7 @@ export default defineConfig({
   server: {
     port: 5500,
     proxy: {
-      "/patients": "http://127.0.0.1:9999",
-      "/agreements": "http://127.0.0.1:9999",
-      "/enrollments": "http://127.0.0.1:9999",
-      "/medications": "http://127.0.0.1:9999",
-      "/monodrugs": "http://127.0.0.1:9999",
-      "/prescriptions": "http://127.0.0.1:9999",
-      "/ledger": "http://127.0.0.1:9999",
-      "/auth": "http://127.0.0.1:9999",
+      "/api": "http://127.0.0.1:9999",
     },
   },
 });

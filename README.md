@@ -41,11 +41,24 @@ Proyecto Final de Ingeniería Informática (UADE).
 │   ├── network.sh
 │   ├── network/             crypto-config, configtx, compose
 │   └── scripts/             bootstrap, createChannel, deployChaincode, etc.
-├── docs/                    Documentación de la red Fabric
+├── deploy/                  Scripts de despliegue en AWS
+│   ├── deploy-all.sh        Script maestro (ejecuta todo)
+│   ├── 00-variables.sh      Variables de configuracion
+│   ├── 01-vpc-network.sh    VPC, subredes, Security Groups
+│   ├── 02-ecr-push.sh       Build Docker + push a ECR
+│   ├── 03-secrets-iam.sh    Secrets Manager + roles IAM
+│   ├── 04-ecs-cluster.sh    ECS Fargate + Cloud Map
+│   ├── 05-api-gateway.sh    API Gateway HTTP API + VPC Link
+│   ├── 06-s3-cloudfront.sh  S3 + CloudFront (SPA + API)
+│   └── 99-cleanup.sh        Limpieza de recursos
+├── docs/                    Documentacion
 │   ├── 01-prerequisitos.md
 │   ├── 02-arquitectura.md
 │   ├── 03-uso.md
-│   └── 04-aws-ec2-setup.md
+│   ├── 04-aws-ec2-setup.md
+│   └── 05-deploy-aws-consola.md  Guia paso a paso para AWS
+├── Dockerfile               Imagen Docker del backend
+├── .dockerignore             Exclusiones para Docker build
 ├── requirements.txt         Dependencias de Python
 └── ARQUITECTURA PASO A PASO.md   Documentación detallada de la arquitectura
 ```
@@ -70,6 +83,7 @@ python -m backend.main
 ```
 
 La API queda disponible en `http://127.0.0.1:9999`.
+Todos los endpoints de negocio estan bajo `/api` (ej. `http://127.0.0.1:9999/api/patients`).
 Documentación interactiva (Swagger) en `http://127.0.0.1:9999/docs`.
 
 ### Frontend
@@ -85,19 +99,28 @@ Vite actúa como proxy, redirigiendo las peticiones API al backend automáticame
 
 ## API Endpoints principales
 
+Todos los endpoints de negocio estan bajo el prefijo `/api`:
+
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `POST` | `/patients` | Crear paciente |
-| `GET` | `/patients` | Listar pacientes |
-| `POST` | `/patients/bulk-import` | Importar pacientes desde Excel |
-| `POST` | `/enrollments` | Crear empadronamiento |
-| `GET` | `/enrollments` | Listar empadronamientos |
-| `POST` | `/medications` | Crear medicamento |
-| `GET` | `/medications` | Listar medicamentos |
-| `POST` | `/monodrugs` | Crear monodroga |
-| `GET` | `/monodrugs` | Listar monodrogas |
-| `POST` | `/agreements` | Crear acuerdo |
-| `GET` | `/agreements` | Listar acuerdos |
+| `GET`  | `/` | Health check |
+| `POST` | `/api/auth/login` | Iniciar sesión |
+| `GET`  | `/api/auth/me` | Usuario actual |
+| `POST` | `/api/patients` | Crear paciente |
+| `GET`  | `/api/patients` | Listar pacientes |
+| `POST` | `/api/patients/bulk-import` | Importar pacientes desde Excel |
+| `POST` | `/api/enrollments/{tipo}` | Crear empadronamiento |
+| `GET`  | `/api/enrollments/{tipo}` | Listar empadronamientos |
+| `POST` | `/api/medications` | Crear medicamento |
+| `GET`  | `/api/medications` | Listar medicamentos |
+| `POST` | `/api/monodrugs` | Crear monodroga |
+| `GET`  | `/api/monodrugs` | Listar monodrogas |
+| `POST` | `/api/agreements` | Crear acuerdo |
+| `GET`  | `/api/agreements` | Listar acuerdos |
+| `POST` | `/api/prescriptions` | Crear prescripción |
+| `GET`  | `/api/prescriptions` | Listar prescripciones |
+| `GET`  | `/api/ledger` | Bloques del ledger |
+| `GET`  | `/api/ledger/verify` | Verificar integridad |
 
 ## Blockchain
 
@@ -164,6 +187,59 @@ Más detalle en [docs/03-uso.md](docs/03-uso.md).
 - **configtx.yaml**: las rutas a `organizations/` son relativas a `FABRIC_CFG_PATH` (`fabric/network/`), por lo que usan `./organizations/`.
 
 Para la guía paso a paso de configuración de la blockchain, ver [`ARQUITECTURA PASO A PASO.md`](ARQUITECTURA%20PASO%20A%20PASO.md).
+
+## Despliegue en AWS
+
+La aplicacion esta desplegada en produccion en:
+
+**https://d3qe3o25c33oqd.cloudfront.net**
+
+### Arquitectura en la nube
+
+| Capa | Servicio AWS | Descripcion |
+|------|-------------|-------------|
+| **Frontend** | S3 + CloudFront | SPA estatica servida con HTTPS |
+| **Backend** | ECS Fargate + API Gateway HTTP API | Contenedor Docker serverless |
+| **Blockchain** | EC2 dedicada | Red Fabric 2.5 con Docker |
+
+### URLs de produccion
+
+| Recurso | URL |
+|---------|-----|
+| App (usuario final) | `https://d3qe3o25c33oqd.cloudfront.net` |
+| API Gateway (directo) | `https://vl5nsf5jt5.execute-api.us-east-1.amazonaws.com` |
+| Health check | `https://vl5nsf5jt5.execute-api.us-east-1.amazonaws.com/` |
+| Swagger | `https://vl5nsf5jt5.execute-api.us-east-1.amazonaws.com/docs` |
+
+### Guias de despliegue
+
+- **Paso a paso por consola web:** [docs/05-deploy-aws-consola.md](docs/05-deploy-aws-consola.md)
+- **Scripts automatizados (CLI):** ver carpeta `deploy/`
+- **Blockchain en EC2:** [docs/04-aws-ec2-setup.md](docs/04-aws-ec2-setup.md)
+
+### Actualizar el frontend en produccion
+
+```bash
+cd frontend
+npm run build
+aws s3 sync dist/ s3://medchain-frontend-007072540405-007072540405-us-east-1-an/ --delete
+```
+
+### Actualizar el backend en produccion
+
+```bash
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 007072540405.dkr.ecr.us-east-1.amazonaws.com
+docker build -t medchain-backend .
+docker tag medchain-backend:latest 007072540405.dkr.ecr.us-east-1.amazonaws.com/medchain-backend:latest
+docker push 007072540405.dkr.ecr.us-east-1.amazonaws.com/medchain-backend:latest
+aws ecs update-service --cluster medchain-cluster --service medchain-backend-svc --force-new-deployment --region us-east-1
+```
+
+### Limpieza de recursos
+
+```bash
+bash deploy/99-cleanup.sh
+```
 
 ## Notas
 
