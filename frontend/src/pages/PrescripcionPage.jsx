@@ -101,7 +101,7 @@ export default function PrescripcionPage() {
               />
 
               <div className="form-grid">
-                <FormField label="ID Paciente SAP" htmlFor="patient_sap_id" required span={4}>
+                <FormField label="ID Paciente" htmlFor="patient_sap_id" required span={4}>
                   <input id="patient_sap_id" name="patient_sap_id" type="text" placeholder="Ej.: SAP-000123" required />
                 </FormField>
                 <FormField label="Edad" htmlFor="edad" required span={2}>
