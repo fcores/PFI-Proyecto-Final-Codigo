@@ -41,6 +41,8 @@ Proyecto Final de Ingeniería Informática (UADE).
 │   ├── network.sh
 │   ├── network/             crypto-config, configtx, compose
 │   └── scripts/             bootstrap, createChannel, deployChaincode, etc.
+├── .github/workflows/       CI/CD con GitHub Actions
+│   └── deploy.yml           Deploy automatico a AWS al pushear
 ├── deploy/                  Scripts de despliegue en AWS
 │   ├── deploy-all.sh        Script maestro (ejecuta todo)
 │   ├── 00-variables.sh      Variables de configuracion
@@ -240,6 +242,26 @@ aws ecs update-service --cluster medchain-cluster --service medchain-backend-svc
 ```bash
 bash deploy/99-cleanup.sh
 ```
+
+### CI/CD (GitHub Actions)
+
+El repositorio tiene un workflow automatico que despliega a AWS cada vez que se pushea a la rama `desarrollo`.
+
+**Que despliega:**
+- Si cambia `backend/`, `Dockerfile` o `requirements.txt` -> reconstruye la imagen Docker, la sube a ECR y fuerza un nuevo deploy en ECS Fargate.
+- Si cambia `frontend/` -> hace build del frontend, lo sube a S3 e invalida el cache de CloudFront.
+- Ambos jobs corren en paralelo si hay cambios en los dos.
+
+**Configuracion necesaria (una sola vez):**
+
+Ir a **GitHub > Settings > Secrets and variables > Actions** y crear dos secrets:
+
+| Secret | Valor |
+|--------|-------|
+| `AWS_ACCESS_KEY_ID` | Access Key del usuario IAM `medchain-admin` |
+| `AWS_SECRET_ACCESS_KEY` | Secret Key del usuario IAM `medchain-admin` |
+
+El workflow se encuentra en `.github/workflows/deploy.yml`.
 
 ## Notas
 
