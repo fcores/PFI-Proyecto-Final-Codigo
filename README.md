@@ -19,19 +19,34 @@ Proyecto Final de Ingeniería Informática (UADE).
 ```
 ├── backend/                 API REST en Python
 │   ├── main.py              Punto de entrada (FastAPI + Uvicorn)
-│   ├── models/              Modelos Pydantic (patient, prescription, etc.)
-│   ├── repositories/        Almacenamiento en memoria
-│   ├── routers/             Endpoints de la API
-│   └── services/            Lógica de negocio
-├── frontend/                Aplicación web React
+│   ├── db.py                Conexion a PostgreSQL (pool, context manager, fallback en memoria)
+│   ├── auth_middleware.py   Middleware de autenticacion y RBAC
+│   ├── dependencies.py      Inyeccion de dependencias (singleton repos/services)
+│   ├── models/              Modelos Pydantic (patient, prescription, audit, agreement, enrollment, etc.)
+│   ├── repositories/        Repositorios con soporte dual PostgreSQL / en memoria
+│   ├── routers/             Endpoints de la API con autenticacion y control de roles
+│   └── services/            Logica de negocio (validacion, ledger, auditoria)
+├── sql/                     Queries SQL externalizadas
+│   ├── schema.sql           DDL de todas las tablas (11 tablas)
+│   ├── patients.sql         Queries de pacientes
+│   ├── prescriptions.sql    Queries de prescripciones
+│   ├── audit.sql            Queries de auditoria (casos, dictamenes, correcciones)
+│   ├── agreements.sql       Queries de acuerdos
+│   ├── enrollments.sql      Queries de empadronamientos
+│   ├── medications.sql      Queries de medicamentos
+│   ├── monodrugs.sql        Queries de monodrogas
+│   ├── ledger.sql           Queries del ledger
+│   └── users.sql            Queries de usuarios
+├── frontend/                Aplicacion web React
 │   ├── src/
-│   │   ├── api/             Clientes HTTP al backend
-│   │   ├── components/      Componentes reutilizables
+│   │   ├── api/             Clientes HTTP al backend (audit, agreements, enrollments, etc.)
+│   │   ├── auth/            Contexto de autenticacion y proteccion de rutas con RBAC
+│   │   ├── components/      Componentes reutilizables (Layout, Sidebar con menu por roles)
 │   │   ├── hooks/           Hooks personalizados
-│   │   └── pages/           Páginas de la aplicación
+│   │   └── pages/           Paginas de la aplicacion (incluye auditoria)
 │   └── vite.config.js       Dev server + proxy al backend
-├── ml-models/               Módulo de inteligencia artificial
-│   └── datosSinteticos.py   Generación de datasets sintéticos de diabetes
+├── ml-models/               Modulo de inteligencia artificial
+│   └── datosSinteticos.py   Generacion de datasets sinteticos de diabetes
 ├── blockchain/              Smart contract PatientContract en Go
 │   ├── main.go              CreatePatient, QueryPatient, GetPatientHistory
 │   └── go.mod               Dependencias (fabric-contract-api-go)
@@ -62,7 +77,7 @@ Proyecto Final de Ingeniería Informática (UADE).
 ├── Dockerfile               Imagen Docker del backend
 ├── .dockerignore             Exclusiones para Docker build
 ├── requirements.txt         Dependencias de Python
-└── ARQUITECTURA PASO A PASO.md   Documentación detallada de la arquitectura
+└── ARQUITECTURA PASO A PASO.md   Documentacion detallada de la arquitectura
 ```
 
 ## Instalación y ejecución (app: frontend + backend)
@@ -72,6 +87,7 @@ Proyecto Final de Ingeniería Informática (UADE).
 - Python 3.11+
 - Node.js 18+
 - npm
+- PostgreSQL 15+ (opcional; sin BD, el backend usa almacenamiento en memoria)
 
 ### Backend
 
@@ -86,7 +102,33 @@ python -m backend.main
 
 La API queda disponible en `http://127.0.0.1:9999`.
 Todos los endpoints de negocio estan bajo `/api` (ej. `http://127.0.0.1:9999/api/patients`).
-Documentación interactiva (Swagger) en `http://127.0.0.1:9999/docs`.
+Documentacion interactiva (Swagger) en `http://127.0.0.1:9999/docs`.
+
+#### Variables de entorno (`.env`)
+
+| Variable | Descripcion |
+|----------|-------------|
+| `AUTH_USERNAME` | Usuario de autenticacion (fallback sin BD) |
+| `AUTH_PASSWORD` | Contraseña de autenticacion (fallback sin BD) |
+| `DATABASE_URL` | URL de conexion PostgreSQL (ej. `postgresql://user:pass@host:5432/medchain`). Si no se define, el backend usa almacenamiento en memoria |
+| `CORS_ORIGINS` | Origenes permitidos para CORS (separados por coma) |
+
+#### Persistencia dual
+
+El backend soporta dos modos de persistencia:
+
+- **PostgreSQL**: Si `DATABASE_URL` esta configurada, todos los repositorios usan la base de datos. Las tablas se crean automaticamente al iniciar (`sql/schema.sql`).
+- **En memoria**: Si `DATABASE_URL` no esta definida, los datos se almacenan en listas Python y se pierden al reiniciar.
+
+#### Roles y permisos (RBAC)
+
+El sistema soporta tres roles con permisos diferenciados:
+
+| Rol | Acceso |
+|-----|--------|
+| `administrador` | Acceso completo a todos los modulos |
+| `prescriptor` | Pacientes, prescripciones |
+| `auditor` | Cola de auditoria, trazabilidad, dictamenes |
 
 ### Frontend
 
@@ -101,24 +143,33 @@ Vite actúa como proxy, redirigiendo las peticiones API al backend automáticame
 
 ## API Endpoints principales
 
-Todos los endpoints de negocio estan bajo el prefijo `/api`:
+Todos los endpoints de negocio estan bajo el prefijo `/api`. Los endpoints protegidos requieren header `Authorization: Bearer <token>`.
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET`  | `/` | Health check |
-| `POST` | `/api/auth/login` | Iniciar sesión |
-| `GET`  | `/api/auth/me` | Usuario actual |
-| `POST` | `/api/patients` | Crear paciente |
-| `GET`  | `/api/patients` | Listar pacientes |
-| `POST` | `/api/patients/bulk-import` | Importar pacientes desde Excel |
-| `POST` | `/api/medications` | Crear medicamento |
-| `GET`  | `/api/medications` | Listar medicamentos |
-| `POST` | `/api/monodrugs` | Crear monodroga |
-| `GET`  | `/api/monodrugs` | Listar monodrogas |
-| `POST` | `/api/prescriptions` | Crear prescripción |
-| `GET`  | `/api/prescriptions` | Listar prescripciones |
-| `GET`  | `/api/ledger` | Bloques del ledger |
-| `GET`  | `/api/ledger/verify` | Verificar integridad |
+| Metodo | Ruta | Rol requerido | Descripcion |
+|--------|------|---------------|-------------|
+| `GET`  | `/` | — | Health check |
+| `POST` | `/api/auth/login` | — | Iniciar sesion |
+| `GET`  | `/api/auth/me` | cualquiera | Usuario actual |
+| `POST` | `/api/patients` | admin, prescriptor | Crear paciente |
+| `GET`  | `/api/patients` | cualquiera | Listar pacientes |
+| `POST` | `/api/patients/bulk-import` | admin | Importar pacientes desde Excel |
+| `POST` | `/api/medications` | admin | Crear medicamento |
+| `GET`  | `/api/medications` | cualquiera | Listar medicamentos |
+| `POST` | `/api/monodrugs` | admin | Crear monodroga |
+| `GET`  | `/api/monodrugs` | cualquiera | Listar monodrogas |
+| `POST` | `/api/prescriptions` | admin, prescriptor | Crear prescripcion |
+| `GET`  | `/api/prescriptions` | cualquiera | Listar prescripciones |
+| `POST` | `/api/agreements` | admin | Crear acuerdo |
+| `GET`  | `/api/agreements` | cualquiera | Listar acuerdos |
+| `POST` | `/api/enrollments` | admin | Crear empadronamiento |
+| `GET`  | `/api/enrollments` | cualquiera | Listar empadronamientos |
+| `GET`  | `/api/audit/queue` | auditor, admin | Cola de auditoria |
+| `GET`  | `/api/audit/cases/{id}` | auditor, admin | Detalle de caso |
+| `POST` | `/api/audit/cases/{id}/dictamen` | auditor, admin | Emitir dictamen |
+| `POST` | `/api/audit/cases/{id}/corrections` | auditor, admin | Registrar correccion |
+| `GET`  | `/api/audit/cases/{id}/history` | auditor, admin | Historial de correcciones |
+| `GET`  | `/api/ledger` | cualquiera | Bloques del ledger |
+| `GET`  | `/api/ledger/verify` | cualquiera | Verificar integridad |
 
 ## Blockchain
 
@@ -265,6 +316,7 @@ El workflow se encuentra en `.github/workflows/deploy.yml`.
 
 ## Notas
 
-- Los datos del backend se almacenan **en memoria**; se pierden al reiniciar el servidor.
-- El campo `blockchain_tx_id` en los modelos de paciente está preparado para vincular cada registro con su transacción en blockchain (pendiente de integración).
-- La carpeta `ml-models/` contiene los scripts de generación de datos sintéticos y será el módulo donde se implementen los modelos de IA del proyecto.
+- Si `DATABASE_URL` esta configurada, los datos persisten en PostgreSQL. Sin ella, se usa almacenamiento en memoria (los datos se pierden al reiniciar).
+- El campo `blockchain_tx_id` en los modelos de paciente y dictamen esta preparado para vincular cada registro con su transaccion en blockchain (pendiente de integracion con Hyperledger Fabric).
+- La carpeta `ml-models/` contiene los scripts de generacion de datos sinteticos y sera el modulo donde se implementen los modelos de IA del proyecto.
+- Los dictamenes y correcciones de auditoria se registran en el ledger inmutable para trazabilidad completa.

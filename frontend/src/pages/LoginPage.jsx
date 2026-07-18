@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export default function LoginPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("");
@@ -11,10 +11,16 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const redirectTo = location.state?.from?.pathname || "/prescripciones/alta";
+  function getDefaultRoute(userRole) {
+    if (userRole === "auditor") return "/trazabilidad";
+    if (userRole === "prescriptor") return "/prescripciones/alta";
+    return "/pacientes/alta";
+  }
+
+  const savedRedirect = location.state?.from?.pathname;
 
   if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={savedRedirect || getDefaultRoute(user?.role)} replace />;
   }
 
   async function handleSubmit(event) {
@@ -22,8 +28,9 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(username.trim(), password);
-      navigate(redirectTo, { replace: true });
+      const data = await login(username.trim(), password);
+      const destination = savedRedirect || getDefaultRoute(data.user?.role);
+      navigate(destination, { replace: true });
     } catch (err) {
       setError(err.message || "No se pudo iniciar sesión.");
     } finally {

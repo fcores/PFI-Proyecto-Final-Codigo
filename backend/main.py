@@ -10,6 +10,9 @@ from backend.routers import (
     prescription_router,
     ledger_router,
     auth_router,
+    agreement_router,
+    enrollment_router,
+    audit_router,
 )
 
 
@@ -35,6 +38,9 @@ def create_app() -> FastAPI:
     api.include_router(prescription_router)
     api.include_router(ledger_router)
     api.include_router(auth_router)
+    api.include_router(agreement_router)
+    api.include_router(enrollment_router)
+    api.include_router(audit_router)
     app.include_router(api)
 
     @app.get("/")

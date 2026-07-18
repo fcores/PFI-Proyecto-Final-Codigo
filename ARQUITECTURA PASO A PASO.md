@@ -69,6 +69,8 @@ El sistema tiene tres componentes principales desplegados en AWS de forma indepe
 |------|-----------|-------------|
 | **Frontend** | React 19 + Vite 6 | S3 + CloudFront |
 | **Backend** | Python 3.12 + FastAPI | ECS Fargate + API Gateway HTTP API |
+| **Persistencia** | PostgreSQL 15 (con fallback en memoria) | RDS o EC2 |
+| **Autenticacion** | RBAC con hash+salt (3 roles) | Dentro del backend |
 | **Validacion** | Motor de reglas (stub) | Dentro del backend |
 | **Ledger simulado** | Cadena SHA-256 en memoria | Dentro del backend |
 | **Blockchain** | Hyperledger Fabric 2.5 LTS | EC2 t3.large dedicada |
@@ -87,41 +89,65 @@ PFI-Proyecto-Final/
 |
 |-- backend/                  Servidor API en Python
 |   |-- main.py               Punto de entrada (FastAPI + Uvicorn, version 0.5.0)
-|   |-- dependencies.py       Inyeccion de dependencias
-|   |-- models/               Modelos Pydantic (patient, prescription, ledger, etc.)
-|   |-- repositories/         Almacenamiento en memoria
-|   |-- routers/              Endpoints bajo /api
+|   |-- db.py                 Conexion PostgreSQL (pool, context manager, fallback en memoria)
+|   |-- auth_middleware.py    Middleware de autenticacion y RBAC (require_auth, require_role)
+|   |-- dependencies.py       Inyeccion de dependencias (singleton repos/services)
+|   |-- models/               Modelos Pydantic (patient, prescription, audit, agreement, enrollment, etc.)
+|   |-- repositories/         Repositorios con soporte dual PostgreSQL / en memoria
+|   |-- routers/              Endpoints bajo /api con autenticacion y control de roles
 |   |   |-- auth_router.py       Autenticacion (login, me, logout)
 |   |   |-- patient_router.py    CRUD de pacientes
 |   |   |-- prescription_router.py  Prescripciones oncologicas
 |   |   |-- ledger_router.py     Bloques del ledger y verificacion
 |   |   |-- medication_router.py Medicamentos
 |   |   |-- monodrug_router.py   Monodrogas
+|   |   |-- agreement_router.py  Acuerdos con laboratorios
+|   |   |-- enrollment_router.py Empadronamientos
+|   |   |-- audit_router.py     Cola de auditoria, dictamenes, correcciones
 |   |-- services/             Logica de negocio
-|       |-- auth_service.py      Autenticacion con tokens en memoria
-|       |-- prescription_service.py  Validacion + registro en ledger
+|       |-- auth_service.py      Autenticacion con hash+salt (BD o fallback .env)
+|       |-- prescription_service.py  Validacion + registro en ledger + caso de auditoria
 |       |-- validation_service.py    Motor de reglas (stub)
 |       |-- ledger_service.py       Cadena de bloques SHA-256
+|       |-- audit_service.py        Gestion de casos, dictamenes y correcciones
 |       |-- patient_service.py
 |       |-- medication_service.py
 |       |-- monodrug_service.py
+|       |-- agreement_service.py
+|       |-- enrollment_service.py
 |       |-- excel_import_service.py
+|
+|-- sql/                      Queries SQL externalizadas
+|   |-- schema.sql            DDL de 11 tablas (users, patients, prescriptions, audit_cases, etc.)
+|   |-- patients.sql          Queries CRUD de pacientes
+|   |-- prescriptions.sql     Queries de prescripciones
+|   |-- audit.sql             Queries de auditoria (casos, dictamenes, correcciones)
+|   |-- agreements.sql        Queries de acuerdos
+|   |-- enrollments.sql       Queries de empadronamientos
+|   |-- medications.sql       Queries de medicamentos
+|   |-- monodrugs.sql         Queries de monodrogas
+|   |-- ledger.sql            Queries del ledger
+|   |-- users.sql             Queries de usuarios
 |
 |-- frontend/                 Aplicacion web React
 |   |-- index.html
 |   |-- vite.config.js        Dev server + proxy /api al backend
 |   |-- package.json
 |   |-- src/
-|       |-- App.jsx            Rutas de la SPA (react-router-dom)
+|       |-- App.jsx            Rutas de la SPA con proteccion RBAC
 |       |-- main.jsx           Punto de entrada
 |       |-- index.css          Estilos globales
 |       |-- api/
 |       |   |-- client.js      API_BASE configurable (VITE_API_URL || "/api")
+|       |   |-- audit.js       Cliente de la API de auditoria
+|       |   |-- agreements.js  Cliente de la API de acuerdos
+|       |   |-- enrollments.js Cliente de la API de empadronamientos
 |       |-- auth/
-|       |   |-- ProtectedRoute.jsx  Proteccion de rutas autenticadas
-|       |-- components/        Componentes reutilizables (Layout, FormField, etc.)
+|       |   |-- ProtectedRoute.jsx  Proteccion de rutas con soporte de roles
+|       |   |-- AuthContext.jsx     Contexto de autenticacion (user con role)
+|       |-- components/        Componentes reutilizables (Layout, Sidebar por roles, etc.)
 |       |-- hooks/             Hooks personalizados
-|       |-- pages/             15 paginas de la aplicacion
+|       |-- pages/             Paginas de la aplicacion (incluye auditoria, acuerdos, empadronamientos)
 |
 |-- blockchain/               Smart Contract en Go
 |   |-- main.go               PatientContract (CreatePatient, QueryPatient, GetPatientHistory)
@@ -200,22 +226,35 @@ Todas las llamadas del frontend pasan por un unico cliente centralizado (`api/cl
 
 ### Paginas de la aplicacion
 
-| Pagina | Ruta | Que hace |
-|--------|------|---------|
-| `LoginPage` | `/login` | Autenticacion (split-screen) |
-| `PacientesPage` | `/pacientes/alta` | Alta clinica de pacientes |
-| `HistorialPacientesPage` | `/pacientes/historial` | Historial de pacientes con filtros |
-| `PrescripcionPage` | `/prescripciones/alta` | Alta de prescripcion oncologica con validacion |
-| `HistorialPrescripcionesPage` | `/prescripciones/historial` | Historial de prescripciones |
-| `TrazabilidadPage` | `/trazabilidad` | Bloques del ledger y verificacion de integridad |
-| `AltaMedicamentosPage` | `/medicamentos/alta` | Alta de medicamentos |
-| `HistorialMedicamentosPage` | `/medicamentos/historial` | Historial de medicamentos |
-| `MonodrogasPage` | `/monodrogas/alta` | Alta de monodrogas |
-| `HistorialMonodrogasPage` | `/monodrogas/historial` | Historial de monodrogas |
+| Pagina | Ruta | Roles | Que hace |
+|--------|------|-------|---------|
+| `LoginPage` | `/login` | — | Autenticacion (split-screen) |
+| `PacientesPage` | `/pacientes/alta` | admin, prescriptor | Alta clinica de pacientes |
+| `HistorialPacientesPage` | `/pacientes/historial` | admin, prescriptor | Historial de pacientes con filtros |
+| `PrescripcionPage` | `/prescripciones/alta` | todos | Alta de prescripcion oncologica con validacion |
+| `HistorialPrescripcionesPage` | `/prescripciones/historial` | todos | Historial de prescripciones |
+| `AcuerdoPage` | `/acuerdos` | admin | Gestion de acuerdos con laboratorios |
+| `EmpadronamientoPage` | `/empadronamientos/:tipo` | admin | Alta de empadronamientos (Tipo A, B) |
+| `HistorialEmpadronamientosPage` | `/empadronamientos/historial` | admin | Historial de empadronamientos |
+| `AuditQueuePage` | `/auditoria/cola` | auditor, admin | Cola de casos pendientes de revision |
+| `AuditCasePage` | `/auditoria/caso/:id` | auditor, admin | Detalle de caso con dictamen y correcciones |
+| `TrazabilidadPage` | `/trazabilidad` | auditor, admin | Bloques del ledger y verificacion de integridad |
+| `AltaMedicamentosPage` | `/medicamentos/alta` | admin | Alta de medicamentos |
+| `HistorialMedicamentosPage` | `/medicamentos/historial` | admin | Historial de medicamentos |
+| `MonodrogasPage` | `/monodrogas/alta` | admin | Alta de monodrogas |
+| `HistorialMonodrogasPage` | `/monodrogas/historial` | admin | Historial de monodrogas |
 
-### Autenticacion
+### Autenticacion y autorizacion (RBAC)
 
-Todas las rutas (excepto `/login`) estan protegidas por `ProtectedRoute`, que verifica la existencia de un token valido antes de renderizar el contenido.
+Todas las rutas (excepto `/login`) estan protegidas por `ProtectedRoute`, que verifica la existencia de un token valido antes de renderizar el contenido. Cada ruta puede especificar un array de roles permitidos; si el usuario no tiene el rol requerido, se muestra "Acceso denegado".
+
+El sidebar de navegacion filtra automaticamente los menus segun el rol del usuario autenticado.
+
+| Rol | Modulos accesibles |
+|-----|-------------------|
+| `administrador` | Todos los modulos |
+| `prescriptor` | Pacientes, prescripciones |
+| `auditor` | Cola de auditoria, trazabilidad |
 
 ### Como levantar el frontend (desarrollo local)
 
@@ -241,6 +280,7 @@ El backend es el **servidor** que recibe peticiones del frontend, ejecuta la log
 | **FastAPI** | Framework web para APIs REST |
 | **Uvicorn** | Servidor ASGI |
 | **Pydantic** | Validacion automatica de datos |
+| **psycopg2** | Driver PostgreSQL (pool de conexiones) |
 | **python-dotenv** | Carga de variables de entorno desde `.env` |
 | **Pandas / Openpyxl** | Importacion de datos desde Excel |
 
@@ -250,45 +290,62 @@ El backend es el **servidor** que recibe peticiones del frontend, ejecuta la log
 Peticion HTTP
      |
      v
-+-----------+     +-----------+     +--------------+
-|  Router   |---->|  Service  |---->|  Repository  |
-| (/api/*)  |     | (Logica)  |     | (Datos)      |
-+-----------+     +-----------+     +--------------+
-                       |
-                       v
-                 +-------------+
-                 |   Ledger    |
-                 |  Service    |
-                 | (SHA-256)   |
-                 +-------------+
++-----------+     +----------------+     +-----------+     +--------------+
+|  Router   |---->| Auth Middleware |---->|  Service  |---->|  Repository  |
+| (/api/*)  |     | (RBAC)         |     | (Logica)  |     | (PG / Mem)   |
++-----------+     +----------------+     +-----------+     +--------------+
+                                              |                   |
+                                              v                   v
+                                        +----------+       +----------+
+                                        |  Ledger  |       | db.py    |
+                                        | Service  |       | (Pool)   |
+                                        | (SHA-256)|       +----------+
+                                        +----------+            |
+                                                                v
+                                                          +----------+
+                                                          | sql/*.sql|
+                                                          | (Queries)|
+                                                          +----------+
 ```
 
 | Capa | Archivo ejemplo | Que hace |
 |------|----------------|---------|
 | **Router** | `prescription_router.py` | Define los endpoints HTTP. Recibe datos del frontend. |
-| **Service** | `prescription_service.py` | Logica de negocio: valida la prescripcion, calcula superficie corporal, registra en el ledger. |
+| **Auth Middleware** | `auth_middleware.py` | Extrae token, valida usuario, verifica rol (RBAC). |
+| **Service** | `prescription_service.py` | Logica de negocio: valida la prescripcion, calcula superficie corporal, registra en el ledger, crea caso de auditoria si estado es REVISION. |
+| **Audit** | `audit_service.py` | Gestiona cola de auditoria, dictamenes y correcciones con registro en ledger. |
 | **Validation** | `validation_service.py` | Motor de reglas stub que evalua completitud y consistencia del estadio/metastasis. |
 | **Ledger** | `ledger_service.py` | Cadena de bloques en memoria: cada operacion se registra como un bloque con hash SHA-256. |
-| **Repository** | `prescription_repo.py` | Almacenamiento en memoria (los datos se pierden al reiniciar). |
+| **Repository** | `prescription_repo.py` | Soporte dual: PostgreSQL (via sql/*.sql) o almacenamiento en memoria. |
+| **DB** | `db.py` | Pool de conexiones PostgreSQL (`SimpleConnectionPool`), context manager, fallback automatico si `DATABASE_URL` no esta definida. |
 | **Model** | `prescription.py` | Define la forma de los datos con Pydantic. |
 
 ### Endpoints principales
 
-Todos los endpoints de negocio estan bajo el prefijo `/api`:
+Todos los endpoints de negocio estan bajo el prefijo `/api`. Los endpoints protegidos requieren header `Authorization: Bearer <token>`.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| `GET`  | `/` | Health check (usado por ECS) |
-| `POST` | `/api/auth/login` | Iniciar sesion |
-| `GET`  | `/api/auth/me` | Usuario actual |
-| `POST` | `/api/patients` | Crear paciente |
-| `GET`  | `/api/patients` | Listar pacientes |
-| `POST` | `/api/prescriptions` | Crear prescripcion (valida + registra en ledger) |
-| `GET`  | `/api/prescriptions` | Listar prescripciones |
-| `GET`  | `/api/ledger` | Bloques del ledger |
-| `GET`  | `/api/ledger/verify` | Verificar integridad de la cadena |
-| `POST` | `/api/medications` | Crear medicamento |
-| `POST` | `/api/monodrugs` | Crear monodroga |
+| Metodo | Ruta | Rol | Descripcion |
+|--------|------|-----|-------------|
+| `GET`  | `/` | — | Health check (usado por ECS) |
+| `POST` | `/api/auth/login` | — | Iniciar sesion |
+| `GET`  | `/api/auth/me` | cualquiera | Usuario actual |
+| `POST` | `/api/patients` | admin, prescriptor | Crear paciente |
+| `GET`  | `/api/patients` | cualquiera | Listar pacientes |
+| `POST` | `/api/prescriptions` | admin, prescriptor | Crear prescripcion (valida + ledger + caso auditoria) |
+| `GET`  | `/api/prescriptions` | cualquiera | Listar prescripciones |
+| `POST` | `/api/agreements` | admin | Crear acuerdo |
+| `GET`  | `/api/agreements` | cualquiera | Listar acuerdos |
+| `POST` | `/api/enrollments` | admin | Crear empadronamiento |
+| `GET`  | `/api/enrollments` | cualquiera | Listar empadronamientos |
+| `GET`  | `/api/audit/queue` | auditor, admin | Cola de auditoria |
+| `GET`  | `/api/audit/cases/{id}` | auditor, admin | Detalle de caso |
+| `POST` | `/api/audit/cases/{id}/dictamen` | auditor, admin | Emitir dictamen |
+| `POST` | `/api/audit/cases/{id}/corrections` | auditor, admin | Registrar correccion |
+| `GET`  | `/api/audit/cases/{id}/history` | auditor, admin | Historial de correcciones |
+| `GET`  | `/api/ledger` | cualquiera | Bloques del ledger |
+| `GET`  | `/api/ledger/verify` | cualquiera | Verificar integridad de la cadena |
+| `POST` | `/api/medications` | admin | Crear medicamento |
+| `POST` | `/api/monodrugs` | admin | Crear monodroga |
 
 ### Motor de validacion (ValidationService)
 
@@ -660,11 +717,36 @@ El job de blockchain maneja el acceso SSH de forma segura:
    - block_index: indice del bloque en la cadena
                   |
                   v
-8. Se guarda en el PrescriptionRepository (memoria)
+8. Se guarda en el PrescriptionRepository (PostgreSQL o memoria)
                   |
                   v
-9. Frontend muestra el resultado con el estado de validacion
-   y el blockchain_tx_id para referencia de trazabilidad
+9. Si validacion.estado == "REVISION", se crea automaticamente
+   un caso de auditoria (AuditCase) que aparece en la cola del auditor
+                  |
+                  v
+10. Frontend muestra el resultado con el estado de validacion
+    y el blockchain_tx_id para referencia de trazabilidad
+
+### Flujo de auditoria (post-prescripcion)
+
+```
+1. Auditor accede a /auditoria/cola y ve los casos pendientes
+                  |
+                  v
+2. Selecciona un caso y revisa los datos de la prescripcion
+   (diagnostico, estadio, esquema, dosis, resultado de validacion)
+                  |
+                  v
+3. Puede realizar correcciones de datos clinicos (campo por campo)
+   Cada correccion se registra en el ledger con audit trail completo
+                  |
+                  v
+4. Emite un dictamen: APROBADO, RECHAZADO o PENDIENTE_DOCS
+   El dictamen se registra en el ledger como bloque inmutable
+                  |
+                  v
+5. El caso cambia a estado "dictaminado" y queda cerrado
+```
 ```
 
 ### Por que este flujo importa
@@ -672,6 +754,7 @@ El job de blockchain maneja el acceso SSH de forma segura:
 - **Paso 4** (validacion): atrapa errores evidentes antes de registrar la prescripcion.
 - **Paso 6** (ledger): crea un registro inmutable (la cadena de hashes no se puede alterar sin romper la verificacion).
 - **Paso 7** (blockchain_tx_id): vincula cada prescripcion con su bloque, permitiendo auditoria completa desde la pagina de Trazabilidad.
+- **Paso 9** (auditoria): las prescripciones en REVISION se derivan automaticamente al auditor para dictamen, garantizando que ningun caso quede sin revisar.
 
 ---
 

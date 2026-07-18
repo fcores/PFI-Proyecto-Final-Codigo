@@ -9,6 +9,7 @@ class LoginRequest(BaseModel):
 class UserInfo(BaseModel):
     username: str = Field(..., title="Usuario")
     display_name: str = Field(..., title="Nombre a mostrar")
+    role: str = Field(..., title="Rol del usuario")
 
 
 class LoginResponse(BaseModel):

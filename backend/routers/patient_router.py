@@ -1,8 +1,9 @@
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, Header, UploadFile, File, Form
 
+from backend.auth_middleware import require_auth, require_role
 from backend.models.bulk_import import BulkImportResult
 from backend.models.patient import Patient, PatientList
 from backend.dependencies import get_patient_service
@@ -32,7 +33,11 @@ async def create_patient(
     lab_file: Optional[UploadFile] = File(None),
     receta_file: Optional[UploadFile] = File(None),
     otros_file: Optional[UploadFile] = File(None),
+    authorization: Optional[str] = Header(default=None),
 ):
+    """Crea un paciente nuevo. Requiere rol administrador."""
+    user = require_auth(authorization)
+    require_role(user, ["administrador"])
     svc = get_patient_service()
     return svc.create(
         sap_id=sap_id,
@@ -59,13 +64,21 @@ async def create_patient(
 
 
 @router.get("", response_model=PatientList)
-async def list_patients():
+async def list_patients(authorization: Optional[str] = Header(default=None)):
+    """Lista todos los pacientes. Requiere autenticacion."""
+    require_auth(authorization)
     svc = get_patient_service()
     return svc.list_all()
 
 
 @router.post("/bulk-import", response_model=BulkImportResult)
-async def bulk_import_patients(file: UploadFile = File(...)):
+async def bulk_import_patients(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Importa pacientes masivamente desde Excel. Requiere rol administrador."""
+    user = require_auth(authorization)
+    require_role(user, ["administrador"])
     svc = get_patient_service()
     file_bytes = await file.read()
     return svc.bulk_import(file_bytes, file.filename or "pacientes.xlsx")

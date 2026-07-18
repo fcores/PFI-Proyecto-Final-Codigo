@@ -1,5 +1,8 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from typing import Optional
 
+from fastapi import APIRouter, File, Form, Header, UploadFile
+
+from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import get_monodrug_service
 from backend.models.bulk_import import BulkImportResult
 from backend.models.monodrug import Monodrug, MonodrugList
@@ -11,7 +14,11 @@ router = APIRouter(prefix="/monodrugs", tags=["monodrugs"])
 async def create_monodrug(
     descripcion: str = Form(...),
     sap_id: str = Form(...),
+    authorization: Optional[str] = Header(default=None),
 ):
+    """Crea una monodroga nueva. Requiere rol administrador."""
+    user = require_auth(authorization)
+    require_role(user, ["administrador"])
     svc = get_monodrug_service()
     return svc.create(
         descripcion=descripcion,
@@ -20,13 +27,21 @@ async def create_monodrug(
 
 
 @router.get("", response_model=MonodrugList)
-async def list_monodrugs():
+async def list_monodrugs(authorization: Optional[str] = Header(default=None)):
+    """Lista todas las monodrogas. Requiere autenticacion."""
+    require_auth(authorization)
     svc = get_monodrug_service()
     return svc.list_all()
 
 
 @router.post("/bulk-import", response_model=BulkImportResult)
-async def bulk_import_monodrugs(file: UploadFile = File(...)):
+async def bulk_import_monodrugs(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Importa monodrogas masivamente desde Excel. Requiere rol administrador."""
+    user = require_auth(authorization)
+    require_role(user, ["administrador"])
     svc = get_monodrug_service()
     file_bytes = await file.read()
     return svc.bulk_import(file_bytes, file.filename or "monodrogas.xlsx")

@@ -1,36 +1,34 @@
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Header
 
+from backend.auth_middleware import extract_token
 from backend.models.auth import LoginRequest, LoginResponse, UserInfo
 from backend.dependencies import get_auth_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _extract_token(authorization: Optional[str]) -> Optional[str]:
-    if not authorization:
-        return None
-    parts = authorization.split(" ", 1)
-    if len(parts) == 2 and parts[0].lower() == "bearer":
-        return parts[1].strip()
-    return authorization.strip()
-
-
 @router.post("/login", response_model=LoginResponse)
 async def login(data: LoginRequest):
+    """Autentica al usuario y devuelve un token de sesion."""
     svc = get_auth_service()
     return svc.login(data.username, data.password)
 
 
 @router.get("/me", response_model=UserInfo)
 async def me(authorization: Optional[str] = Header(default=None)):
+    """Devuelve la informacion del usuario autenticado."""
     svc = get_auth_service()
-    return svc.resolve(_extract_token(authorization))
+    return svc.resolve(extract_token(authorization))
 
 
 @router.post("/logout")
 async def logout(authorization: Optional[str] = Header(default=None)):
+    """Cierra la sesion del usuario invalidando el token."""
     svc = get_auth_service()
-    svc.logout(_extract_token(authorization))
-    return {"message": "Sesión cerrada."}
+    svc.logout(extract_token(authorization))
+    return {"message": "Sesion cerrada."}

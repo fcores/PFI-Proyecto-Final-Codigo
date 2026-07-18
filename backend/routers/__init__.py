@@ -4,6 +4,9 @@ from .monodrug_router import router as monodrug_router
 from .prescription_router import router as prescription_router
 from .ledger_router import router as ledger_router
 from .auth_router import router as auth_router
+from .agreement_router import router as agreement_router
+from .enrollment_router import router as enrollment_router
+from .audit_router import router as audit_router
 
 __all__ = [
     "patient_router",
@@ -12,4 +15,7 @@ __all__ = [
     "prescription_router",
     "ledger_router",
     "auth_router",
+    "agreement_router",
+    "enrollment_router",
+    "audit_router",
 ]
