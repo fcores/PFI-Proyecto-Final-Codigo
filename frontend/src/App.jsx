@@ -6,9 +6,6 @@ import AltaMedicamentosPage from "./pages/AltaMedicamentosPage";
 import HistorialMedicamentosPage from "./pages/HistorialMedicamentosPage";
 import MonodrogasPage from "./pages/MonodrogasPage";
 import HistorialMonodrogasPage from "./pages/HistorialMonodrogasPage";
-import AcuerdoPage from "./pages/AcuerdoPage";
-import EmpadronamientoPage from "./pages/EmpadronamientoPage";
-import HistorialEmpadronamientosPage from "./pages/HistorialEmpadronamientosPage";
 import PrescripcionPage from "./pages/PrescripcionPage";
 import HistorialPrescripcionesPage from "./pages/HistorialPrescripcionesPage";
 import TrazabilidadPage from "./pages/TrazabilidadPage";
@@ -36,15 +33,10 @@ export default function App() {
         <Route path="/monodrogas" element={<Navigate to="/monodrogas/alta" replace />} />
         <Route path="/monodrogas/alta" element={<MonodrogasPage />} />
         <Route path="/monodrogas/historial" element={<HistorialMonodrogasPage />} />
-        <Route path="/acuerdos" element={<AcuerdoPage />} />
         <Route path="/prescripciones" element={<Navigate to="/prescripciones/alta" replace />} />
         <Route path="/prescripciones/alta" element={<PrescripcionPage />} />
         <Route path="/prescripciones/historial" element={<HistorialPrescripcionesPage />} />
         <Route path="/trazabilidad" element={<TrazabilidadPage />} />
-        <Route path="/empadronamientos/historial" element={<HistorialEmpadronamientosPage />} />
-        <Route path="/empadronamientos/tipo-c" element={<Navigate to="/empadronamientos/tipo-a" replace />} />
-        <Route path="/empadronamientos/:tipo" element={<EmpadronamientoPage />} />
-        <Route path="/empadronamientos" element={<Navigate to="/empadronamientos/tipo-a" replace />} />
       </Route>
     </Routes>
   );

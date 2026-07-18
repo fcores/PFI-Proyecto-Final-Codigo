@@ -5,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.routers import (
     patient_router,
-    agreement_router,
-    enrollment_router,
     medication_router,
     monodrug_router,
     prescription_router,
@@ -32,8 +30,6 @@ def create_app() -> FastAPI:
 
     api = APIRouter(prefix="/api")
     api.include_router(patient_router)
-    api.include_router(agreement_router)
-    api.include_router(enrollment_router)
     api.include_router(medication_router)
     api.include_router(monodrug_router)
     api.include_router(prescription_router)

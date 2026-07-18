@@ -19,7 +19,7 @@ Proyecto Final de Ingeniería Informática (UADE).
 ```
 ├── backend/                 API REST en Python
 │   ├── main.py              Punto de entrada (FastAPI + Uvicorn)
-│   ├── models/              Modelos Pydantic (patient, enrollment, etc.)
+│   ├── models/              Modelos Pydantic (patient, prescription, etc.)
 │   ├── repositories/        Almacenamiento en memoria
 │   ├── routers/             Endpoints de la API
 │   └── services/            Lógica de negocio
@@ -111,14 +111,10 @@ Todos los endpoints de negocio estan bajo el prefijo `/api`:
 | `POST` | `/api/patients` | Crear paciente |
 | `GET`  | `/api/patients` | Listar pacientes |
 | `POST` | `/api/patients/bulk-import` | Importar pacientes desde Excel |
-| `POST` | `/api/enrollments/{tipo}` | Crear empadronamiento |
-| `GET`  | `/api/enrollments/{tipo}` | Listar empadronamientos |
 | `POST` | `/api/medications` | Crear medicamento |
 | `GET`  | `/api/medications` | Listar medicamentos |
 | `POST` | `/api/monodrugs` | Crear monodroga |
 | `GET`  | `/api/monodrugs` | Listar monodrogas |
-| `POST` | `/api/agreements` | Crear acuerdo |
-| `GET`  | `/api/agreements` | Listar acuerdos |
 | `POST` | `/api/prescriptions` | Crear prescripción |
 | `GET`  | `/api/prescriptions` | Listar prescripciones |
 | `GET`  | `/api/ledger` | Bloques del ledger |
@@ -270,5 +266,5 @@ El workflow se encuentra en `.github/workflows/deploy.yml`.
 ## Notas
 
 - Los datos del backend se almacenan **en memoria**; se pierden al reiniciar el servidor.
-- El campo `blockchain_tx_id` en los modelos de paciente y empadronamiento está preparado para vincular cada registro con su transacción en blockchain (pendiente de integración).
+- El campo `blockchain_tx_id` en los modelos de paciente está preparado para vincular cada registro con su transacción en blockchain (pendiente de integración).
 - La carpeta `ml-models/` contiene los scripts de generación de datos sintéticos y será el módulo donde se implementen los modelos de IA del proyecto.

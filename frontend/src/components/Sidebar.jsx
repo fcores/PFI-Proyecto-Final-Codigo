@@ -17,12 +17,6 @@ const MONODROGAS_SUBTYPES = [
   { to: "/monodrogas/historial", label: "Historial de Monodrogas" },
 ];
 
-const EMPADRONAMIENTO_SUBTYPES = [
-  { to: "/empadronamientos/tipo-a", label: "Tipo A" },
-  { to: "/empadronamientos/tipo-b", label: "Tipo B" },
-  { to: "/empadronamientos/historial", label: "Historial Empadronamientos" },
-];
-
 const PRESCRIPCIONES_SUBTYPES = [
   { to: "/prescripciones/alta", label: "Alta de Prescripciones" },
   { to: "/prescripciones/historial", label: "Historial de Prescripciones" },
@@ -34,12 +28,10 @@ export default function Sidebar() {
   const pacientesActive = location.pathname.startsWith("/pacientes");
   const medicamentosActive = location.pathname.startsWith("/medicamentos");
   const monodrogasActive = location.pathname.startsWith("/monodrogas");
-  const empadronamientoActive = location.pathname.startsWith("/empadronamientos");
   const prescripcionesActive = location.pathname.startsWith("/prescripciones");
   const [pacientesOpen, setPacientesOpen] = useState(pacientesActive);
   const [medicamentosOpen, setMedicamentosOpen] = useState(medicamentosActive);
   const [monodrogasOpen, setMonodrogasOpen] = useState(monodrogasActive);
-  const [empadronamientoOpen, setEmpadronamientoOpen] = useState(empadronamientoActive);
   const [prescripcionesOpen, setPrescripcionesOpen] = useState(prescripcionesActive);
 
   return (
@@ -56,44 +48,6 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        <NavLink
-          to="/acuerdos"
-          className={({ isActive }) => (isActive ? "active" : "")}
-        >
-          <span className="nav-emoji">📋</span> Acuerdos
-        </NavLink>
-
-        {/* Empadronamientos con submenú */}
-        <div className="nav-group">
-          <button
-            className={`nav-group-toggle${empadronamientoActive ? " active" : ""}`}
-            onClick={() => setEmpadronamientoOpen((o) => !o)}
-            type="button"
-          >
-            <span className="nav-emoji">📝</span>
-            <span className="nav-group-label">Empadronamientos</span>
-            <span className={`nav-group-chevron${empadronamientoOpen ? " open" : ""}`}>
-              ›
-            </span>
-          </button>
-
-          {empadronamientoOpen && (
-            <div className="nav-subnav">
-              {EMPADRONAMIENTO_SUBTYPES.map((sub) => (
-                <NavLink
-                  key={sub.to}
-                  to={sub.to}
-                  className={({ isActive }) =>
-                    `nav-subitem${isActive ? " active" : ""}`
-                  }
-                >
-                  {sub.label}
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Prescripciones con submenú */}
         <div className="nav-group">
           <button
@@ -215,9 +169,6 @@ export default function Sidebar() {
         </NavLink>
         <a href="#">
           <span className="nav-emoji">📊</span> Reportes
-        </a>
-        <a href="#">
-          <span className="nav-emoji">💬</span> Soporte
         </a>
       </nav>
 

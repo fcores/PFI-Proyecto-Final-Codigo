@@ -95,20 +95,16 @@ PFI-Proyecto-Final/
 |   |   |-- patient_router.py    CRUD de pacientes
 |   |   |-- prescription_router.py  Prescripciones oncologicas
 |   |   |-- ledger_router.py     Bloques del ledger y verificacion
-|   |   |-- enrollment_router.py Empadronamientos
 |   |   |-- medication_router.py Medicamentos
 |   |   |-- monodrug_router.py   Monodrogas
-|   |   |-- agreement_router.py  Acuerdos
 |   |-- services/             Logica de negocio
 |       |-- auth_service.py      Autenticacion con tokens en memoria
 |       |-- prescription_service.py  Validacion + registro en ledger
 |       |-- validation_service.py    Motor de reglas (stub)
 |       |-- ledger_service.py       Cadena de bloques SHA-256
 |       |-- patient_service.py
-|       |-- enrollment_service.py
 |       |-- medication_service.py
 |       |-- monodrug_service.py
-|       |-- agreement_service.py
 |       |-- excel_import_service.py
 |
 |-- frontend/                 Aplicacion web React
@@ -216,9 +212,6 @@ Todas las llamadas del frontend pasan por un unico cliente centralizado (`api/cl
 | `HistorialMedicamentosPage` | `/medicamentos/historial` | Historial de medicamentos |
 | `MonodrogasPage` | `/monodrogas/alta` | Alta de monodrogas |
 | `HistorialMonodrogasPage` | `/monodrogas/historial` | Historial de monodrogas |
-| `AcuerdoPage` | `/acuerdos` | Gestion de acuerdos |
-| `EmpadronamientoPage` | `/empadronamientos/:tipo` | Empadronamiento por tipo (A, B) |
-| `HistorialEmpadronamientosPage` | `/empadronamientos/historial` | Historial de empadronamientos |
 
 ### Autenticacion
 
@@ -294,10 +287,8 @@ Todos los endpoints de negocio estan bajo el prefijo `/api`:
 | `GET`  | `/api/prescriptions` | Listar prescripciones |
 | `GET`  | `/api/ledger` | Bloques del ledger |
 | `GET`  | `/api/ledger/verify` | Verificar integridad de la cadena |
-| `POST` | `/api/enrollments/{tipo}` | Crear empadronamiento |
 | `POST` | `/api/medications` | Crear medicamento |
 | `POST` | `/api/monodrugs` | Crear monodroga |
-| `POST` | `/api/agreements` | Crear acuerdo |
 
 ### Motor de validacion (ValidationService)
 
