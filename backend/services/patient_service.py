@@ -10,6 +10,8 @@ from backend.services.excel_import_service import ExcelImportService
 
 
 class PatientService:
+    """Gestiona el maestro de pacientes."""
+
     IMPORT_ALIASES = {
         "sap_id": ["id paciente sap", "sap", "id sap paciente"],
         "credential_id": ["id credencial", "credencial"],
@@ -20,13 +22,10 @@ class PatientService:
         "birth_date": ["fecha de nacimiento", "fecha_nacimiento"],
         "gender": ["genero", "sexo"],
         "treatment": ["diagnostico", "tratamiento"],
-        "tipo_empadronamiento": ["tipo de empadronamiento", "tipo_empadronamiento"],
-        "fecha_inicio": ["fecha de inicio", "fecha_inicio"],
-        "fecha_primera_toma": ["fecha de primera toma", "fecha_primera_toma"],
-        "cadencia_estimada_toma": ["cadencia estimada", "cadencia estimada toma", "cadencia_estimada_toma"],
     }
 
     def __init__(self, repo: PatientRepository, excel_importer: ExcelImportService) -> None:
+        """Inicializa el servicio de pacientes."""
         self._repo = repo
         self._excel_importer = excel_importer
 
@@ -43,10 +42,6 @@ class PatientService:
         gender: str,
         treatment: Optional[str],
         medications: List[str],
-        tipo_empadronamiento: str,
-        fecha_inicio: date,
-        fecha_primera_toma: date,
-        cadencia_estimada_toma: int,
         hc_file: Optional[UploadFile],
         ap_file: Optional[UploadFile],
         img_file: Optional[UploadFile],
@@ -54,6 +49,7 @@ class PatientService:
         receta_file: Optional[UploadFile],
         otros_file: Optional[UploadFile],
     ) -> Patient:
+        """Crea un paciente nuevo."""
         patient = Patient(
             id=self._repo.next_id(),
             sap_id=sap_id,
@@ -66,10 +62,6 @@ class PatientService:
             gender=gender,
             treatment=treatment,
             medications=medications,
-            tipo_empadronamiento=tipo_empadronamiento,
-            fecha_inicio=fecha_inicio,
-            fecha_primera_toma=fecha_primera_toma,
-            cadencia_estimada_toma=cadencia_estimada_toma,
             hc_filename=hc_file.filename if hc_file else None,
             ap_filename=ap_file.filename if ap_file else None,
             img_filename=img_file.filename if img_file else None,
@@ -80,11 +72,13 @@ class PatientService:
         return self._repo.add(patient)
 
     def list_all(self) -> PatientList:
+        """Lista todos los pacientes."""
         return PatientList(patients=self._repo.list_all())
 
     def bulk_import(self, file_bytes: bytes, filename: str) -> BulkImportResult:
+        """Importa pacientes masivamente desde Excel."""
         rows = self._excel_importer.read_rows(file_bytes, filename, self.IMPORT_ALIASES)
-        errors: list[BulkImportError] = []
+        errors = []
         imported_count = 0
 
         for index, row in enumerate(rows, start=2):
@@ -100,22 +94,6 @@ class PatientService:
                     gender=self._excel_importer.as_required_str(row, "gender", "género"),
                     treatment=self._excel_importer.as_optional_str(row, "treatment"),
                     medications=[],
-                    tipo_empadronamiento=self._excel_importer.as_required_str(
-                        row,
-                        "tipo_empadronamiento",
-                        "tipo de empadronamiento",
-                    ),
-                    fecha_inicio=self._excel_importer.as_required_date(row, "fecha_inicio", "fecha de inicio"),
-                    fecha_primera_toma=self._excel_importer.as_required_date(
-                        row,
-                        "fecha_primera_toma",
-                        "fecha de primera toma",
-                    ),
-                    cadencia_estimada_toma=self._excel_importer.as_required_int(
-                        row,
-                        "cadencia_estimada_toma",
-                        "cadencia estimada de toma",
-                    ),
                     hc_file=None,
                     ap_file=None,
                     img_file=None,
@@ -124,7 +102,7 @@ class PatientService:
                     otros_file=None,
                 )
                 imported_count += 1
-            except Exception as exc:  # pragma: no cover - validation aggregation
+            except Exception as exc:
                 errors.append(BulkImportError(row_number=index, message=str(exc)))
 
         return BulkImportResult(

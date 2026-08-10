@@ -1,5 +1,4 @@
 """Router de endpoints de auditoria."""
-import logging
 from typing import Optional
 
 from fastapi import APIRouter, Header
@@ -15,8 +14,6 @@ from backend.models.audit import (
     Dictamen,
     DictamenRequest,
 )
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 

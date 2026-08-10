@@ -9,33 +9,19 @@ import { fetchPatients } from "../api/patients";
 
 const TABLE_COLUMNS = [
   "ID",
+  "ID SAP",
   "Paciente",
   "Diagnóstico",
   "Prestador",
-  "Tipo Emp.",
-  "Inicio",
-  "1ra Toma",
-  "Cadencia",
+  "Género",
   "Estado",
 ];
-
-const EMPADRONAMIENTO_OPTIONS = [
-  { value: "tipo-a", label: "Tipo A" },
-  { value: "tipo-b", label: "Tipo B" },
-];
-
-function formatDate(value) {
-  if (!value) return "-";
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
-}
 
 export default function HistorialPacientesPage() {
   const [patients, setPatients] = useState([]);
   const [filters, setFilters] = useState({
     query: "",
     provider: "",
-    tipo_empadronamiento: "",
   });
 
   const loadPatients = useCallback(async () => {
@@ -78,11 +64,8 @@ export default function HistorialPacientesPage() {
       const matchesProvider = filters.provider
         ? patient.provider === filters.provider
         : true;
-      const matchesTipo = filters.tipo_empadronamiento
-        ? patient.tipo_empadronamiento === filters.tipo_empadronamiento
-        : true;
 
-      return matchesQuery && matchesProvider && matchesTipo;
+      return matchesQuery && matchesProvider;
     });
   }, [filters, patients]);
 
@@ -94,28 +77,20 @@ export default function HistorialPacientesPage() {
     setFilters({
       query: "",
       provider: "",
-      tipo_empadronamiento: "",
     });
   }
 
   function renderPatientRow(patient) {
     const fullName = `${patient.last_name ?? ""} ${patient.first_name ?? ""}`.trim();
-    const tipoEmp = patient.tipo_empadronamiento
-      ? patient.tipo_empadronamiento.toUpperCase().replace("TIPO-", "")
-      : "-";
 
     return (
       <tr key={patient.id}>
         <td>{patient.id}</td>
+        <td>{patient.sap_id || "-"}</td>
         <td>{fullName || "-"}</td>
         <td>{patient.treatment || "-"}</td>
         <td>{patient.provider || "-"}</td>
-        <td>
-          <span className="enrollment-code-chip">{tipoEmp}</span>
-        </td>
-        <td>{formatDate(patient.fecha_inicio)}</td>
-        <td>{formatDate(patient.fecha_primera_toma)}</td>
-        <td>{patient.cadencia_estimada_toma ? `${patient.cadencia_estimada_toma} días` : "-"}</td>
+        <td>{patient.gender || "-"}</td>
         <td>
           <StatusChip variant="success" label="Activo" />
         </td>
@@ -127,17 +102,17 @@ export default function HistorialPacientesPage() {
     <>
       <TopBar
         title="Historial de pacientes"
-        subtitle="Consultá el historial operativo y aplicá filtros generales por paciente, prestador o tipo de empadronamiento."
+        subtitle="Consultá el historial operativo y aplicá filtros por paciente o prestador."
         badge="Pacientes"
       />
 
       <main className="page page--wide">
         <section className="layout layout--single">
           <section className="card card-table">
-            <header className="agreements-header agreements-header--modern">
+            <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Actividad</span>
-                <h2>📋 Pacientes cargados</h2>
+                <h2>Pacientes cargados</h2>
                 <p className="muted">
                   Usá los filtros para realizar consultas generales sobre el historial de pacientes.
                 </p>
@@ -149,11 +124,11 @@ export default function HistorialPacientesPage() {
               <CardHeader
                 eyebrow="Consultas"
                 title="Filtros generales"
-                description="Filtrá por nombre, ID SAP, diagnóstico, prestador o tipo de empadronamiento."
+                description="Filtrá por nombre, ID SAP, diagnóstico o prestador."
               />
 
               <div className="form-grid history-filters">
-                <FormField label="Buscar" htmlFor="history_query" span={5}>
+                <FormField label="Buscar" htmlFor="history_query" span={8}>
                   <input
                     id="history_query"
                     name="history_query"
@@ -175,22 +150,6 @@ export default function HistorialPacientesPage() {
                     {providerOptions.map((provider) => (
                       <option key={provider} value={provider}>
                         {provider}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-
-                <FormField label="Tipo empadronamiento" htmlFor="history_tipo_empadronamiento" span={3}>
-                  <select
-                    id="history_tipo_empadronamiento"
-                    name="history_tipo_empadronamiento"
-                    value={filters.tipo_empadronamiento}
-                    onChange={(event) => updateFilter("tipo_empadronamiento", event.target.value)}
-                  >
-                    <option value="">Todos</option>
-                    {EMPADRONAMIENTO_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
                       </option>
                     ))}
                   </select>

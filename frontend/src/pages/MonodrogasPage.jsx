@@ -34,27 +34,17 @@ export default function MonodrogasPage() {
                 split
                 eyebrow="Maestro farmacológico"
                 title="Datos de la monodroga"
-                description="Completá la descripción y el ID SAP para dejar la monodroga disponible para relacionarla con medicamentos."
+                description="Ingresá el nombre de la droga. El código (MONO-XXXX) se genera automáticamente."
                 badge="Formulario guiado"
               />
 
               <div className="form-grid">
-                <FormField label="Descripción" htmlFor="descripcion" required span={8}>
+                <FormField label="Descripción (nombre de la droga)" htmlFor="descripcion" required span={12}>
                   <input
                     id="descripcion"
                     name="descripcion"
                     type="text"
-                    placeholder="Ej.: Adalimumab"
-                    required
-                  />
-                </FormField>
-
-                <FormField label="ID SAP" htmlFor="sap_id" required span={4}>
-                  <input
-                    id="sap_id"
-                    name="sap_id"
-                    type="text"
-                    placeholder="Ej.: MONO-SAP-001"
+                    placeholder="Ej.: oxaliplatino, pembrolizumab, capecitabina"
                     required
                   />
                 </FormField>
@@ -69,9 +59,9 @@ export default function MonodrogasPage() {
 
             <BulkImportCard
               title="Importar monodrogas desde Excel"
-              description="Cargá múltiples monodrogas en una sola operación usando un archivo Excel con descripción e ID SAP."
+              description="Cargá múltiples monodrogas en una sola operación. El código se genera automáticamente."
               importFn={bulkImportMonodrugs}
-              templateHint="descripcion, sap_id"
+              templateHint="descripcion"
             />
           </section>
         </section>

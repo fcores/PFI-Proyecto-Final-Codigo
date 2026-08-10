@@ -7,15 +7,18 @@ import PanelStat from "../components/PanelStat";
 import { fetchMedications } from "../api/medications";
 
 const TABLE_COLUMNS = [
-  "ID",
+  "Código",
   "Descripción",
   "EAN",
-  "Alfabeta",
+  "Troquel",
   "Conservación",
-  "ID SAP",
-  "ID Monodroga",
-  "Descripción Monodroga",
-  "Tamaño / dimensión",
+  "Laboratorio",
+  "Monodroga",
+  "Tamaño",
+  "Potencia",
+  "Unidad",
+  "Precio",
+  "Vía",
 ];
 
 const CONSERVACION_OPTIONS = [
@@ -33,8 +36,8 @@ export default function HistorialMedicamentosPage() {
   const [filters, setFilters] = useState({
     query: "",
     tipo_conservacion: "",
-    sap_id: "",
-    monodroga_id: "",
+    codigo: "",
+    monodroga: "",
   });
 
   const loadMedications = useCallback(async () => {
@@ -54,14 +57,16 @@ export default function HistorialMedicamentosPage() {
 
     return medications.filter((medication) => {
       const searchableText = [
+        medication.codigo,
         medication.descripcion,
         medication.ean,
         medication.codigo_alfabeta,
-        medication.sap_id,
-        medication.monodroga_id,
-        medication.monodroga_descripcion,
+        medication.laboratorio,
+        medication.monodroga,
         medication.tamano_dimension,
         medication.tipo_conservacion,
+        medication.unidad_potencia,
+        medication.via_administracion,
       ]
         .filter(Boolean)
         .join(" ")
@@ -73,14 +78,14 @@ export default function HistorialMedicamentosPage() {
       const matchesConservacion = filters.tipo_conservacion
         ? medication.tipo_conservacion === filters.tipo_conservacion
         : true;
-      const matchesSap = filters.sap_id
-        ? medication.sap_id.toLowerCase().includes(filters.sap_id.trim().toLowerCase())
+      const matchesCodigo = filters.codigo
+        ? (medication.codigo || "").toLowerCase().includes(filters.codigo.trim().toLowerCase())
         : true;
-      const matchesMonodroga = filters.monodroga_id
-        ? medication.monodroga_id.toLowerCase().includes(filters.monodroga_id.trim().toLowerCase())
+      const matchesMonodroga = filters.monodroga
+        ? (medication.monodroga || "").toLowerCase().includes(filters.monodroga.trim().toLowerCase())
         : true;
 
-      return matchesQuery && matchesConservacion && matchesSap && matchesMonodroga;
+      return matchesQuery && matchesConservacion && matchesCodigo && matchesMonodroga;
     });
   }, [filters, medications]);
 
@@ -92,23 +97,26 @@ export default function HistorialMedicamentosPage() {
     setFilters({
       query: "",
       tipo_conservacion: "",
-      sap_id: "",
-      monodroga_id: "",
+      codigo: "",
+      monodroga: "",
     });
   }
 
   function renderMedicationRow(medication) {
     return (
       <tr key={medication.id}>
-        <td>{medication.id}</td>
+        <td>{medication.codigo}</td>
         <td>{medication.descripcion}</td>
         <td>{medication.ean}</td>
         <td>{medication.codigo_alfabeta}</td>
         <td>{formatConservation(medication.tipo_conservacion)}</td>
-        <td>{medication.sap_id}</td>
-        <td>{medication.monodroga_id}</td>
-        <td>{medication.monodroga_descripcion || "-"}</td>
+        <td>{medication.laboratorio}</td>
+        <td>{medication.monodroga}</td>
         <td>{medication.tamano_dimension}</td>
+        <td>{medication.potencia_mg ?? "-"}</td>
+        <td>{medication.unidad_potencia || "-"}</td>
+        <td>{medication.precio ?? "-"}</td>
+        <td>{medication.via_administracion || "-"}</td>
       </tr>
     );
   }
@@ -117,19 +125,19 @@ export default function HistorialMedicamentosPage() {
     <>
       <TopBar
         title="Historial de medicamentos"
-        subtitle="Consultá el maestro de materiales y filtrá medicamentos por distintos identificadores operativos."
+        subtitle="Consultá el maestro de materiales y filtrá por código, monodroga, laboratorio o conservación."
         badge="Medicamentos"
       />
 
       <main className="page page--wide">
         <section className="layout layout--single">
           <section className="card card-table">
-            <header className="agreements-header agreements-header--modern">
+            <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Actividad</span>
-                <h2>💊 Medicamentos cargados</h2>
+                <h2>Medicamentos cargados</h2>
                 <p className="muted">
-                  Usá los filtros para buscar materiales por descripción, códigos, monodroga asociada y condiciones de conservación.
+                  Usá los filtros para buscar materiales por descripción, códigos, monodroga y conservación.
                 </p>
               </div>
               <PanelStat count={filteredMedications.length} singular="resultado" plural="resultados" />
@@ -139,7 +147,7 @@ export default function HistorialMedicamentosPage() {
               <CardHeader
                 eyebrow="Consultas"
                 title="Filtros generales"
-                description="Buscá por descripción, EAN, Alfabeta, SAP, ID de monodroga, descripción de monodroga o conservación."
+                description="Buscá por descripción, EAN, código MED-XXXX, monodroga o laboratorio."
               />
 
               <div className="form-grid history-filters">
@@ -148,7 +156,7 @@ export default function HistorialMedicamentosPage() {
                     id="history_medication_query"
                     name="history_medication_query"
                     type="text"
-                    placeholder="Descripción, EAN, Alfabeta o dimensión"
+                    placeholder="Descripción, EAN, laboratorio..."
                     value={filters.query}
                     onChange={(event) => updateFilter("query", event.target.value)}
                   />
@@ -170,14 +178,14 @@ export default function HistorialMedicamentosPage() {
                   </select>
                 </FormField>
 
-                <FormField label="ID SAP" htmlFor="history_medication_sap" span={2}>
+                <FormField label="Código" htmlFor="history_medication_codigo" span={2}>
                   <input
-                    id="history_medication_sap"
-                    name="history_medication_sap"
+                    id="history_medication_codigo"
+                    name="history_medication_codigo"
                     type="text"
-                    placeholder="SAP..."
-                    value={filters.sap_id}
-                    onChange={(event) => updateFilter("sap_id", event.target.value)}
+                    placeholder="MED-0001"
+                    value={filters.codigo}
+                    onChange={(event) => updateFilter("codigo", event.target.value)}
                   />
                 </FormField>
 
@@ -186,9 +194,9 @@ export default function HistorialMedicamentosPage() {
                     id="history_medication_monodroga"
                     name="history_medication_monodroga"
                     type="text"
-                    placeholder="MONO..."
-                    value={filters.monodroga_id}
-                    onChange={(event) => updateFilter("monodroga_id", event.target.value)}
+                    placeholder="oxaliplatino..."
+                    value={filters.monodroga}
+                    onChange={(event) => updateFilter("monodroga", event.target.value)}
                   />
                 </FormField>
               </div>

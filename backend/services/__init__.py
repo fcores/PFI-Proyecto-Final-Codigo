@@ -5,9 +5,9 @@ from .prescription_service import PrescriptionService
 from .validation_service import ValidationService
 from .ledger_service import LedgerService
 from .auth_service import AuthService
-from .agreement_service import AgreementService
-from .enrollment_service import EnrollmentService
 from .audit_service import AuditService
+from .dosis_service import DosisService
+from .recomendacion_service import RecomendacionService
 
 __all__ = [
     "PatientService",
@@ -17,7 +17,7 @@ __all__ = [
     "ValidationService",
     "LedgerService",
     "AuthService",
-    "AgreementService",
-    "EnrollmentService",
     "AuditService",
+    "DosisService",
+    "RecomendacionService",
 ]

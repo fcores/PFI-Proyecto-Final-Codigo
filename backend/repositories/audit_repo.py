@@ -32,9 +32,14 @@ class AuditRepository:
         except Exception:
             return False
 
-    def add_case(self, prescription_id: int, status: str) -> AuditCase:
-        """Crea un caso de auditoria para una prescripcion."""
+    def add_case(self, prescription_id: int, status: str, snapshot=None) -> AuditCase:
+        """Crea un caso de auditoria para una prescripcion.
+
+        snapshot opcional permite enriquecer el caso en modo memoria con
+        datos clinicos y de validacion para el detalle de auditoria.
+        """
         try:
+            extra = snapshot or {}
             if self._db_available():
                 from backend.db import get_db, load_query
                 queries = load_query("audit.sql")
@@ -49,6 +54,7 @@ class AuditRepository:
                     status=status,
                     assigned_auditor=None,
                     created_at=datetime.now(),
+                    **extra,
                 )
                 return case
             case = AuditCase(
@@ -57,6 +63,7 @@ class AuditRepository:
                 status=status,
                 assigned_auditor=None,
                 created_at=datetime.now(),
+                **extra,
             )
             self._next_case_id += 1
             self._cases.append(case)

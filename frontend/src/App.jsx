@@ -9,9 +9,6 @@ import HistorialMonodrogasPage from "./pages/HistorialMonodrogasPage";
 import PrescripcionPage from "./pages/PrescripcionPage";
 import HistorialPrescripcionesPage from "./pages/HistorialPrescripcionesPage";
 import TrazabilidadPage from "./pages/TrazabilidadPage";
-import AcuerdoPage from "./pages/AcuerdoPage";
-import EmpadronamientoPage from "./pages/EmpadronamientoPage";
-import HistorialEmpadronamientosPage from "./pages/HistorialEmpadronamientosPage";
 import AuditQueuePage from "./pages/AuditQueuePage";
 import AuditCasePage from "./pages/AuditCasePage";
 import LoginPage from "./pages/LoginPage";
@@ -57,18 +54,6 @@ export default function App() {
         <Route path="/monodrogas/historial" element={
           <ProtectedRoute roles={["administrador"]}><HistorialMonodrogasPage /></ProtectedRoute>
         } />
-
-        <Route path="/acuerdos" element={
-          <ProtectedRoute roles={["administrador"]}><AcuerdoPage /></ProtectedRoute>
-        } />
-        <Route path="/empadronamientos/historial" element={
-          <ProtectedRoute roles={["administrador"]}><HistorialEmpadronamientosPage /></ProtectedRoute>
-        } />
-        <Route path="/empadronamientos/tipo-c" element={<Navigate to="/empadronamientos/tipo-a" replace />} />
-        <Route path="/empadronamientos/:tipo" element={
-          <ProtectedRoute roles={["administrador"]}><EmpadronamientoPage /></ProtectedRoute>
-        } />
-        <Route path="/empadronamientos" element={<Navigate to="/empadronamientos/tipo-a" replace />} />
 
         <Route path="/trazabilidad" element={
           <ProtectedRoute roles={["administrador", "auditor"]}><TrazabilidadPage /></ProtectedRoute>

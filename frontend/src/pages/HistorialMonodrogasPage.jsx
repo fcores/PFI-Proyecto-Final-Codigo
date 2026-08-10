@@ -8,15 +8,15 @@ import { fetchMonodrugs } from "../api/monodrugs";
 
 const TABLE_COLUMNS = [
   "ID",
+  "Código",
   "Descripción",
-  "ID SAP",
 ];
 
 export default function HistorialMonodrogasPage() {
   const [monodrugs, setMonodrugs] = useState([]);
   const [filters, setFilters] = useState({
     query: "",
-    sap_id: "",
+    codigo: "",
   });
 
   const loadMonodrugs = useCallback(async () => {
@@ -33,12 +33,12 @@ export default function HistorialMonodrogasPage() {
 
   const filteredMonodrugs = useMemo(() => {
     const normalizedQuery = filters.query.trim().toLowerCase();
-    const normalizedSap = filters.sap_id.trim().toLowerCase();
+    const normalizedCodigo = filters.codigo.trim().toLowerCase();
 
     return monodrugs.filter((monodrug) => {
       const searchableText = [
         monodrug.descripcion,
-        monodrug.sap_id,
+        monodrug.codigo,
       ]
         .filter(Boolean)
         .join(" ")
@@ -47,11 +47,11 @@ export default function HistorialMonodrogasPage() {
       const matchesQuery = normalizedQuery
         ? searchableText.includes(normalizedQuery)
         : true;
-      const matchesSap = normalizedSap
-        ? monodrug.sap_id.toLowerCase().includes(normalizedSap)
+      const matchesCodigo = normalizedCodigo
+        ? (monodrug.codigo || "").toLowerCase().includes(normalizedCodigo)
         : true;
 
-      return matchesQuery && matchesSap;
+      return matchesQuery && matchesCodigo;
     });
   }, [filters, monodrugs]);
 
@@ -62,7 +62,7 @@ export default function HistorialMonodrogasPage() {
   function clearFilters() {
     setFilters({
       query: "",
-      sap_id: "",
+      codigo: "",
     });
   }
 
@@ -70,8 +70,8 @@ export default function HistorialMonodrogasPage() {
     return (
       <tr key={monodrug.id}>
         <td>{monodrug.id}</td>
+        <td>{monodrug.codigo}</td>
         <td>{monodrug.descripcion}</td>
-        <td>{monodrug.sap_id}</td>
       </tr>
     );
   }
@@ -80,17 +80,17 @@ export default function HistorialMonodrogasPage() {
     <>
       <TopBar
         title="Historial de monodrogas"
-        subtitle="Consultá el maestro de monodrogas y aplicá filtros por descripción o ID SAP."
+        subtitle="Consultá el maestro de monodrogas y aplicá filtros por descripción o código."
         badge="Monodrogas"
       />
 
       <main className="page page--wide">
         <section className="layout layout--single">
           <section className="card card-table">
-            <header className="agreements-header agreements-header--modern">
+            <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Actividad</span>
-                <h2>🧪 Monodrogas cargadas</h2>
+                <h2>Monodrogas cargadas</h2>
                 <p className="muted">
                   Usá los filtros para consultar las monodrogas cargadas en el maestro farmacológico.
                 </p>
@@ -102,7 +102,7 @@ export default function HistorialMonodrogasPage() {
               <CardHeader
                 eyebrow="Consultas"
                 title="Filtros generales"
-                description="Buscá por descripción o por ID SAP de la monodroga."
+                description="Buscá por descripción o por código autogenerado (MONO-XXXX)."
               />
 
               <div className="form-grid history-filters">
@@ -111,20 +111,20 @@ export default function HistorialMonodrogasPage() {
                     id="history_monodrug_query"
                     name="history_monodrug_query"
                     type="text"
-                    placeholder="Descripción o ID SAP"
+                    placeholder="Descripción o código"
                     value={filters.query}
                     onChange={(event) => updateFilter("query", event.target.value)}
                   />
                 </FormField>
 
-                <FormField label="ID SAP" htmlFor="history_monodrug_sap_id" span={4}>
+                <FormField label="Código" htmlFor="history_monodrug_codigo" span={4}>
                   <input
-                    id="history_monodrug_sap_id"
-                    name="history_monodrug_sap_id"
+                    id="history_monodrug_codigo"
+                    name="history_monodrug_codigo"
                     type="text"
-                    placeholder="MONO-SAP..."
-                    value={filters.sap_id}
-                    onChange={(event) => updateFilter("sap_id", event.target.value)}
+                    placeholder="MONO-0001"
+                    value={filters.codigo}
+                    onChange={(event) => updateFilter("codigo", event.target.value)}
                   />
                 </FormField>
               </div>

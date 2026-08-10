@@ -10,15 +10,13 @@ from backend.routers import (
     prescription_router,
     ledger_router,
     auth_router,
-    agreement_router,
-    enrollment_router,
     audit_router,
 )
 
 
 def create_app() -> FastAPI:
     """Crea y configura la instancia FastAPI con routers bajo /api."""
-    app = FastAPI(title="MedChain AI", version="0.5.0")
+    app = FastAPI(title="MedChain AI", version="0.6.0")
 
     raw_origins = os.getenv("CORS_ORIGINS")
     origins = [o.strip() for o in raw_origins.split(",") if o.strip()] if raw_origins else ["*"]
@@ -38,8 +36,6 @@ def create_app() -> FastAPI:
     api.include_router(prescription_router)
     api.include_router(ledger_router)
     api.include_router(auth_router)
-    api.include_router(agreement_router)
-    api.include_router(enrollment_router)
     api.include_router(audit_router)
     app.include_router(api)
 

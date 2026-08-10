@@ -1,28 +1,28 @@
 # Datos Maestros — MedChain AI
 
-Documentación de todas las entidades del proyecto (backend FastAPI). Incluye los campos, tipos, obligatoriedad, identificadores, relaciones, endpoints y columnas de importación por Excel de cada entidad.
+Documentación de las entidades del proyecto (backend FastAPI). Incluye campos, tipos, obligatoriedad, identificadores, relaciones, endpoints y columnas de importación por Excel.
 
-> Persistencia: todas las entidades se almacenan **en memoria** (se reinician al reiniciar el backend). La API corre en `http://127.0.0.1:9999`.
+> Persistencia: PostgreSQL si está configurado; si no, **en memoria** (se reinicia al reiniciar el backend). La API corre en `http://127.0.0.1:9999`.
 
 ## Índice de entidades
 
 | Entidad | Prefijo API | Código / ID | Importación Excel |
 |---------|-------------|-------------|-------------------|
 | [Paciente](#1-paciente-patient) | `/patients` | `id` autoincremental | Sí |
-| [Empadronamiento](#2-empadronamiento-enrollment) | `/enrollments` | `EMP-{A\|B}-0000` | Sí (por tipo) |
-| [Acuerdo](#3-acuerdo-agreement) | `/agreements` | `id` autoincremental | Sí |
-| [Medicamento](#4-medicamento-medication) | `/medications` | `id` autoincremental | Sí |
-| [Monodroga](#5-monodroga-monodrug) | `/monodrugs` | `id` autoincremental | Sí |
-| [Prescripción](#6-prescripción-prescription) | `/prescriptions` | `PRESC-0000` | No |
-| [Bloque / Ledger](#7-bloque--ledger-blockchain-simulada) | `/ledger` | `index` + `hash` | No |
-| [Usuario / Sesión](#8-usuario--sesión-auth) | `/auth` | `username` | No |
-| [Resultado de importación](#9-resultado-de-importación-bulkimportresult) | (transversal) | — | — |
+| [Medicamento](#2-medicamento-medication) | `/medications` | `MED-0001` (auto) | Sí |
+| [Monodroga](#3-monodroga-monodrug) | `/monodrugs` | `MONO-0001` (auto) | Sí |
+| [Prescripción](#4-prescripción-prescription) | `/prescriptions` | `PRESC-0000` | No |
+| [Bloque / Ledger](#5-bloque--ledger-blockchain-simulada) | `/ledger` | `index` + `hash` | No |
+| [Usuario / Sesión](#6-usuario--sesión-auth) | `/auth` | `username` | No |
+| [Resultado de importación](#7-resultado-de-importación-bulkimportresult) | (transversal) | — | — |
+
+> **Eliminado del proceso:** Empadronamientos y Acuerdos ya no forman parte del sistema.
 
 ---
 
 ## 1. Paciente (`Patient`)
 
-Entidad clínica central. Combina datos del paciente con datos del empadronamiento inicial.
+Entidad clínica central.
 
 | Campo | Tipo | Obligatorio | Notas |
 |-------|------|-------------|-------|
@@ -36,161 +36,72 @@ Entidad clínica central. Combina datos del paciente con datos del empadronamien
 | `gender` | str | Sí | Género |
 | `treatment` | str | No | Tratamiento / diagnóstico |
 | `medications` | list[str] | No (`[]`) | Medicamentos |
-| `tipo_empadronamiento` | str | Sí | Tipo de empadronamiento |
-| `fecha_inicio` | date | Sí | Fecha de inicio del empadronamiento |
-| `fecha_primera_toma` | date | Sí | Fecha de la primera toma |
-| `cadencia_estimada_toma` | int | Sí (`>= 1`) | Cadencia en días |
 | `id` | int | (auto) | Identificador autoincremental |
-| `hc_filename` | str | No | Nombre de archivo: historia clínica |
-| `ap_filename` | str | No | Nombre de archivo: anatomía patológica |
-| `img_filename` | str | No | Nombre de archivo: imágenes |
-| `lab_filename` | str | No | Nombre de archivo: laboratorio |
-| `receta_filename` | str | No | Nombre de archivo: receta |
-| `otros_filename` | str | No | Nombre de archivo: otros |
-| `blockchain_tx_id` | str | No | ID de transacción en blockchain (placeholder) |
-
-**Relaciones:** `provider`/`provider_id` (prestador), `medications` (lista de descripciones, no FK), `tipo_empadronamiento` alineado con Empadronamiento.
+| `hc_filename` / `ap_filename` / `img_filename` / `lab_filename` / `receta_filename` / `otros_filename` | str | No | Adjuntos |
+| `blockchain_tx_id` | str | No | Placeholder blockchain |
 
 **Endpoints:**
-- `POST /patients` — alta (multipart/form-data: datos + 6 archivos opcionales).
+- `POST /patients` — alta (multipart/form-data).
 - `GET /patients` — listado.
 - `POST /patients/bulk-import` — importación desde `.xlsx`.
 
-**Columnas Excel (alias aceptados):**
-- `sap_id`: "id paciente sap", "sap", "id sap paciente"
-- `credential_id`: "id credencial", "credencial"
-- `provider_id`: "id prestador"
-- `provider`: "prestador"
-- `first_name`: "nombre"
-- `last_name`: "apellido"
-- `birth_date`: "fecha de nacimiento", "fecha_nacimiento"
-- `gender`: "genero", "sexo"
-- `treatment`: "diagnostico", "tratamiento"
-- `tipo_empadronamiento`: "tipo de empadronamiento", "tipo_empadronamiento"
-
-> En importación por Excel, `medications` se carga vacío (`[]`).
+**Columnas Excel:** `sap_id`, `credential_id`, `provider_id`, `provider`, `first_name`, `last_name`, `birth_date`, `gender`, `treatment`.
 
 ---
 
-## 2. Empadronamiento (`Enrollment`)
+## 2. Medicamento (`Medication`)
 
-Registro de empadronamiento por esquema de tratamiento, particionado por **tipo**.
+Maestro de materiales / presentaciones. Atributos alineados con `Medicamentos v1.xlsx`.
 
-| Campo | Tipo | Obligatorio | Notas |
-|-------|------|-------------|-------|
-| `medications` | list[str] | Sí (`min 1`) | Medicamentos |
-| `diagnostico` | str | Sí | Diagnóstico |
-| `id` | int | (auto) | Autoincremental por tipo |
-| `enrollment_code` | str | (auto) | Formato `EMP-{A\|B}-0001` |
-| `tipo` | str | (ruta) | `tipo-a` o `tipo-b` |
-| `created_at` | datetime | (auto) | Fecha de creación |
-| `blockchain_tx_id` | str | No | Placeholder |
-
-**Tipos válidos:** `tipo-a`, `tipo-b` (un tipo inexistente devuelve 404).
-
-**Endpoints:**
-- `POST /enrollments/{tipo}` — alta.
-- `GET /enrollments/{tipo}` — listado por tipo.
-- `POST /enrollments/{tipo}/bulk-import` — importación por tipo.
-
-**Columnas Excel:**
-- `diagnostico`: "diagnostico", "diagnóstico"
-- `medications`: "medications", "medicamentos", "medicamento" (separadores `;` `,` `|`)
-
----
-
-## 3. Acuerdo (`Agreement`)
-
-Convenio comercial laboratorio–prestador–medicamento.
-
-| Campo | Tipo | Obligatorio | Notas |
-|-------|------|-------------|-------|
-| `laboratorio` | str | Sí | |
-| `prestador` | str | Sí | |
-| `medicamento` | str | Sí | |
-| `medicamento_sap` | str | Sí | |
-| `medico_auditor` | str | No | |
-| `fecha_inicial` | date | Sí | |
-| `fecha_final` | date | Sí | |
-| `condicion_recupero` | str | Sí | |
+| Campo | Tipo | Obligatorio | Notas / columna xlsx |
+|-------|------|-------------|----------------------|
+| `codigo` | str | (auto) | `MED-0001`, `MED-0002`, … |
+| `descripcion` | str | Sí | Texto Largo de Material |
+| `ean` | str | Sí | Código EAN/UPC |
+| `codigo_alfabeta` | str | Sí | Nro Troquel alfabeta |
+| `tipo_conservacion` | str | Sí | Cadena de frío (`frio` / `seco`; en Excel `X` → frío) |
+| `laboratorio` | str | Sí | Laboratorio |
+| `monodroga` | str | Sí | Nombre de la droga (debe existir en maestro de monodrogas) |
+| `tamano_dimension` | str | Sí | Tamaño / Dimensión |
+| `potencia_mg` | float | No | Valor de Potencia |
+| `unidad_potencia` | str | No | Códigos de Potencia (ej. `MG`) |
+| `precio` | float | No | Precio de Venta al Público |
+| `via_administracion` | str | No | Código de vías (`ORAL`, `INYECTABLE IV`, …) |
 | `id` | int | (auto) | Autoincremental |
-| `contrato_filename` | str | No | Nombre de archivo del contrato |
 
-**Endpoints:**
-- `POST /agreements` — alta (+ contrato opcional).
-- `GET /agreements` — listado.
-- `POST /agreements/bulk-import` — importación.
-
-**Columnas Excel:**
-- `laboratorio`: "laboratorio"
-- `prestador`: "prestador"
-- `medicamento`: "medicamento"
-- `medicamento_sap`: "medicamento sap", "medicamento_sap"
-- `medico_auditor`: "medico auditor", "medico_auditor"
-- `fecha_inicial`: "fecha inicial", "fecha_inicial"
-- `fecha_final`: "fecha final", "fecha_final"
-- `condicion_recupero`: "condicion recupero", "condición recupero", "condicion de recupero"
-
----
-
-## 4. Medicamento (`Medication`)
-
-Maestro de materiales / medicamentos.
-
-| Campo | Tipo | Obligatorio | Notas |
-|-------|------|-------------|-------|
-| `descripcion` | str | Sí | |
-| `ean` | str | Sí | Código de barras EAN |
-| `codigo_alfabeta` | str | Sí | Código Alfabeta |
-| `tipo_conservacion` | str | Sí | Ej.: `seco`, `frio` |
-| `sap_id` | str | Sí | ID SAP |
-| `monodroga_id` | str | Sí | Referencia a `Monodrug.sap_id` |
-| `tamano_dimension` | str | Sí | Tamaño / dimensión |
-| `id` | int | (auto) | Autoincremental |
-| `monodroga_descripcion` | str | (derivado) | Resuelto en runtime por `monodroga_id == Monodrug.sap_id` |
-
-**Relación:** `monodroga_id` → `Monodrug.sap_id` (lookup en memoria).
+**Relación:** `monodroga` → `Monodrug.descripcion` (validada en alta individual). En bulk import, si la monodroga no existe se **auto-crea**.
 
 **Endpoints:**
 - `POST /medications` — alta.
-- `GET /medications` — listado (enriquecido con `monodroga_descripcion`).
-- `POST /medications/bulk-import` — importación.
+- `GET /medications` — listado.
+- `POST /medications/bulk-import` — importación (acepta headers del xlsx real).
 
-**Columnas Excel:**
-- `descripcion`: "descripcion", "descripción"
-- `ean`: "ean"
-- `codigo_alfabeta`: "codigo alfabeta", "código alfabeta", "codigo_alfabeta"
-- `tipo_conservacion`: "tipo conservacion", "tipo de conservacion", "tipo_conservacion"
-- `sap_id`: "sap_id", "id sap"
-- `monodroga_id`: "monodroga_id", "id monodroga", "id de monodroga"
-- `tamano_dimension`: "tamano dimension", "tamaño dimension", "tamano_dimension", "tamaño/dimension"
+**Uso en costos:** `DosisService.find_by_monodroga(nombre)` busca presentaciones por este campo para calcular dosis y costo.
 
 ---
 
-## 5. Monodroga (`Monodrug`)
+## 3. Monodroga (`Monodrug`)
 
 Principio activo / maestro farmacológico.
 
 | Campo | Tipo | Obligatorio | Notas |
 |-------|------|-------------|-------|
-| `descripcion` | str | Sí | |
-| `sap_id` | str | Sí | ID SAP (referenciado por medicamentos) |
+| `descripcion` | str | Sí | Nombre de la droga (ej. `oxaliplatino`, `pembrolizumab`) |
+| `codigo` | str | (auto) | `MONO-0001`, `MONO-0002`, … |
 | `id` | int | (auto) | Autoincremental |
 
 **Endpoints:**
-- `POST /monodrugs` — alta.
-- `GET /monodrugs` — listado.
+- `POST /monodrugs` — alta (solo `descripcion`; código auto).
+- `GET /monodrugs` — listado (usado por el desplegable del alta de medicamentos).
 - `POST /monodrugs/bulk-import` — importación.
 
-**Columnas Excel:**
-- `descripcion`: "descripcion", "descripción"
-- `sap_id`: "sap_id", "id sap", "idsap"
+**Columnas Excel:** `descripcion` (también acepta “código de monodroga”).
 
 ---
 
-## 6. Prescripción (`Prescription`)
+## 4. Prescripción (`Prescription`)
 
-Prescripción oncológica de alta complejidad (caso piloto: cáncer de colon). Al crearse, ejecuta la validación (motor stub) y registra un bloque en el ledger.
+Prescripción oncológica de alta complejidad (cáncer de colon). Al crearse, ejecuta validación híbrida (reglas + LightGBM) y registra un bloque en el ledger.
 
 ### Atributos de paciente y dosis
 | Campo | Tipo | Obligatorio | Notas |
@@ -198,134 +109,52 @@ Prescripción oncológica de alta complejidad (caso piloto: cáncer de colon). A
 | `patient_sap_id` | str | Sí | ID Paciente SAP |
 | `edad` | int | Sí (`0–120`) | |
 | `sexo` | str | Sí | Masculino / Femenino |
-| `peso_kg` | float | Sí (`> 0`) | |
-| `talla_cm` | float | Sí (`> 0`) | |
-| `superficie_corporal_m2` | float | (derivado) | Mosteller: `sqrt(talla_cm * peso_kg / 3600)` |
+| `peso_kg` / `talla_cm` | float | Sí (`> 0`) | |
+| `superficie_corporal_m2` | float | (derivado) | Mosteller |
+| `id_regimen` | str | Sí | R00–R13 |
+| `dosis_por_farmaco` | list | No | `{monodroga, dosis_mg}` |
+| `msi` / `ras` / `braf_v600e` | Literal | Sí | Tres estados (incl. `no_evaluado`) |
 
-### Estadificación TNM
-| Campo | Tipo | Obligatorio | Valores |
-|-------|------|-------------|---------|
-| `diagnostico_cie10` | str | Sí | Ej.: `C18.9` |
-| `localizacion_tumor` | str | Sí | Colon derecho / Colon izquierdo |
-| `tipo_histologico` | str | Sí | Ej.: Adenocarcinoma |
-| `t` | str | Sí | T1, T2, T3, T4 |
-| `n` | str | Sí | N0, N1, N2 |
-| `m` | str | Sí | M0, M1 |
-| `estadio` | str | Sí | I, II, III, IV |
-
-### Biomarcadores
-| Campo | Tipo | Obligatorio | Notas |
-|-------|------|-------------|-------|
-| `msi_alta` | bool | No (`false`) | Inestabilidad microsatelital alta |
-| `ras_mutado` | bool | No (`false`) | KRAS/NRAS mutado |
-| `braf_v600e` | bool | No (`false`) | BRAF V600E presente |
-
-### Prescripción
-| Campo | Tipo | Obligatorio | Notas |
-|-------|------|-------------|-------|
-| `linea_tratamiento` | str | Sí | Primera / Segunda |
-| `esquema` | str | Sí | Esquema y medicamento prescrito |
-| `dosis_mg_m2` | float | Sí (`> 0`) | Dosis en mg/m² |
-| `medico_prescriptor` | str | Sí | |
-| `matricula` | str | Sí | |
-
-### Campos generados
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | int | Autoincremental |
-| `prescription_code` | str | Formato `PRESC-0001` |
-| `created_at` | datetime | Fecha de creación |
-| `validacion` | ValidationResult | Resultado de la validación |
-| `blockchain_tx_id` | str | Hash del bloque en el ledger |
-| `block_index` | int | Índice del bloque |
-
-### `ValidationResult`
+### `ValidationResult` (resumen)
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | `estado` | str | `APROBADO` / `RECHAZADO` / `REVISION` |
-| `motivos` | list[str] | Motivos de la validación |
-
-> Motor de validación: **stub** (completitud + linealidad, ej. estadio IV requiere M1). Criterio recall-first: ante duda deriva a `REVISION`.
+| `motivos` | list[str] | |
+| `probabilidad_concordante` | float | Score del modelo |
+| `costo_por_farmaco` / `costo_total` | list / float | Estimado desde el catálogo |
 
 **Endpoints:**
 - `POST /prescriptions` — alta (JSON).
 - `GET /prescriptions` — listado.
+- `GET /prescriptions/regimenes` — catálogo.
+- `GET /prescriptions/dosis-referencia` — dosis de referencia.
+- `POST /prescriptions/recomendacion` — sugerencia por guías (sin ML).
 
 ---
 
-## 7. Bloque / Ledger (blockchain simulada)
+## 5. Bloque / Ledger (blockchain simulada)
 
-Registro inmutable simulado: cadena de bloques enlazados por hash SHA-256 en memoria.
+Registro inmutable simulado: cadena de bloques enlazados por hash SHA-256.
 
-### `Block`
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `index` | int | Índice del bloque (0 = génesis) |
-| `timestamp` | str | Marca de tiempo ISO |
-| `tx_type` | str | `genesis`, `prescription`, ... |
-| `payload` | dict | Contenido de la transacción |
-| `prev_hash` | str | Hash del bloque anterior |
-| `hash` | str | SHA-256 de `index+timestamp+tx_type+payload+prev_hash` |
-
-### `LedgerVerification`
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `valido` | bool | La cadena es íntegra |
-| `total_bloques` | int | Cantidad de bloques |
-| `roto_en` | int? | Índice del primer bloque inválido (o `null`) |
-
-**Endpoints:**
-- `GET /ledger` — lista de bloques.
-- `GET /ledger/verify` — verificación de integridad.
+**Endpoints:** `GET /ledger`, `GET /ledger/verify`.
 
 ---
 
-## 8. Usuario / Sesión (`Auth`)
+## 6. Usuario / Sesión (`Auth`)
 
-Autenticación simple del prototipo. Credenciales leídas desde variables de entorno (`.env`); tokens opacos en memoria.
+Credenciales desde `.env` (`AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_DISPLAY_NAME`).
 
-### `LoginRequest`
-| Campo | Tipo | Obligatorio |
-|-------|------|-------------|
-| `username` | str | Sí |
-| `password` | str | Sí |
-
-### `UserInfo`
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `username` | str | Usuario |
-| `display_name` | str | Nombre a mostrar |
-
-### `LoginResponse`
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `token` | str | Token de sesión (Bearer) |
-| `user` | UserInfo | Usuario autenticado |
-
-**Variables de entorno (`.env`):** `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_DISPLAY_NAME`.
-
-**Endpoints:**
-- `POST /auth/login` — login (JSON).
-- `GET /auth/me` — usuario actual (header `Authorization: Bearer <token>`).
-- `POST /auth/logout` — cierre de sesión.
+**Endpoints:** `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`.
 
 ---
 
-## 9. Resultado de importación (`BulkImportResult`)
-
-Estructura transversal devuelta por todos los endpoints `/*/bulk-import`.
+## 7. Resultado de importación (`BulkImportResult`)
 
 | Campo | Tipo | Notas |
 |-------|------|-------|
-| `total_rows` | int | Total de filas procesadas |
-| `imported_count` | int | Registros importados |
-| `failed_count` | int | Registros fallidos |
-| `errors` | list[BulkImportError] | Detalle de errores |
+| `total_rows` | int | Filas procesadas |
+| `imported_count` | int | Importados |
+| `failed_count` | int | Fallidos |
+| `errors` | list[BulkImportError] | Detalle por fila |
 
-### `BulkImportError`
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `row_number` | int | Fila del Excel (desde 2 = primera fila de datos) |
-| `message` | str | Descripción del error |
-
-> Formato de importación: solo `.xlsx`. Fechas aceptadas como `date`/`datetime`/`Timestamp` o string ISO `YYYY-MM-DD`. Listas con separadores `;`, `,` o `|`. Los errores por fila se acumulan sin abortar el resto.
+> Formato: solo `.xlsx`. En import de medicamentos, monodrogas faltantes se crean automáticamente.

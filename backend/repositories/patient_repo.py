@@ -1,7 +1,7 @@
 """Repositorio de pacientes con soporte PostgreSQL y fallback en memoria."""
 import json
 import logging
-from typing import List, Optional
+from typing import List
 
 from backend.models.patient import Patient
 
@@ -54,10 +54,9 @@ class PatientRepository:
                                 patient.sap_id, patient.credential_id, patient.provider_id,
                                 patient.provider, patient.first_name, patient.last_name,
                                 str(patient.birth_date), patient.gender, patient.treatment,
-                                json.dumps(patient.medications), patient.tipo_empadronamiento,
-                                str(patient.fecha_inicio), str(patient.fecha_primera_toma),
-                                patient.cadencia_estimada_toma, patient.hc_filename,
-                                patient.ap_filename, patient.img_filename, patient.lab_filename,
+                                json.dumps(patient.medications),
+                                patient.hc_filename, patient.ap_filename,
+                                patient.img_filename, patient.lab_filename,
                                 patient.receta_filename, patient.otros_filename,
                                 patient.blockchain_tx_id,
                             ),

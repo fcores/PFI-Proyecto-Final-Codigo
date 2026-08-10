@@ -12,19 +12,24 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS monodrugs (
     id SERIAL PRIMARY KEY,
     descripcion VARCHAR(500) NOT NULL,
-    sap_id VARCHAR(100) NOT NULL,
+    codigo VARCHAR(100) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS medications (
     id SERIAL PRIMARY KEY,
+    codigo VARCHAR(100) NOT NULL,
     descripcion VARCHAR(500) NOT NULL,
     ean VARCHAR(100) NOT NULL,
     codigo_alfabeta VARCHAR(100) NOT NULL,
     tipo_conservacion VARCHAR(200) NOT NULL,
-    sap_id VARCHAR(100) NOT NULL,
-    monodroga_id VARCHAR(100) NOT NULL,
+    laboratorio VARCHAR(300) NOT NULL,
+    monodroga VARCHAR(200) NOT NULL,
     tamano_dimension VARCHAR(200) NOT NULL,
+    potencia_mg NUMERIC(12,4),
+    unidad_potencia VARCHAR(50),
+    precio NUMERIC(14,2),
+    via_administracion VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -40,10 +45,6 @@ CREATE TABLE IF NOT EXISTS patients (
     gender VARCHAR(50) NOT NULL,
     treatment VARCHAR(500),
     medications TEXT DEFAULT '[]',
-    tipo_empadronamiento VARCHAR(100) NOT NULL,
-    fecha_inicio DATE NOT NULL,
-    fecha_primera_toma DATE NOT NULL,
-    cadencia_estimada_toma INTEGER NOT NULL DEFAULT 1,
     hc_filename VARCHAR(500),
     ap_filename VARCHAR(500),
     img_filename VARCHAR(500),
@@ -70,16 +71,25 @@ CREATE TABLE IF NOT EXISTS prescriptions (
     n VARCHAR(50) NOT NULL,
     m VARCHAR(50) NOT NULL,
     estadio VARCHAR(50) NOT NULL,
-    msi_alta BOOLEAN NOT NULL DEFAULT FALSE,
-    ras_mutado BOOLEAN NOT NULL DEFAULT FALSE,
-    braf_v600e BOOLEAN NOT NULL DEFAULT FALSE,
+    msi VARCHAR(20) NOT NULL DEFAULT 'no_evaluado',
+    ras VARCHAR(20) NOT NULL DEFAULT 'no_evaluado',
+    braf_v600e VARCHAR(20) NOT NULL DEFAULT 'no_evaluado',
     linea_tratamiento VARCHAR(100) NOT NULL,
+    id_regimen VARCHAR(10) NOT NULL,
     esquema VARCHAR(500) NOT NULL,
+    dosis_por_farmaco TEXT DEFAULT '[]',
     dosis_mg_m2 NUMERIC(10,2) NOT NULL,
     medico_prescriptor VARCHAR(200) NOT NULL,
     matricula VARCHAR(100) NOT NULL,
     estado_validacion VARCHAR(50) NOT NULL,
     motivos_validacion TEXT DEFAULT '[]',
+    probabilidad_concordante NUMERIC(10,6),
+    nivel_confianza VARCHAR(50),
+    umbral_bajo NUMERIC(10,6),
+    umbral_alto NUMERIC(10,6),
+    origen_validacion VARCHAR(50),
+    version_modelo VARCHAR(50),
+    features_relevantes TEXT DEFAULT '[]',
     blockchain_tx_id VARCHAR(256),
     block_index INTEGER,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -92,30 +102,6 @@ CREATE TABLE IF NOT EXISTS ledger_blocks (
     payload JSONB NOT NULL DEFAULT '{}',
     prev_hash VARCHAR(256) NOT NULL,
     hash VARCHAR(256) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS agreements (
-    id SERIAL PRIMARY KEY,
-    laboratorio VARCHAR(200) NOT NULL,
-    prestador VARCHAR(200) NOT NULL,
-    medicamento VARCHAR(200) NOT NULL,
-    medicamento_sap VARCHAR(100),
-    medico_auditor VARCHAR(200),
-    fecha_inicio DATE,
-    fecha_fin DATE,
-    condicion_recupero TEXT,
-    contrato_filename VARCHAR(500),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS enrollments (
-    id SERIAL PRIMARY KEY,
-    enrollment_code VARCHAR(50) NOT NULL,
-    tipo VARCHAR(50) NOT NULL,
-    patient_sap_id VARCHAR(100),
-    diagnostico VARCHAR(500),
-    medications TEXT DEFAULT '[]',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS audit_cases (

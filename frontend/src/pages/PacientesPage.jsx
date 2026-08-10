@@ -28,7 +28,7 @@ export default function PacientesPage() {
     <>
       <TopBar
         title="Alta de pacientes"
-        subtitle="Gestioná el alta clínica, la documentación y el empadronamiento inicial del paciente desde una sola vista."
+        subtitle="Gestioná el alta clínica y la documentación del paciente desde una sola vista."
         badge="Pacientes"
       />
       <main className="page page--wide">
@@ -95,35 +95,7 @@ export default function PacientesPage() {
                     id="treatment"
                     name="treatment"
                     type="text"
-                    placeholder="Ej.: Artritis reumatoidea"
-                  />
-                </FormField>
-
-                {/* Campos de empadronamiento */}
-                <FormField label="Tipo de empadronamiento" htmlFor="tipo_empadronamiento" required span={4}>
-                  <select id="tipo_empadronamiento" name="tipo_empadronamiento" required defaultValue="">
-                    <option value="">Seleccionar...</option>
-                    <option value="tipo-a">Tipo A</option>
-                    <option value="tipo-b">Tipo B</option>
-                  </select>
-                </FormField>
-
-                <FormField label="Fecha de inicio" htmlFor="fecha_inicio" required span={4}>
-                  <input id="fecha_inicio" name="fecha_inicio" type="date" required />
-                </FormField>
-
-                <FormField label="Fecha de primera toma" htmlFor="fecha_primera_toma" required span={4}>
-                  <input id="fecha_primera_toma" name="fecha_primera_toma" type="date" required />
-                </FormField>
-
-                <FormField label="Cadencia estimada (días)" htmlFor="cadencia_estimada_toma" required span={4}>
-                  <input
-                    id="cadencia_estimada_toma"
-                    name="cadencia_estimada_toma"
-                    type="number"
-                    min="1"
-                    placeholder="Ej.: 30"
-                    required
+                    placeholder="Ej.: Cáncer de colon"
                   />
                 </FormField>
               </div>
@@ -152,7 +124,7 @@ export default function PacientesPage() {
               title="Importar pacientes desde Excel"
               description="Cargá múltiples pacientes en una sola operación usando un archivo Excel con los campos del alta clínica."
               importFn={bulkImportPatients}
-              templateHint="sap_id, credential_id, provider_id, provider, first_name, last_name, birth_date, gender, treatment, tipo_empadronamiento, fecha_inicio, fecha_primera_toma, cadencia_estimada_toma"
+              templateHint="sap_id, credential_id, provider_id, provider, first_name, last_name, birth_date, gender, treatment"
             />
           </section>
         </section>

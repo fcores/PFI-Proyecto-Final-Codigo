@@ -102,8 +102,26 @@ class get_db:
             return False
 
 
+def _run_migrations(cur):
+    """Ejecuta los scripts ALTER de sql/migrations en orden alfabetico."""
+    try:
+        migrations_dir = Path(__file__).resolve().parent.parent / "sql" / "migrations"
+        if not migrations_dir.exists():
+            return
+        archivos = sorted(migrations_dir.glob("*.sql"))
+        for ruta in archivos:
+            with open(str(ruta), "r", encoding="utf-8") as f:
+                sql_text = f.read()
+            if sql_text.strip():
+                cur.execute(sql_text)
+                logger.info("Migracion aplicada: %s", ruta.name)
+    except Exception as exc:
+        logger.error("Error al ejecutar migraciones: %s", exc, exc_info=True)
+        raise
+
+
 def init_db():
-    """Lee y ejecuta sql/schema.sql para crear las tablas si no existen."""
+    """Lee y ejecuta sql/schema.sql y luego las migraciones ALTER."""
     try:
         if not is_db_available():
             logger.info("Base de datos no disponible, omitiendo inicializacion de schema")
@@ -114,6 +132,7 @@ def init_db():
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute(schema_sql)
+                _run_migrations(cur)
         logger.info("Schema de base de datos inicializado correctamente")
     except Exception as exc:
         logger.error("Error al inicializar schema de DB: %s", exc, exc_info=True)

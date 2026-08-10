@@ -161,7 +161,9 @@ frontend/dist/
 frontend/.vite/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -178,6 +180,26 @@ Thumbs.db
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Datos sensibles / artefactos de trabajo (criterio 9)
+.env
+*.xlsx
+*.csv
+*.bat
+*.json
+!package.json
+!package-lock.json
+!frontend/**/package.json
+!frontend/**/package-lock.json
+!frontend/**/tsconfig*.json
+!frontend/**/jsconfig.json
+!.vscode/extensions.json
+!.vscode/settings.json
+!ml_models/artefactos/categorias_modelo.json
+!ml_models/artefactos/metricas_modelo.json
+ml_models/cache/
+ml_models/datos/
+ml_models/figuras/
 
 # ──────────────────────────────────────────────────────────────
 # Hyperledger Fabric

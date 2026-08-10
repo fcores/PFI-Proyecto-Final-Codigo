@@ -7,6 +7,8 @@ import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import StatusChip from "../components/StatusChip";
 import { fetchAuditQueue } from "../api/audit";
+import { ESTADO_VARIANT } from "../constants/estadoVariant";
+import { formatDate } from "../utils/formatDate";
 
 const TABLE_COLUMNS = [
   "ID Caso",
@@ -18,25 +20,6 @@ const TABLE_COLUMNS = [
   "Estado Validación",
   "Fecha",
 ];
-
-const ESTADO_VARIANT = {
-  APROBADO: "success",
-  RECHAZADO: "error",
-  PENDIENTE_DOCS: "warning",
-  REVISION: "info",
-  pendiente: "neutral",
-};
-
-function formatDate(raw) {
-  if (!raw) return "—";
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-  return date.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 export default function AuditQueuePage() {
   const navigate = useNavigate();
@@ -139,7 +122,7 @@ export default function AuditQueuePage() {
       <main className="page page--wide">
         <section className="layout layout--single">
           <section className="card card-table">
-            <header className="agreements-header agreements-header--modern">
+            <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Auditoría</span>
                 <h2>Casos pendientes de revisión</h2>

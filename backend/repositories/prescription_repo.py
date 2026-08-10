@@ -1,9 +1,14 @@
 """Repositorio de prescripciones con soporte PostgreSQL y fallback en memoria."""
 import json
 import logging
-from typing import List, Optional
+from typing import List
 
-from backend.models.prescription import Prescription
+from backend.models.prescription import (
+    DosisFarmaco,
+    FeatureAporte,
+    Prescription,
+    ValidationResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +45,61 @@ class PrescriptionRepository:
             logger.error("Error al obtener next_id: %s", exc, exc_info=True)
             raise
 
+    def _features_to_json(self, features):
+        """Serializa features relevantes a JSON."""
+        try:
+            payload = []
+            for item in features or []:
+                if hasattr(item, "model_dump"):
+                    payload.append(item.model_dump())
+                else:
+                    payload.append(item)
+            return json.dumps(payload)
+        except Exception as exc:
+            logger.error("Error al serializar features: %s", exc, exc_info=True)
+            raise
+
+    def _dosis_to_json(self, dosis_por_farmaco):
+        """Serializa dosis por farmaco a JSON."""
+        try:
+            payload = []
+            for item in dosis_por_farmaco or []:
+                if hasattr(item, "model_dump"):
+                    payload.append(item.model_dump())
+                else:
+                    payload.append(item)
+            return json.dumps(payload)
+        except Exception as exc:
+            logger.error("Error al serializar dosis_por_farmaco: %s", exc, exc_info=True)
+            raise
+
+    def _row_to_prescription(self, data):
+        """Mapea una fila de DB a Prescription."""
+        try:
+            dosis_raw = json.loads(data.pop("dosis_por_farmaco", "[]") or "[]")
+            dosis = [DosisFarmaco(**item) for item in dosis_raw]
+
+            features_raw = json.loads(data.pop("features_relevantes", "[]") or "[]")
+            features = [FeatureAporte(**item) for item in features_raw]
+
+            validacion = ValidationResult(
+                estado=data.pop("estado_validacion", ""),
+                motivos=json.loads(data.pop("motivos_validacion", "[]") or "[]"),
+                probabilidad_concordante=data.pop("probabilidad_concordante", None),
+                nivel_confianza=data.pop("nivel_confianza", None),
+                umbral_bajo=data.pop("umbral_bajo", None),
+                umbral_alto=data.pop("umbral_alto", None),
+                origen=data.pop("origen_validacion", None),
+                version_modelo=data.pop("version_modelo", None),
+                features_relevantes=features,
+            )
+            data["dosis_por_farmaco"] = dosis
+            data["validacion"] = validacion
+            return Prescription(**data)
+        except Exception as exc:
+            logger.error("Error al mapear fila a Prescription: %s", exc, exc_info=True)
+            raise
+
     def add(self, prescription: Prescription) -> Prescription:
         """Agrega una prescripcion al repositorio."""
         try:
@@ -51,18 +111,41 @@ class PrescriptionRepository:
                         cur.execute(
                             queries["insert_prescription"],
                             (
-                                prescription.prescription_code, prescription.patient_sap_id,
-                                prescription.edad, prescription.sexo, prescription.peso_kg,
-                                prescription.talla_cm, prescription.superficie_corporal_m2,
-                                prescription.diagnostico_cie10, prescription.localizacion_tumor,
-                                prescription.tipo_histologico, prescription.t, prescription.n,
-                                prescription.m, prescription.estadio, prescription.msi_alta,
-                                prescription.ras_mutado, prescription.braf_v600e,
-                                prescription.linea_tratamiento, prescription.esquema,
-                                prescription.dosis_mg_m2, prescription.medico_prescriptor,
-                                prescription.matricula, prescription.validacion.estado,
+                                prescription.prescription_code,
+                                prescription.patient_sap_id,
+                                prescription.edad,
+                                prescription.sexo,
+                                prescription.peso_kg,
+                                prescription.talla_cm,
+                                prescription.superficie_corporal_m2,
+                                prescription.diagnostico_cie10,
+                                prescription.localizacion_tumor,
+                                prescription.tipo_histologico,
+                                prescription.t,
+                                prescription.n,
+                                prescription.m,
+                                prescription.estadio,
+                                prescription.msi,
+                                prescription.ras,
+                                prescription.braf_v600e,
+                                prescription.linea_tratamiento,
+                                prescription.id_regimen,
+                                prescription.esquema,
+                                self._dosis_to_json(prescription.dosis_por_farmaco),
+                                prescription.dosis_mg_m2,
+                                prescription.medico_prescriptor,
+                                prescription.matricula,
+                                prescription.validacion.estado,
                                 json.dumps(prescription.validacion.motivos),
-                                prescription.blockchain_tx_id, prescription.block_index,
+                                prescription.validacion.probabilidad_concordante,
+                                prescription.validacion.nivel_confianza,
+                                prescription.validacion.umbral_bajo,
+                                prescription.validacion.umbral_alto,
+                                prescription.validacion.origen,
+                                prescription.validacion.version_modelo,
+                                self._features_to_json(prescription.validacion.features_relevantes),
+                                prescription.blockchain_tx_id,
+                                prescription.block_index,
                             ),
                         )
                         row = cur.fetchone()
@@ -79,7 +162,6 @@ class PrescriptionRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
-                from backend.models.prescription import ValidationResult
                 queries = load_query("prescriptions.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -89,63 +171,9 @@ class PrescriptionRepository:
                 result = []
                 for row in rows:
                     data = dict(zip(columns, row))
-                    data["validacion"] = ValidationResult(
-                        estado=data.pop("estado_validacion", ""),
-                        motivos=json.loads(data.pop("motivos_validacion", "[]") or "[]"),
-                    )
-                    result.append(Prescription(**data))
+                    result.append(self._row_to_prescription(data))
                 return result
             return list(self._store)
         except Exception as exc:
             logger.error("Error al listar prescripciones: %s", exc, exc_info=True)
-            raise
-
-    def find_by_id(self, prescription_id: int) -> Optional[Prescription]:
-        """Busca una prescripcion por su ID."""
-        try:
-            if self._db_available():
-                from backend.db import get_db, load_query
-                from backend.models.prescription import ValidationResult
-                queries = load_query("prescriptions.sql")
-                with get_db() as conn:
-                    with conn.cursor() as cur:
-                        cur.execute(queries["find_prescription_by_id"], (prescription_id,))
-                        columns = [desc[0] for desc in cur.description]
-                        row = cur.fetchone()
-                if row is None:
-                    return None
-                data = dict(zip(columns, row))
-                data["validacion"] = ValidationResult(
-                    estado=data.pop("estado_validacion", ""),
-                    motivos=json.loads(data.pop("motivos_validacion", "[]") or "[]"),
-                )
-                return Prescription(**data)
-            for item in self._store:
-                if item.id == prescription_id:
-                    return item
-            return None
-        except Exception as exc:
-            logger.error("Error al buscar prescripcion por id %s: %s", prescription_id, exc, exc_info=True)
-            raise
-
-    def update_validation(self, prescription_id: int, estado: str, motivos: List[str]) -> None:
-        """Actualiza el estado de validacion de una prescripcion."""
-        try:
-            if self._db_available():
-                from backend.db import get_db, load_query
-                queries = load_query("prescriptions.sql")
-                with get_db() as conn:
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            queries["update_prescription_validation"],
-                            (estado, json.dumps(motivos), prescription_id),
-                        )
-                return
-            for item in self._store:
-                if item.id == prescription_id:
-                    item.validacion.estado = estado
-                    item.validacion.motivos = motivos
-                    break
-        except Exception as exc:
-            logger.error("Error al actualizar validacion de prescripcion %s: %s", prescription_id, exc, exc_info=True)
             raise

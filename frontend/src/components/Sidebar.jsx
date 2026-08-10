@@ -27,12 +27,6 @@ const AUDITORIAS_SUBTYPES = [
   { to: "/trazabilidad", label: "Trazabilidad" },
 ];
 
-const EMPADRONAMIENTO_SUBTYPES = [
-  { to: "/empadronamientos/tipo-a", label: "Tipo A" },
-  { to: "/empadronamientos/tipo-b", label: "Tipo B" },
-  { to: "/empadronamientos/historial", label: "Historial" },
-];
-
 export default function Sidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -41,13 +35,11 @@ export default function Sidebar() {
   const medicamentosActive = location.pathname.startsWith("/medicamentos");
   const monodrogasActive = location.pathname.startsWith("/monodrogas");
   const prescripcionesActive = location.pathname.startsWith("/prescripciones");
-  const empadronamientoActive = location.pathname.startsWith("/empadronamientos");
   const auditoriasActive = location.pathname.startsWith("/auditoria") || location.pathname.startsWith("/trazabilidad");
   const [pacientesOpen, setPacientesOpen] = useState(pacientesActive);
   const [medicamentosOpen, setMedicamentosOpen] = useState(medicamentosActive);
   const [monodrogasOpen, setMonodrogasOpen] = useState(monodrogasActive);
   const [prescripcionesOpen, setPrescripcionesOpen] = useState(prescripcionesActive);
-  const [empadronamientoOpen, setEmpadronamientoOpen] = useState(empadronamientoActive);
   const [auditoriasOpen, setAuditoriasOpen] = useState(auditoriasActive);
 
   return (
@@ -70,7 +62,7 @@ export default function Sidebar() {
             onClick={() => setPrescripcionesOpen((o) => !o)}
             type="button"
           >
-            <span className="nav-emoji">🧬</span>
+            <span className="nav-emoji">&#x1F9EC;</span>
             <span className="nav-group-label">Prescripciones</span>
             <span className={`nav-group-chevron${prescripcionesOpen ? " open" : ""}`}>
               ›
@@ -99,7 +91,7 @@ export default function Sidebar() {
               onClick={() => setPacientesOpen((open) => !open)}
               type="button"
             >
-              <span className="nav-emoji">👥</span>
+              <span className="nav-emoji">&#x1F465;</span>
               <span className="nav-group-label">Pacientes</span>
               <span className={`nav-group-chevron${pacientesOpen ? " open" : ""}`}>
                 ›
@@ -129,7 +121,7 @@ export default function Sidebar() {
               onClick={() => setMedicamentosOpen((open) => !open)}
               type="button"
             >
-              <span className="nav-emoji">💊</span>
+              <span className="nav-emoji">&#x1F48A;</span>
               <span className="nav-group-label">Medicamentos</span>
               <span className={`nav-group-chevron${medicamentosOpen ? " open" : ""}`}>
                 ›
@@ -159,7 +151,7 @@ export default function Sidebar() {
               onClick={() => setMonodrogasOpen((open) => !open)}
               type="button"
             >
-              <span className="nav-emoji">🧪</span>
+              <span className="nav-emoji">&#x1F9EA;</span>
               <span className="nav-group-label">Monodrogas</span>
               <span className={`nav-group-chevron${monodrogasOpen ? " open" : ""}`}>
                 ›
@@ -182,45 +174,6 @@ export default function Sidebar() {
           </div>
         )}
 
-        {role === "administrador" && (
-          <NavLink
-            to="/acuerdos"
-            className={({ isActive }) => (isActive ? "active" : "")}
-          >
-            <span className="nav-emoji">📋</span> Acuerdos
-          </NavLink>
-        )}
-
-        {role === "administrador" && (
-          <div className="nav-group">
-            <button
-              className={`nav-group-toggle${empadronamientoActive ? " active" : ""}`}
-              onClick={() => setEmpadronamientoOpen((open) => !open)}
-              type="button"
-            >
-              <span className="nav-emoji">📝</span>
-              <span className="nav-group-label">Empadronamientos</span>
-              <span className={`nav-group-chevron${empadronamientoOpen ? " open" : ""}`}>
-                ›
-              </span>
-            </button>
-
-            {empadronamientoOpen && (
-              <div className="nav-subnav">
-                {EMPADRONAMIENTO_SUBTYPES.map((sub) => (
-                  <NavLink
-                    key={sub.to}
-                    to={sub.to}
-                    className={({ isActive }) => `nav-subitem${isActive ? " active" : ""}`}
-                  >
-                    {sub.label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {(role === "administrador" || role === "auditor") && (
           <div className="nav-group">
             <button
@@ -228,7 +181,7 @@ export default function Sidebar() {
               onClick={() => setAuditoriasOpen((open) => !open)}
               type="button"
             >
-              <span className="nav-emoji">🔗</span>
+              <span className="nav-emoji">&#x1F517;</span>
               <span className="nav-group-label">Auditorías</span>
               <span className={`nav-group-chevron${auditoriasOpen ? " open" : ""}`}>
                 ›
@@ -249,11 +202,6 @@ export default function Sidebar() {
               </div>
             )}
           </div>
-        )}
-        {role === "administrador" && (
-          <a href="#">
-            <span className="nav-emoji">📊</span> Reportes
-          </a>
         )}
       </nav>
 

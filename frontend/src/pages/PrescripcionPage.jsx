@@ -1,17 +1,18 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "../components/TopBar";
 import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import FormActions from "../components/FormActions";
 import StatusChip from "../components/StatusChip";
+import ConfidenceBar from "../components/ConfidenceBar";
 import useFormStatus from "../hooks/useFormStatus";
-import { createPrescription } from "../api/prescriptions";
-
-const ESTADO_VARIANT = {
-  APROBADO: "success",
-  REVISION: "warning",
-  RECHAZADO: "error",
-};
+import { ESTADO_VARIANT } from "../constants/estadoVariant";
+import {
+  createPrescription,
+  fetchDosisReferencia,
+  fetchRegimenes,
+  recomendarRegimen,
+} from "../api/prescriptions";
 
 function bodySurfaceArea(pesoKg, tallaCm) {
   const peso = Number(pesoKg);
@@ -25,11 +26,89 @@ export default function PrescripcionPage() {
   const { status, setLoading, setSuccess, setError, clear } = useFormStatus();
   const [result, setResult] = useState(null);
   const [preview, setPreview] = useState({ peso: "", talla: "" });
+  const [regimenes, setRegimenes] = useState([]);
+  const [idRegimen, setIdRegimen] = useState("");
+  const [dosisRows, setDosisRows] = useState([]);
+  const [guiaNota, setGuiaNota] = useState("");
 
   const superficie = useMemo(
     () => bodySurfaceArea(preview.peso, preview.talla),
     [preview],
   );
+
+  useEffect(() => {
+    fetchRegimenes()
+      .then(setRegimenes)
+      .catch(() => setRegimenes([]));
+  }, []);
+
+  useEffect(() => {
+    async function loadDosis() {
+      if (!idRegimen || !preview.peso || !preview.talla) {
+        return;
+      }
+      try {
+        const rows = await fetchDosisReferencia(
+          idRegimen,
+          Number(preview.peso),
+          Number(preview.talla),
+        );
+        setDosisRows(rows || []);
+      } catch {
+        setDosisRows([]);
+      }
+    }
+    loadDosis();
+  }, [idRegimen, preview.peso, preview.talla]);
+
+  function updateDosis(index, value) {
+    setDosisRows((current) =>
+      current.map((row, idx) =>
+        idx === index ? { ...row, dosis_mg: Number(value) } : row,
+      ),
+    );
+  }
+
+  async function handleSugerirGuias() {
+    const form = formRef.current;
+    const data = new FormData(form);
+    const peso = data.get("peso_kg");
+    const talla = data.get("talla_cm");
+    const body = {
+      estadio: data.get("estadio") || "",
+      t: data.get("t") || "",
+      n: data.get("n") || "",
+      m: data.get("m") || "",
+      localizacion_tumor: data.get("localizacion_tumor") || "",
+      msi: data.get("msi") || "no_evaluado",
+      ras: data.get("ras") || "no_evaluado",
+      braf_v600e: data.get("braf_v600e") || "no_evaluado",
+      linea_tratamiento: data.get("linea_tratamiento") || "",
+    };
+    if (peso) body.peso_kg = Number(peso);
+    if (talla) body.talla_cm = Number(talla);
+
+    if (!body.estadio) {
+      setError("Completá el estadio para sugerir según guías.");
+      return;
+    }
+
+    setLoading("Consultando guías clínicas...");
+    try {
+      const reco = await recomendarRegimen(body);
+      setIdRegimen(reco.id_regimen);
+      let nota = `Sugerido ${reco.id_regimen} (${reco.nombre_regimen}) por: ${
+        (reco.reglas_aplicadas || []).join(", ") || "guías clínicas"
+      }`;
+      if (reco.costo_total != null) {
+        nota += ` — Costo estimado: $${reco.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+      }
+      setGuiaNota(nota);
+      setSuccess(`Régimen sugerido: ${reco.id_regimen}`);
+    } catch (err) {
+      setError(err.message || "No se pudo obtener la sugerencia de guías.");
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -49,12 +128,15 @@ export default function PrescripcionPage() {
       n: data.get("n") || "",
       m: data.get("m") || "",
       estadio: data.get("estadio") || "",
-      msi_alta: data.get("msi_alta") === "on",
-      ras_mutado: data.get("ras_mutado") === "on",
-      braf_v600e: data.get("braf_v600e") === "on",
+      msi: data.get("msi") || "no_evaluado",
+      ras: data.get("ras") || "no_evaluado",
+      braf_v600e: data.get("braf_v600e") || "no_evaluado",
       linea_tratamiento: data.get("linea_tratamiento") || "",
-      esquema: (data.get("esquema") || "").trim(),
-      dosis_mg_m2: Number(data.get("dosis_mg_m2")),
+      id_regimen: idRegimen || data.get("id_regimen") || "",
+      dosis_por_farmaco: dosisRows.map((row) => ({
+        monodroga: row.monodroga,
+        dosis_mg: Number(row.dosis_mg),
+      })),
       medico_prescriptor: (data.get("medico_prescriptor") || "").trim(),
       matricula: (data.get("matricula") || "").trim(),
     };
@@ -68,6 +150,9 @@ export default function PrescripcionPage() {
       setResult(created);
       form.reset();
       setPreview({ peso: "", talla: "" });
+      setIdRegimen("");
+      setDosisRows([]);
+      setGuiaNota("");
     } catch (err) {
       setError(err.message || "Ocurrió un error al registrar la prescripción.");
     }
@@ -77,6 +162,9 @@ export default function PrescripcionPage() {
     formRef.current.reset();
     setPreview({ peso: "", talla: "" });
     setResult(null);
+    setIdRegimen("");
+    setDosisRows([]);
+    setGuiaNota("");
     clear();
   }
 
@@ -84,7 +172,7 @@ export default function PrescripcionPage() {
     <>
       <TopBar
         title="Alta de prescripción de alta complejidad"
-        subtitle="Registro de prescripciones oncológicas (caso piloto: cáncer de colon) con validación y trazabilidad en blockchain."
+        subtitle="Registro de prescripciones oncológicas (caso piloto: cáncer de colon) con validación híbrida y trazabilidad en blockchain."
         badge="Prescripciones"
       />
 
@@ -96,7 +184,7 @@ export default function PrescripcionPage() {
                 split
                 eyebrow="Auditoría de prescripciones"
                 title="Datos clínicos y prescripción"
-                description="Completá los atributos clínicos del paciente y el esquema prescrito. El sistema ejecuta una validación preliminar y registra la operación en el ledger."
+                description="Completá los atributos clínicos, elegí el régimen (opcionalmente sugerido por guías) y validá con el motor híbrido."
                 badge="Cáncer de colon"
               />
 
@@ -163,6 +251,7 @@ export default function PrescripcionPage() {
                     <option value="" disabled>Seleccionar</option>
                     <option value="Colon derecho">Colon derecho</option>
                     <option value="Colon izquierdo">Colon izquierdo</option>
+                    <option value="Colon transverso">Colon transverso</option>
                   </select>
                 </FormField>
                 <FormField label="Tipo histológico" htmlFor="tipo_histologico" required span={4}>
@@ -199,6 +288,7 @@ export default function PrescripcionPage() {
                     <option value="" disabled>Seleccionar</option>
                     <option value="M0">M0</option>
                     <option value="M1">M1</option>
+                    <option value="MX">MX</option>
                   </select>
                 </FormField>
               </div>
@@ -206,30 +296,36 @@ export default function PrescripcionPage() {
               <CardHeader
                 eyebrow="Biomarcadores"
                 title="Marcadores moleculares"
-                description="Condicionan el esquema terapéutico."
+                description="Tres estados: no se imputa wild type si no fue evaluado."
               />
               <div className="form-grid">
-                <FormField label="MSI-alta" htmlFor="msi_alta" span={4}>
-                  <label className="checkbox-inline">
-                    <input id="msi_alta" name="msi_alta" type="checkbox" /> Inestabilidad microsatelital alta
-                  </label>
+                <FormField label="MSI" htmlFor="msi" required span={4}>
+                  <select id="msi" name="msi" required defaultValue="no_evaluado">
+                    <option value="no_evaluado">No evaluado</option>
+                    <option value="MSI-H">MSI-H</option>
+                    <option value="MSS">MSS</option>
+                  </select>
                 </FormField>
-                <FormField label="Mutación RAS" htmlFor="ras_mutado" span={4}>
-                  <label className="checkbox-inline">
-                    <input id="ras_mutado" name="ras_mutado" type="checkbox" /> KRAS/NRAS mutado
-                  </label>
+                <FormField label="RAS" htmlFor="ras" required span={4}>
+                  <select id="ras" name="ras" required defaultValue="no_evaluado">
+                    <option value="no_evaluado">No evaluado</option>
+                    <option value="wild_type">Wild type</option>
+                    <option value="mutado">Mutado</option>
+                  </select>
                 </FormField>
-                <FormField label="Mutación BRAF V600E" htmlFor="braf_v600e" span={4}>
-                  <label className="checkbox-inline">
-                    <input id="braf_v600e" name="braf_v600e" type="checkbox" /> BRAF V600E presente
-                  </label>
+                <FormField label="BRAF V600E" htmlFor="braf_v600e" required span={4}>
+                  <select id="braf_v600e" name="braf_v600e" required defaultValue="no_evaluado">
+                    <option value="no_evaluado">No evaluado</option>
+                    <option value="wild_type">Wild type / ausente</option>
+                    <option value="presente">Presente</option>
+                  </select>
                 </FormField>
               </div>
 
               <CardHeader
                 eyebrow="Prescripción"
-                title="Esquema y dosificación"
-                description="Esquema prescrito, dosis en mg/m² y datos del prescriptor."
+                title="Régimen y dosificación"
+                description="Podés sugerir según guías y luego auditar lo prescrito con el modelo ML."
               />
               <div className="form-grid">
                 <FormField label="Línea de tratamiento" htmlFor="linea_tratamiento" required span={4}>
@@ -239,12 +335,38 @@ export default function PrescripcionPage() {
                     <option value="Segunda">Segunda</option>
                   </select>
                 </FormField>
-                <FormField label="Esquema / medicamento" htmlFor="esquema" required span={5}>
-                  <input id="esquema" name="esquema" type="text" placeholder="Ej.: FOLFOX + Bevacizumab" required />
+                <FormField label="Régimen" htmlFor="id_regimen" required span={5}>
+                  <select
+                    id="id_regimen"
+                    name="id_regimen"
+                    required
+                    value={idRegimen}
+                    onChange={(e) => setIdRegimen(e.target.value)}
+                  >
+                    <option value="" disabled>Seleccionar</option>
+                    {regimenes.map((reg) => (
+                      <option key={reg.id_regimen} value={reg.id_regimen}>
+                        {reg.id_regimen} — {reg.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </FormField>
-                <FormField label="Dosis (mg/m²)" htmlFor="dosis_mg_m2" required span={3}>
-                  <input id="dosis_mg_m2" name="dosis_mg_m2" type="number" step="0.1" min="0" placeholder="85" required />
+                <FormField label="Acción" htmlFor="sugerir_guias" span={3}>
+                  <button
+                    id="sugerir_guias"
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleSugerirGuias}
+                  >
+                    Sugerir según guías
+                  </button>
                 </FormField>
+                {guiaNota ? (
+                  <FormField label="Nota de guías" htmlFor="guia_nota" span={12}>
+                    <input id="guia_nota" type="text" value={guiaNota} readOnly />
+                  </FormField>
+                ) : null}
+
                 <FormField label="Médico prescriptor" htmlFor="medico_prescriptor" required span={8}>
                   <input id="medico_prescriptor" name="medico_prescriptor" type="text" placeholder="Ej.: Dr. Juan Pérez" required />
                 </FormField>
@@ -252,6 +374,36 @@ export default function PrescripcionPage() {
                   <input id="matricula" name="matricula" type="text" placeholder="MN 12345" required />
                 </FormField>
               </div>
+
+              {dosisRows.length > 0 && (
+                <div className="dosis-table-wrap">
+                  <h3 className="dosis-table__title">Dosis por fármaco</h3>
+                  <table className="dosis-table">
+                    <thead>
+                      <tr>
+                        <th>Monodroga</th>
+                        <th>Dosis (mg)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dosisRows.map((row, index) => (
+                        <tr key={row.monodroga}>
+                          <td>{row.monodroga}</td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={row.dosis_mg}
+                              onChange={(e) => updateDosis(index, e.target.value)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               <FormActions status={status} onCancel={handleCancel} submitLabel="✅ Validar y registrar" />
             </form>
@@ -262,7 +414,7 @@ export default function PrescripcionPage() {
                   split
                   eyebrow="Resultado de la validación"
                   title={`Prescripción ${result.prescription_code}`}
-                  description="Resultado preliminar del motor de validación y registro en la blockchain simulada."
+                  description="Veredicto del motor híbrido reglas + ML y registro en la blockchain simulada."
                   badge={`Superficie: ${result.superficie_corporal_m2} m²`}
                 />
                 <div className="form-grid">
@@ -274,7 +426,21 @@ export default function PrescripcionPage() {
                       />
                     </div>
                   </FormField>
-                  <FormField label="Hash del bloque (tx)" htmlFor="result_hash" span={8}>
+                  <FormField label="Origen" htmlFor="result_origen" span={4}>
+                    <input id="result_origen" type="text" value={result.validacion.origen || "—"} readOnly />
+                  </FormField>
+                  <FormField label="Versión modelo" htmlFor="result_version" span={4}>
+                    <input id="result_version" type="text" value={result.validacion.version_modelo || "—"} readOnly />
+                  </FormField>
+                  <FormField label="Confianza" htmlFor="result_confianza" span={12}>
+                    <ConfidenceBar
+                      value={result.validacion.probabilidad_concordante}
+                      low={result.validacion.umbral_bajo}
+                      high={result.validacion.umbral_alto}
+                      label={`Nivel: ${result.validacion.nivel_confianza || "—"}`}
+                    />
+                  </FormField>
+                  <FormField label="Hash del bloque (tx)" htmlFor="result_hash" span={12}>
                     <input id="result_hash" type="text" value={result.blockchain_tx_id || ""} readOnly />
                   </FormField>
                 </div>
@@ -283,6 +449,46 @@ export default function PrescripcionPage() {
                     <li key={idx}>{motivo}</li>
                   ))}
                 </ul>
+                {result.validacion.features_relevantes?.length > 0 && (
+                  <div className="features-aportes">
+                    <h4>Aportes principales</h4>
+                    <ul>
+                      {result.validacion.features_relevantes.map((item) => (
+                        <li key={item.feature}>
+                          {item.feature}: {item.aporte}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {result.validacion.costo_total != null && (
+                  <div className="features-aportes">
+                    <h4>Costo estimado del régimen</h4>
+                    <p style={{ fontWeight: 600, fontSize: "1.1em", margin: "0.5em 0" }}>
+                      Total: ${result.validacion.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </p>
+                    {result.validacion.costo_por_farmaco?.length > 0 && (
+                      <table className="dosis-table" style={{ marginTop: "0.5em" }}>
+                        <thead>
+                          <tr>
+                            <th>Fármaco</th>
+                            <th>Dosis (mg)</th>
+                            <th>Costo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.validacion.costo_por_farmaco.map((item) => (
+                            <tr key={item.monodroga}>
+                              <td>{item.monodroga}</td>
+                              <td>{item.dosis_mg}</td>
+                              <td>{item.costo != null ? `$${item.costo.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
               </section>
             )}
           </section>

@@ -1,6 +1,6 @@
 # MedChain AI
 
-Sistema de gestión de empadronamiento de pacientes con registro inmutable en blockchain privada (Hyperledger Fabric).
+Sistema de auditoría de prescripciones oncológicas de alta complejidad con validación híbrida (reglas + ML) y registro inmutable en blockchain privada (Hyperledger Fabric).
 
 Proyecto Final de Ingeniería Informática (UADE).
 
@@ -10,7 +10,7 @@ Proyecto Final de Ingeniería Informática (UADE).
 |------|-----------|
 | **Frontend** | React + Vite (puerto 5500) |
 | **Backend** | Python 3.11 + FastAPI (puerto 9999) |
-| **Modelo IA** | Python — generación de datos sintéticos para clasificación de diabetes |
+| **Modelo IA** | LightGBM (validación de concordancia de prescripciones de cáncer de colon) |
 | **Blockchain** | Hyperledger Fabric 2.5 LTS (red propia, ver `fabric/`) |
 | **Smart Contract** | Go |
 
@@ -22,31 +22,34 @@ Proyecto Final de Ingeniería Informática (UADE).
 │   ├── db.py                Conexion a PostgreSQL (pool, context manager, fallback en memoria)
 │   ├── auth_middleware.py   Middleware de autenticacion y RBAC
 │   ├── dependencies.py      Inyeccion de dependencias (singleton repos/services)
-│   ├── models/              Modelos Pydantic (patient, prescription, audit, agreement, enrollment, etc.)
+│   ├── models/              Modelos Pydantic (patient, prescription, audit, medication, monodrug, etc.)
 │   ├── repositories/        Repositorios con soporte dual PostgreSQL / en memoria
 │   ├── routers/             Endpoints de la API con autenticacion y control de roles
-│   └── services/            Logica de negocio (validacion, ledger, auditoria)
+│   └── services/            Logica de negocio (validacion, ledger, auditoria, dosis)
 ├── sql/                     Queries SQL externalizadas
-│   ├── schema.sql           DDL de todas las tablas (11 tablas)
+│   ├── schema.sql           DDL de todas las tablas
 │   ├── patients.sql         Queries de pacientes
 │   ├── prescriptions.sql    Queries de prescripciones
 │   ├── audit.sql            Queries de auditoria (casos, dictamenes, correcciones)
-│   ├── agreements.sql       Queries de acuerdos
-│   ├── enrollments.sql      Queries de empadronamientos
 │   ├── medications.sql      Queries de medicamentos
 │   ├── monodrugs.sql        Queries de monodrogas
 │   ├── ledger.sql           Queries del ledger
-│   └── users.sql            Queries de usuarios
+│   ├── users.sql            Queries de usuarios
+│   └── migrations/          Migraciones incrementales
 ├── frontend/                Aplicacion web React
 │   ├── src/
-│   │   ├── api/             Clientes HTTP al backend (audit, agreements, enrollments, etc.)
+│   │   ├── api/             Clientes HTTP al backend (patients, medications, monodrugs, prescriptions, audit)
 │   │   ├── auth/            Contexto de autenticacion y proteccion de rutas con RBAC
 │   │   ├── components/      Componentes reutilizables (Layout, Sidebar con menu por roles)
 │   │   ├── hooks/           Hooks personalizados
 │   │   └── pages/           Paginas de la aplicacion (incluye auditoria)
 │   └── vite.config.js       Dev server + proxy al backend
-├── ml-models/               Modulo de inteligencia artificial
-│   └── datosSinteticos.py   Generacion de datasets sinteticos de diabetes
+├── ml_models/               Pipeline de entrenamiento y artefactos del modelo
+│   ├── entrenar_modelo.py   Pipeline completo dataset + entrenamiento GBM
+│   ├── reentrenar_desde_dataset.py  Reentrenamiento desde CSV/parquet local
+│   ├── test_paridad_features.py     Test train/serve de features
+│   └── artefactos/          modelo_gbm.joblib + metricas
+├── backend/ml/              Nucleo compartido (regimenes, guias, codificacion, dosis, reglas)
 ├── blockchain/              Smart contract PatientContract en Go
 │   ├── main.go              CreatePatient, QueryPatient, GetPatientHistory
 │   └── go.mod               Dependencias (fabric-contract-api-go)
@@ -112,6 +115,7 @@ Documentacion interactiva (Swagger) en `http://127.0.0.1:9999/docs`.
 | `AUTH_PASSWORD` | Contraseña de autenticacion (fallback sin BD) |
 | `DATABASE_URL` | URL de conexion PostgreSQL (ej. `postgresql://user:pass@host:5432/medchain`). Si no se define, el backend usa almacenamiento en memoria |
 | `CORS_ORIGINS` | Origenes permitidos para CORS (separados por coma) |
+| `ML_MODEL_PATH` | Ruta al artefacto LightGBM (`modelo_gbm.joblib`). Si no se define, se usa `ml_models/artefactos/modelo_gbm.joblib` |
 
 #### Persistencia dual
 
@@ -157,12 +161,11 @@ Todos los endpoints de negocio estan bajo el prefijo `/api`. Los endpoints prote
 | `GET`  | `/api/medications` | cualquiera | Listar medicamentos |
 | `POST` | `/api/monodrugs` | admin | Crear monodroga |
 | `GET`  | `/api/monodrugs` | cualquiera | Listar monodrogas |
-| `POST` | `/api/prescriptions` | admin, prescriptor | Crear prescripcion |
+| `POST` | `/api/prescriptions` | admin, prescriptor | Crear prescripcion (valida con motor hibrido) |
 | `GET`  | `/api/prescriptions` | cualquiera | Listar prescripciones |
-| `POST` | `/api/agreements` | admin | Crear acuerdo |
-| `GET`  | `/api/agreements` | cualquiera | Listar acuerdos |
-| `POST` | `/api/enrollments` | admin | Crear empadronamiento |
-| `GET`  | `/api/enrollments` | cualquiera | Listar empadronamientos |
+| `GET`  | `/api/prescriptions/regimenes` | cualquiera | Catalogo de regimenes R00-R13 |
+| `GET`  | `/api/prescriptions/dosis-referencia` | cualquiera | Dosis de referencia por regimen |
+| `POST` | `/api/prescriptions/recomendacion` | admin, prescriptor | Sugerir regimen segun guias (sin ML) |
 | `GET`  | `/api/audit/queue` | auditor, admin | Cola de auditoria |
 | `GET`  | `/api/audit/cases/{id}` | auditor, admin | Detalle de caso |
 | `POST` | `/api/audit/cases/{id}/dictamen` | auditor, admin | Emitir dictamen |
@@ -318,5 +321,5 @@ El workflow se encuentra en `.github/workflows/deploy.yml`.
 
 - Si `DATABASE_URL` esta configurada, los datos persisten en PostgreSQL. Sin ella, se usa almacenamiento en memoria (los datos se pierden al reiniciar).
 - El campo `blockchain_tx_id` en los modelos de paciente y dictamen esta preparado para vincular cada registro con su transaccion en blockchain (pendiente de integracion con Hyperledger Fabric).
-- La carpeta `ml-models/` contiene los scripts de generacion de datos sinteticos y sera el modulo donde se implementen los modelos de IA del proyecto.
+- La carpeta `ml_models/` contiene el pipeline de entrenamiento del modelo de validacion de prescripciones (cancer de colon) y los artefactos asociados.
 - Los dictamenes y correcciones de auditoria se registran en el ledger inmutable para trazabilidad completa.

@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from fastapi import APIRouter, Header
@@ -6,8 +5,6 @@ from fastapi import APIRouter, Header
 from backend.auth_middleware import extract_token
 from backend.models.auth import LoginRequest, LoginResponse, UserInfo
 from backend.dependencies import get_auth_service
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

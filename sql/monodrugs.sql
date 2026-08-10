@@ -1,8 +1,8 @@
 -- name: insert_monodrug
-INSERT INTO monodrugs (descripcion, sap_id) VALUES (%s, %s) RETURNING id;
+INSERT INTO monodrugs (descripcion, codigo) VALUES (%s, %s) RETURNING id;
 
 -- name: select_all_monodrugs
 SELECT * FROM monodrugs ORDER BY id;
 
--- name: find_monodrug_by_sap_id
-SELECT * FROM monodrugs WHERE sap_id = %s LIMIT 1;
+-- name: find_monodrug_by_descripcion
+SELECT * FROM monodrugs WHERE LOWER(descripcion) = LOWER(%s) LIMIT 1;

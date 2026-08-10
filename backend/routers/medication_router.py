@@ -16,12 +16,16 @@ async def create_medication(
     ean: str = Form(...),
     codigo_alfabeta: str = Form(...),
     tipo_conservacion: str = Form(...),
-    sap_id: str = Form(...),
-    monodroga_id: str = Form(...),
+    laboratorio: str = Form(...),
+    monodroga: str = Form(...),
     tamano_dimension: str = Form(...),
+    potencia_mg: Optional[float] = Form(default=None),
+    unidad_potencia: Optional[str] = Form(default=None),
+    precio: Optional[float] = Form(default=None),
+    via_administracion: Optional[str] = Form(default=None),
     authorization: Optional[str] = Header(default=None),
 ):
-    """Crea un medicamento nuevo. Requiere rol administrador."""
+    """Crea un medicamento nuevo con codigo autogenerado. Requiere rol administrador."""
     user = require_auth(authorization)
     require_role(user, ["administrador"])
     svc = get_medication_service()
@@ -30,9 +34,13 @@ async def create_medication(
         ean=ean,
         codigo_alfabeta=codigo_alfabeta,
         tipo_conservacion=tipo_conservacion,
-        sap_id=sap_id,
-        monodroga_id=monodroga_id,
+        laboratorio=laboratorio,
+        monodroga=monodroga,
         tamano_dimension=tamano_dimension,
+        potencia_mg=potencia_mg,
+        unidad_potencia=unidad_potencia,
+        precio=precio,
+        via_administracion=via_administracion,
     )
 
 

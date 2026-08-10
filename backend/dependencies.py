@@ -12,8 +12,6 @@ from backend.repositories import (
     MonodrugRepository,
     PrescriptionRepository,
     LedgerRepository,
-    AgreementRepository,
-    EnrollmentRepository,
     AuditRepository,
 )
 from backend.services import (
@@ -24,32 +22,38 @@ from backend.services import (
     ValidationService,
     LedgerService,
     AuthService,
-    AgreementService,
-    EnrollmentService,
     AuditService,
 )
+from backend.services.dosis_service import DosisService
 from backend.services.excel_import_service import ExcelImportService
+from backend.services.recomendacion_service import RecomendacionService
 
 _patient_repo = PatientRepository()
 _medication_repo = MedicationRepository()
 _monodrug_repo = MonodrugRepository()
 _prescription_repo = PrescriptionRepository()
 _ledger_repo = LedgerRepository()
-_agreement_repo = AgreementRepository()
-_enrollment_repo = EnrollmentRepository()
 _audit_repo = AuditRepository()
 _excel_import_service = ExcelImportService()
+_dosis_service = DosisService(_medication_repo)
 
 _patient_service = PatientService(_patient_repo, _excel_import_service)
 _monodrug_service = MonodrugService(_monodrug_repo, _excel_import_service)
-_medication_service = MedicationService(_medication_repo, _monodrug_repo, _excel_import_service)
-_validation_service = ValidationService()
+_medication_service = MedicationService(
+    _medication_repo, _monodrug_repo, _excel_import_service, _monodrug_service,
+)
+_validation_service = ValidationService(_dosis_service)
 _ledger_service = LedgerService(_ledger_repo)
-_prescription_service = PrescriptionService(_prescription_repo, _validation_service, _ledger_service, _audit_repo)
+_prescription_service = PrescriptionService(
+    _prescription_repo,
+    _validation_service,
+    _ledger_service,
+    _audit_repo,
+    _dosis_service,
+)
 _auth_service = AuthService()
-_agreement_service = AgreementService(_agreement_repo, _excel_import_service)
-_enrollment_service = EnrollmentService(_enrollment_repo, _excel_import_service)
 _audit_service = AuditService(_audit_repo, _ledger_service)
+_recomendacion_service = RecomendacionService(_dosis_service)
 
 
 def get_patient_service() -> PatientService:
@@ -87,11 +91,11 @@ def get_audit_service() -> AuditService:
     return _audit_service
 
 
-def get_agreement_service() -> AgreementService:
-    """Retorna la instancia singleton de AgreementService."""
-    return _agreement_service
+def get_recomendacion_service() -> RecomendacionService:
+    """Retorna la instancia singleton de RecomendacionService."""
+    return _recomendacion_service
 
 
-def get_enrollment_service() -> EnrollmentService:
-    """Retorna la instancia singleton de EnrollmentService."""
-    return _enrollment_service
+def get_dosis_service() -> DosisService:
+    """Retorna la instancia singleton de DosisService."""
+    return _dosis_service

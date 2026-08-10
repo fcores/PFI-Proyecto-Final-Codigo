@@ -27,14 +27,6 @@ class AuditService:
             logger.error("Error al inicializar AuditService: %s", exc, exc_info=True)
             raise
 
-    def create_case(self, prescription_id: int) -> AuditCase:
-        """Crea un caso de auditoria para una prescripcion en revision."""
-        try:
-            return self._repo.add_case(prescription_id, "pendiente")
-        except Exception as exc:
-            logger.error("Error al crear caso de auditoria: %s", exc, exc_info=True)
-            raise
-
     def list_pending(self) -> AuditCaseList:
         """Lista los casos pendientes de revision."""
         try:

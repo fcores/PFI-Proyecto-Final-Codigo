@@ -54,7 +54,7 @@ export default function LoginPage() {
               Plataforma para la gestión de prescripciones
             </h2>
             <p className="login-aside-text">
-              Empadronamiento y auditoría de prescripciones de alta complejidad,
+              Auditoría de prescripciones de alta complejidad,
               con validación asistida y trazabilidad inmutable en blockchain.
             </p>
             <ul className="login-aside-features">

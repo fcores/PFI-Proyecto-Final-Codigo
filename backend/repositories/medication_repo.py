@@ -39,6 +39,20 @@ class MedicationRepository:
             logger.error("Error al obtener next_id: %s", exc, exc_info=True)
             raise
 
+    def count(self) -> int:
+        """Devuelve la cantidad total de medicamentos para generar el codigo."""
+        try:
+            if self._db_available():
+                from backend.db import get_db
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM medications")
+                        return cur.fetchone()[0]
+            return len(self._store)
+        except Exception as exc:
+            logger.error("Error al contar medicamentos: %s", exc, exc_info=True)
+            raise
+
     def add(self, medication: Medication) -> Medication:
         """Agrega un medicamento al repositorio."""
         try:
@@ -50,10 +64,12 @@ class MedicationRepository:
                         cur.execute(
                             queries["insert_medication"],
                             (
-                                medication.descripcion, medication.ean,
+                                medication.codigo, medication.descripcion, medication.ean,
                                 medication.codigo_alfabeta, medication.tipo_conservacion,
-                                medication.sap_id, medication.monodroga_id,
+                                medication.laboratorio, medication.monodroga,
                                 medication.tamano_dimension,
+                                medication.potencia_mg, medication.unidad_potencia,
+                                medication.precio, medication.via_administracion,
                             ),
                         )
                         row = cur.fetchone()
@@ -84,4 +100,39 @@ class MedicationRepository:
             return list(self._store)
         except Exception as exc:
             logger.error("Error al listar medicamentos: %s", exc, exc_info=True)
+            raise
+
+    def find_by_monodroga(self, monodroga: str) -> List[Medication]:
+        """Lista presentaciones filtradas por monodroga, ordenadas por potencia."""
+        try:
+            if self._db_available():
+                from backend.db import get_db, load_query
+                queries = load_query("medications.sql")
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            queries["select_medications_by_monodroga"],
+                            (monodroga,),
+                        )
+                        columns = [desc[0] for desc in cur.description]
+                        rows = cur.fetchall()
+                result = []
+                for row in rows:
+                    data = dict(zip(columns, row))
+                    result.append(Medication(**data))
+                return result
+
+            filtrados = []
+            for med in self._store:
+                if str(med.monodroga).lower() == str(monodroga).lower():
+                    filtrados.append(med)
+            filtrados.sort(key=lambda m: (m.potencia_mg is None, m.potencia_mg or 0, m.id))
+            return filtrados
+        except Exception as exc:
+            logger.error(
+                "Error al buscar medicamentos por monodroga %s: %s",
+                monodroga,
+                exc,
+                exc_info=True,
+            )
             raise

@@ -13,17 +13,13 @@ router = APIRouter(prefix="/monodrugs", tags=["monodrugs"])
 @router.post("", response_model=Monodrug)
 async def create_monodrug(
     descripcion: str = Form(...),
-    sap_id: str = Form(...),
     authorization: Optional[str] = Header(default=None),
 ):
-    """Crea una monodroga nueva. Requiere rol administrador."""
+    """Crea una monodroga nueva con codigo autogenerado. Requiere rol administrador."""
     user = require_auth(authorization)
     require_role(user, ["administrador"])
     svc = get_monodrug_service()
-    return svc.create(
-        descripcion=descripcion,
-        sap_id=sap_id,
-    )
+    return svc.create(descripcion=descripcion)
 
 
 @router.get("", response_model=MonodrugList)

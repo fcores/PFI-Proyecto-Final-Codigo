@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY sql/ sql/
 COPY backend/ backend/
+COPY ml_models/artefactos/ ml_models/artefactos/
 
 EXPOSE 8000
 

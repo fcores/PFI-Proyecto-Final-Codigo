@@ -11,14 +11,9 @@ import {
   createCorrection,
   fetchCorrectionHistory,
 } from "../api/audit";
-
-const ESTADO_VARIANT = {
-  APROBADO: "success",
-  RECHAZADO: "error",
-  PENDIENTE_DOCS: "warning",
-  REVISION: "info",
-  pendiente: "neutral",
-};
+import ConfidenceBar from "../components/ConfidenceBar";
+import { ESTADO_VARIANT } from "../constants/estadoVariant";
+import { formatDate } from "../utils/formatDate";
 
 const CORRECTION_COLUMNS = ["Campo", "Valor nuevo", "Justificación", "Fecha"];
 
@@ -26,24 +21,12 @@ const CAMPO_OPTIONS = [
   "diagnostico_cie10",
   "estadio",
   "esquema",
+  "id_regimen",
   "dosis_mg_m2",
   "localizacion_tumor",
   "tipo_histologico",
   "linea_tratamiento",
 ];
-
-function formatDate(raw) {
-  if (!raw) return "—";
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-  return date.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function AuditCasePage() {
   const { caseId } = useParams();
@@ -163,8 +146,49 @@ export default function AuditCasePage() {
 
   if (!caseData) return null;
 
-  const prescription = caseData.prescription || caseData;
-  const validacion = prescription.validacion || {};
+  const caseInfo = caseData.case || caseData.prescription || caseData;
+  let motivosParsed = [];
+  try {
+    motivosParsed = Array.isArray(caseInfo.motivos_validacion)
+      ? caseInfo.motivos_validacion
+      : JSON.parse(caseInfo.motivos_validacion || "[]");
+  } catch {
+    motivosParsed = caseInfo.motivos_validacion ? [String(caseInfo.motivos_validacion)] : [];
+  }
+  let featuresParsed = [];
+  try {
+    featuresParsed = Array.isArray(caseInfo.features_relevantes)
+      ? caseInfo.features_relevantes
+      : JSON.parse(caseInfo.features_relevantes || "[]");
+  } catch {
+    featuresParsed = [];
+  }
+  const prescription = {
+    ...caseInfo,
+    dosis_mg_m2: caseInfo.dosis_mg_m2,
+    superficie_corporal_m2: caseInfo.superficie_corporal_m2,
+  };
+  let costoParsed = [];
+  try {
+    costoParsed = Array.isArray(caseInfo.costo_por_farmaco)
+      ? caseInfo.costo_por_farmaco
+      : JSON.parse(caseInfo.costo_por_farmaco || "[]");
+  } catch {
+    costoParsed = [];
+  }
+  const validacion = caseInfo.validacion || {
+    estado: caseInfo.estado_validacion,
+    motivos: motivosParsed,
+    probabilidad_concordante: caseInfo.probabilidad_concordante,
+    nivel_confianza: caseInfo.nivel_confianza,
+    umbral_bajo: caseInfo.umbral_bajo,
+    umbral_alto: caseInfo.umbral_alto,
+    origen: caseInfo.origen_validacion,
+    version_modelo: caseInfo.version_modelo,
+    features_relevantes: featuresParsed,
+    costo_por_farmaco: costoParsed,
+    costo_total: caseInfo.costo_total,
+  };
   const dictamen = caseData.dictamen;
   const hasDictamen = dictamen && dictamen.resultado;
 
@@ -211,7 +235,7 @@ export default function AuditCasePage() {
             <CardHeader
               eyebrow="Validación automática"
               title="Resultado"
-              description="Estado y motivos de la validación preliminar."
+              description="Estado, probabilidad y aportes del motor híbrido reglas + ML."
             />
             <div className="form-grid">
               <FormField label="Estado" htmlFor="case_val_estado" span={4}>
@@ -222,7 +246,21 @@ export default function AuditCasePage() {
                   />
                 </div>
               </FormField>
-              <FormField label="Motivos" htmlFor="case_val_motivos" span={8}>
+              <FormField label="Origen" htmlFor="case_val_origen" span={4}>
+                <input id="case_val_origen" type="text" value={validacion.origen || "—"} readOnly />
+              </FormField>
+              <FormField label="Versión modelo" htmlFor="case_val_version" span={4}>
+                <input id="case_val_version" type="text" value={validacion.version_modelo || "—"} readOnly />
+              </FormField>
+              <FormField label="Confianza del modelo" htmlFor="case_val_confianza" span={12}>
+                <ConfidenceBar
+                  value={validacion.probabilidad_concordante}
+                  low={validacion.umbral_bajo}
+                  high={validacion.umbral_alto}
+                  label={`Nivel: ${validacion.nivel_confianza || "—"}`}
+                />
+              </FormField>
+              <FormField label="Motivos" htmlFor="case_val_motivos" span={12}>
                 {validacion.motivos && validacion.motivos.length > 0 ? (
                   <ul className="muted" style={{ paddingLeft: "18px", margin: 0 }}>
                     {validacion.motivos.map((motivo, idx) => (
@@ -233,6 +271,46 @@ export default function AuditCasePage() {
                   <p className="muted">Sin motivos registrados.</p>
                 )}
               </FormField>
+              {validacion.features_relevantes?.length > 0 && (
+                <FormField label="Aportes principales" htmlFor="case_val_aportes" span={12}>
+                  <ul className="muted" style={{ paddingLeft: "18px", margin: 0 }}>
+                    {validacion.features_relevantes.map((item) => (
+                      <li key={item.feature}>
+                        {item.feature}: {item.aporte}
+                      </li>
+                    ))}
+                  </ul>
+                </FormField>
+              )}
+              {validacion.costo_total != null && (
+                <FormField label="Costo estimado" htmlFor="case_val_costo" span={12}>
+                  <div>
+                    <p style={{ fontWeight: 600, margin: "0 0 0.4em" }}>
+                      Total: ${validacion.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </p>
+                    {validacion.costo_por_farmaco?.length > 0 && (
+                      <table className="dosis-table" style={{ marginTop: "0.25em" }}>
+                        <thead>
+                          <tr>
+                            <th>Fármaco</th>
+                            <th>Dosis (mg)</th>
+                            <th>Costo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {validacion.costo_por_farmaco.map((item) => (
+                            <tr key={item.monodroga}>
+                              <td>{item.monodroga}</td>
+                              <td>{item.dosis_mg}</td>
+                              <td>{item.costo != null ? `$${item.costo.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </FormField>
+              )}
             </div>
           </section>
 

@@ -13,17 +13,15 @@ type PatientContract struct {
 }
 
 type Patient struct {
-	DocType              string `json:"docType"`
-	PatientID            string `json:"patientId"`
-	SapID                string `json:"sapId"`
-	FirstName            string `json:"firstName"`
-	LastName             string `json:"lastName"`
-	BirthDate            string `json:"birthDate"`
-	Gender               string `json:"gender"`
-	TipoEmpadronamiento string `json:"tipoEmpadronamiento"`
-	FechaInicio          string `json:"fechaInicio"`
-	DataHash             string `json:"dataHash"`
-	CreatedAt            string `json:"createdAt"`
+	DocType   string `json:"docType"`
+	PatientID string `json:"patientId"`
+	SapID     string `json:"sapId"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	BirthDate string `json:"birthDate"`
+	Gender    string `json:"gender"`
+	DataHash  string `json:"dataHash"`
+	CreatedAt string `json:"createdAt"`
 }
 
 func (pc *PatientContract) InitLedger(ctx contractapi.TransactionContextInterface) error {

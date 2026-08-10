@@ -176,8 +176,9 @@ PFI-Proyecto-Final/
 |   |-- 04-aws-ec2-setup.md
 |   |-- 05-deploy-aws-consola.md   Guia paso a paso para AWS por consola web
 |
-|-- ml-models/                Modulo de inteligencia artificial
-|   |-- datosSinteticos.py    Generacion de datasets sinteticos
+|-- ml_models/                Modulo de inteligencia artificial
+|   |-- entrenar_modelo.py    Pipeline dataset + entrenamiento GBM
+|   |-- reentrenar_desde_dataset.py  Reentrenamiento desde dataset local
 |
 |-- Dockerfile                Imagen Docker del backend
 |-- .dockerignore             Exclusiones para Docker build

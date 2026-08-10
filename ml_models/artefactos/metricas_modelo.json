@@ -1,0 +1,14 @@
+{
+  "lgbm_recall_no_concordante": 0.7099,
+  "lgbm_auc_roc": 0.9024,
+  "lgbm_auc_pr": 0.904,
+  "lgbm_brier_score": 0.1071,
+  "reglas_recall_no_concordante": 0.4224,
+  "delta_ml_sobre_reglas": 0.2875,
+  "umbral_bajo": 0.35,
+  "umbral_alto": 0.65,
+  "n_features": 21,
+  "n_filas_entrenamiento": 874,
+  "version_modelo": "1.0.0",
+  "semilla": 42
+}

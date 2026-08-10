@@ -449,10 +449,6 @@ body {
   align-items: start;
 }
 
-.layout--patients {
-  align-items: start;
-}
-
 .layout--single {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -1187,14 +1183,6 @@ tbody tr:last-child td {
   flex-direction: column;
 }
 
-.contrato-title {
-  margin: 4px 0 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: -0.03em;
-}
-
 .contrato-upload-zone {
   flex: 1;
   min-height: 320px;
@@ -1550,19 +1538,6 @@ tbody tr:last-child td {
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.days-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: rgba(20, 184, 106, 0.1);
-  color: #0b8f54;
-  font-size: 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 /* number input: quitar spinners */
@@ -1926,4 +1901,91 @@ input[type="number"] {
   cursor: pointer;
   font-size: 14px;
   color: var(--text-main);
+}
+
+.confidence-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.confidence-bar__track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.confidence-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--transition-fast);
+}
+
+.confidence-bar__fill--high {
+  background: linear-gradient(90deg, #0d9488, #14b8a6);
+}
+
+.confidence-bar__fill--mid {
+  background: linear-gradient(90deg, #d97706, #f59e0b);
+}
+
+.confidence-bar__fill--low {
+  background: linear-gradient(90deg, #b91c1c, #ef4444);
+}
+
+.confidence-bar__mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.confidence-bar__mark--high {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.confidence-bar__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dosis-table-wrap {
+  margin: 12px 0 20px;
+}
+
+.dosis-table__title {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.dosis-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dosis-table th,
+.dosis-table td {
+  border: 1px solid var(--border-color);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.dosis-table input {
+  width: 100%;
+}
+
+.features-aportes {
+  margin-top: 12px;
+}
+
+.features-aportes h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
 }

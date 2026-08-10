@@ -39,6 +39,20 @@ class MonodrugRepository:
             logger.error("Error al obtener next_id: %s", exc, exc_info=True)
             raise
 
+    def count(self) -> int:
+        """Devuelve la cantidad total de monodrogas para generar el codigo."""
+        try:
+            if self._db_available():
+                from backend.db import get_db
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM monodrugs")
+                        return cur.fetchone()[0]
+            return len(self._store)
+        except Exception as exc:
+            logger.error("Error al contar monodrogas: %s", exc, exc_info=True)
+            raise
+
     def add(self, monodrug: Monodrug) -> Monodrug:
         """Agrega una monodroga al repositorio."""
         try:
@@ -49,7 +63,7 @@ class MonodrugRepository:
                     with conn.cursor() as cur:
                         cur.execute(
                             queries["insert_monodrug"],
-                            (monodrug.descripcion, monodrug.sap_id),
+                            (monodrug.descripcion, monodrug.codigo),
                         )
                         row = cur.fetchone()
                         monodrug = monodrug.model_copy(update={"id": row[0]})
@@ -81,15 +95,15 @@ class MonodrugRepository:
             logger.error("Error al listar monodrogas: %s", exc, exc_info=True)
             raise
 
-    def find_by_sap_id(self, sap_id: str) -> Optional[Monodrug]:
-        """Busca una monodroga por su ID SAP."""
+    def find_by_descripcion(self, descripcion: str) -> Optional[Monodrug]:
+        """Busca una monodroga por su descripcion (case-insensitive)."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
                 queries = load_query("monodrugs.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
-                        cur.execute(queries["find_monodrug_by_sap_id"], (sap_id,))
+                        cur.execute(queries["find_monodrug_by_descripcion"], (descripcion,))
                         columns = [desc[0] for desc in cur.description]
                         row = cur.fetchone()
                 if row is None:
@@ -97,9 +111,9 @@ class MonodrugRepository:
                 data = dict(zip(columns, row))
                 return Monodrug(**data)
             for item in self._store:
-                if item.sap_id == sap_id:
+                if item.descripcion.lower() == descripcion.lower():
                     return item
             return None
         except Exception as exc:
-            logger.error("Error al buscar monodroga por sap_id %s: %s", sap_id, exc, exc_info=True)
+            logger.error("Error al buscar monodroga por descripcion '%s': %s", descripcion, exc, exc_info=True)
             raise

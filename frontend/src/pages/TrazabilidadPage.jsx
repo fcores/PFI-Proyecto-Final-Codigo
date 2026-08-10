@@ -5,14 +5,9 @@ import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import StatusChip from "../components/StatusChip";
 import { fetchLedger, verifyLedger } from "../api/ledger";
+import { shortHash } from "../utils/shortHash";
 
 const TABLE_COLUMNS = ["#", "Tipo", "Fecha", "Contenido", "Hash", "Hash anterior"];
-
-function shortHash(hash) {
-  if (!hash) return "—";
-  if (hash.length <= 18) return hash;
-  return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
-}
 
 function formatPayload(payload) {
   const keys = Object.keys(payload || {});
@@ -63,7 +58,7 @@ export default function TrazabilidadPage() {
       <main className="page page--wide">
         <section className="layout layout--single">
           <section className="card card-table">
-            <header className="agreements-header agreements-header--modern">
+            <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Integridad</span>
                 <h2>🔗 Cadena de bloques</h2>

@@ -5,12 +5,6 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class AuditCaseBase(BaseModel):
-    """Modelo base para crear un caso de auditoria."""
-
-    prescription_id: int = Field(..., title="ID de prescripcion")
-
-
 class AuditCase(BaseModel):
     """Representacion completa de un caso de auditoria."""
 
@@ -24,8 +18,18 @@ class AuditCase(BaseModel):
     diagnostico_cie10: Optional[str] = None
     estadio: Optional[str] = None
     esquema: Optional[str] = None
+    dosis_mg_m2: Optional[float] = None
+    superficie_corporal_m2: Optional[float] = None
+    id_regimen: Optional[str] = None
     estado_validacion: Optional[str] = None
     motivos_validacion: Optional[str] = None
+    probabilidad_concordante: Optional[float] = None
+    nivel_confianza: Optional[str] = None
+    umbral_bajo: Optional[float] = None
+    umbral_alto: Optional[float] = None
+    origen_validacion: Optional[str] = None
+    version_modelo: Optional[str] = None
+    features_relevantes: Optional[str] = None
     prescription_created_at: Optional[datetime] = None
 
 

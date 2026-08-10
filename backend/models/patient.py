@@ -15,11 +15,6 @@ class PatientBase(BaseModel):
     gender: str = Field(..., title="Género")
     treatment: Optional[str] = Field(None, title="Tratamiento")
     medications: List[str] = Field(default_factory=list, title="Medicamentos")
-    # Campos de empadronamiento
-    tipo_empadronamiento: str = Field(..., title="Tipo de empadronamiento")
-    fecha_inicio: date = Field(..., title="Fecha de inicio del empadronamiento")
-    fecha_primera_toma: date = Field(..., title="Fecha de la primera toma")
-    cadencia_estimada_toma: int = Field(..., ge=1, title="Cadencia estimada de toma (días)")
 
 
 class Patient(PatientBase):
