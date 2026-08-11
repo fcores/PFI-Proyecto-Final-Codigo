@@ -9,6 +9,7 @@ on:
       - "frontend/**"
       - "blockchain/**"
       - "fabric/**"
+      - "ml_models/artefactos/**"
       - "Dockerfile"
       - "requirements.txt"
 
@@ -40,6 +41,7 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - 'ml_models/artefactos/**'
               - 'Dockerfile'
               - 'requirements.txt'
             frontend:

@@ -1,8 +1,10 @@
+import logging
 import os
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.ml.model_loader import cargar_modelo, modelo_disponible
 from backend.routers import (
     patient_router,
     medication_router,
@@ -12,6 +14,8 @@ from backend.routers import (
     auth_router,
     audit_router,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -41,8 +45,24 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     async def root():
-        """Health check (sin prefijo /api, usado por ECS/ALB)."""
-        return {"status": "ok", "service": "MedChain AI"}
+        """Health check (sin prefijo /api) que reporta el estado del modelo ML."""
+        try:
+            artefacto = cargar_modelo()
+            version = artefacto.get("version_modelo") if artefacto else None
+            return {
+                "status": "ok",
+                "service": "MedChain AI",
+                "modelo_disponible": modelo_disponible(),
+                "modelo_version": version,
+            }
+        except Exception as exc:
+            logger.error("Error en health check root: %s", exc, exc_info=True)
+            return {
+                "status": "ok",
+                "service": "MedChain AI",
+                "modelo_disponible": False,
+                "modelo_version": None,
+            }
 
     return app
 
