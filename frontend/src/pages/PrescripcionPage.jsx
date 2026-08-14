@@ -116,7 +116,7 @@ export default function PrescripcionPage() {
     const data = new FormData(form);
 
     const body = {
-      patient_sap_id: (data.get("patient_sap_id") || "").trim(),
+      patient_id: Number(data.get("patient_id")),
       edad: Number(data.get("edad")),
       sexo: data.get("sexo") || "",
       peso_kg: Number(data.get("peso_kg")),
@@ -189,8 +189,8 @@ export default function PrescripcionPage() {
               />
 
               <div className="form-grid">
-                <FormField label="ID Paciente" htmlFor="patient_sap_id" required span={4}>
-                  <input id="patient_sap_id" name="patient_sap_id" type="text" placeholder="Ej.: SAP-000123" required />
+                <FormField label="ID Paciente" htmlFor="patient_id" required span={4}>
+                  <input id="patient_id" name="patient_id" type="number" min="1" placeholder="Ej.: 1" required />
                 </FormField>
                 <FormField label="Edad" htmlFor="edad" required span={2}>
                   <input id="edad" name="edad" type="number" min="0" max="120" placeholder="65" required />

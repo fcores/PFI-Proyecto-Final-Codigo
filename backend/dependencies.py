@@ -1,10 +1,9 @@
 """
 Composition root: instancias singleton de repos y servicios.
 Centraliza la inyección para que los routers no conozcan las implementaciones.
+Las migraciones se ejecutan via Alembic como paso explicito del despliegue,
+no al importar este modulo.
 """
-from backend.db import init_db
-
-init_db()
 
 from backend.repositories import (
     PatientRepository,

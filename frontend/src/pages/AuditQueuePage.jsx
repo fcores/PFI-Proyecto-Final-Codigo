@@ -13,7 +13,7 @@ import { formatDate } from "../utils/formatDate";
 const TABLE_COLUMNS = [
   "ID Caso",
   "Código Prescripción",
-  "Paciente SAP",
+  "Paciente ID",
   "Diagnóstico",
   "Estadio",
   "Esquema",
@@ -45,7 +45,7 @@ export default function AuditQueuePage() {
     return cases.filter((item) => {
       const searchableText = [
         item.prescription_code,
-        item.patient_sap_id,
+        String(item.patient_id || ""),
         item.diagnostico_cie10,
         item.esquema,
       ]
@@ -96,7 +96,7 @@ export default function AuditQueuePage() {
       >
         <td>{item.id}</td>
         <td>{item.prescription_code}</td>
-        <td>{item.patient_sap_id}</td>
+        <td>{item.patient_id}</td>
         <td>{item.diagnostico_cie10}</td>
         <td>{item.estadio}</td>
         <td>{item.esquema}</td>

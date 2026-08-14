@@ -52,7 +52,7 @@ class ValidationResult(BaseModel):
 
 
 class PrescriptionBase(BaseModel):
-    patient_sap_id: str = Field(..., title="ID Paciente SAP")
+    patient_id: int = Field(..., title="ID Paciente")
     edad: int = Field(..., ge=0, le=120, title="Edad")
     sexo: str = Field(..., title="Sexo")
     peso_kg: float = Field(..., gt=0, title="Peso (kg)")

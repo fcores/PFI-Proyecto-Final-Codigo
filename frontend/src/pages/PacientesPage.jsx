@@ -49,10 +49,6 @@ export default function PacientesPage() {
               />
 
               <div className="form-grid form-grid--patient">
-                <FormField label="ID Paciente" htmlFor="sap_id" required span={3}>
-                  <input id="sap_id" name="sap_id" type="text" required />
-                </FormField>
-
                 <FormField label="ID Credencial" htmlFor="credential_id" span={3}>
                   <input id="credential_id" name="credential_id" type="text" />
                 </FormField>
@@ -124,7 +120,7 @@ export default function PacientesPage() {
               title="Importar pacientes desde Excel"
               description="Cargá múltiples pacientes en una sola operación usando un archivo Excel con los campos del alta clínica."
               importFn={bulkImportPatients}
-              templateHint="sap_id, credential_id, provider_id, provider, first_name, last_name, birth_date, gender, treatment"
+              templateHint="credential_id, provider_id, provider, first_name, last_name, birth_date, gender, treatment"
             />
           </section>
         </section>

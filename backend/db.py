@@ -1,18 +1,17 @@
 """
 Modulo de acceso a base de datos PostgreSQL.
 Provee pool de conexiones, context manager y utilidades de carga de queries.
-Si DATABASE_URL no esta configurada, el sistema opera en modo in-memory.
+Si DATABASE_URL no esta configurada, el sistema opera en modo in-memory (solo local/test).
+En produccion sin DATABASE_URL el arranque falla (fail-fast via config.py).
 """
-import os
 import logging
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from backend.config import get_settings
+from backend.security.phi_redactor import PHIRedactionFilter
+
 logger = logging.getLogger(__name__)
-_handler = RotatingFileHandler("db.log", maxBytes=5_000_000, backupCount=3)
-_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
-logger.addHandler(_handler)
-logger.setLevel(logging.INFO)
+logger.addFilter(PHIRedactionFilter())
 
 _pool = None
 _use_db = False
@@ -26,7 +25,8 @@ def _init_pool():
         if _pool_initialized:
             return
         _pool_initialized = True
-        database_url = os.getenv("DATABASE_URL")
+        settings = get_settings()
+        database_url = settings.database_url
         if not database_url:
             logger.info("DATABASE_URL no configurada, operando en modo in-memory")
             _use_db = False
@@ -43,99 +43,56 @@ def _init_pool():
 
 def get_connection_pool():
     """Retorna el pool de conexiones singleton, creandolo si no existe."""
-    try:
-        if not _pool_initialized:
-            _init_pool()
-        return _pool
-    except Exception as exc:
-        logger.error("Error al obtener connection pool: %s", exc, exc_info=True)
-        raise
+    if not _pool_initialized:
+        _init_pool()
+    return _pool
 
 
 def is_db_available():
     """Retorna True si la base de datos esta disponible y el pool fue creado."""
-    try:
-        if not _pool_initialized:
-            _init_pool()
-        return _use_db and _pool is not None
-    except Exception as exc:
-        logger.error("Error al verificar disponibilidad de DB: %s", exc, exc_info=True)
-        return False
+    if not _pool_initialized:
+        _init_pool()
+    return _use_db and _pool is not None
 
 
 class get_db:
     """Context manager que provee una conexion del pool, commit en exito, rollback en error."""
 
     def __init__(self):
-        """Inicializa el context manager de conexion."""
-        try:
-            self._conn = None
-            self._pool = None
-        except Exception as exc:
-            logger.error("Error al inicializar get_db: %s", exc, exc_info=True)
-            raise
+        self._conn = None
+        self._pool = None
 
     def __enter__(self):
-        """Obtiene una conexion del pool."""
-        try:
-            self._pool = get_connection_pool()
-            if self._pool is None:
-                raise RuntimeError("Pool de conexiones no disponible")
-            self._conn = self._pool.getconn()
-            return self._conn
-        except Exception as exc:
-            logger.error("Error al obtener conexion del pool: %s", exc, exc_info=True)
-            raise
+        self._pool = get_connection_pool()
+        if self._pool is None:
+            raise RuntimeError("Pool de conexiones no disponible")
+        self._conn = self._pool.getconn()
+        return self._conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Commit en exito, rollback en error, y devuelve la conexion al pool."""
-        try:
-            if self._conn is not None:
-                if exc_type is None:
-                    self._conn.commit()
-                else:
-                    self._conn.rollback()
-                self._pool.putconn(self._conn)
-            return False
-        except Exception as exc:
-            logger.error("Error en get_db __exit__: %s", exc, exc_info=True)
-            return False
-
-
-def _run_migrations(cur):
-    """Ejecuta los scripts ALTER de sql/migrations en orden alfabetico."""
-    try:
-        migrations_dir = Path(__file__).resolve().parent.parent / "sql" / "migrations"
-        if not migrations_dir.exists():
-            return
-        archivos = sorted(migrations_dir.glob("*.sql"))
-        for ruta in archivos:
-            with open(str(ruta), "r", encoding="utf-8") as f:
-                sql_text = f.read()
-            if sql_text.strip():
-                cur.execute(sql_text)
-                logger.info("Migracion aplicada: %s", ruta.name)
-    except Exception as exc:
-        logger.error("Error al ejecutar migraciones: %s", exc, exc_info=True)
-        raise
+        if self._conn is not None:
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+            self._pool.putconn(self._conn)
+        return False
 
 
 def init_db():
-    """Lee y ejecuta sql/schema.sql y luego las migraciones ALTER."""
-    try:
-        if not is_db_available():
-            logger.info("Base de datos no disponible, omitiendo inicializacion de schema")
-            return
-        schema_path = Path(__file__).resolve().parent.parent / "sql" / "schema.sql"
-        with open(str(schema_path), "r", encoding="utf-8") as f:
-            schema_sql = f.read()
-        with get_db() as conn:
-            with conn.cursor() as cur:
-                cur.execute(schema_sql)
-                _run_migrations(cur)
-        logger.info("Schema de base de datos inicializado correctamente")
-    except Exception as exc:
-        logger.error("Error al inicializar schema de DB: %s", exc, exc_info=True)
+    """Inicializa el schema ejecutando sql/schema.sql (sin migraciones).
+    Las migraciones se ejecutan via Alembic como paso explicito del despliegue.
+    """
+    if not is_db_available():
+        logger.info("Base de datos no disponible, omitiendo inicializacion de schema")
+        return
+    schema_path = Path(__file__).resolve().parent.parent / "sql" / "schema.sql"
+    with open(str(schema_path), "r", encoding="utf-8") as f:
+        schema_sql = f.read()
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(schema_sql)
+    logger.info("Schema de base de datos inicializado correctamente")
 
 
 def load_query(filename):
@@ -143,26 +100,22 @@ def load_query(filename):
 
     Parsea comentarios con formato '-- name: nombre_query' como delimitadores.
     """
-    try:
-        sql_path = Path(__file__).resolve().parent.parent / "sql" / filename
-        with open(str(sql_path), "r", encoding="utf-8") as f:
-            content = f.read()
-        queries = {}
-        current_name = None
-        current_lines = []
-        for line in content.split("\n"):
-            stripped = line.strip()
-            if stripped.startswith("-- name:"):
-                if current_name and current_lines:
-                    queries[current_name] = "\n".join(current_lines).strip()
-                current_name = stripped.replace("-- name:", "").strip()
-                current_lines = []
-            else:
-                if current_name is not None:
-                    current_lines.append(line)
-        if current_name and current_lines:
-            queries[current_name] = "\n".join(current_lines).strip()
-        return queries
-    except Exception as exc:
-        logger.error("Error al cargar query desde %s: %s", filename, exc, exc_info=True)
-        raise
+    sql_path = Path(__file__).resolve().parent.parent / "sql" / filename
+    with open(str(sql_path), "r", encoding="utf-8") as f:
+        content = f.read()
+    queries = {}
+    current_name = None
+    current_lines = []
+    for line in content.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("-- name:"):
+            if current_name and current_lines:
+                queries[current_name] = "\n".join(current_lines).strip()
+            current_name = stripped.replace("-- name:", "").strip()
+            current_lines = []
+        else:
+            if current_name is not None:
+                current_lines.append(line)
+    if current_name and current_lines:
+        queries[current_name] = "\n".join(current_lines).strip()
+    return queries

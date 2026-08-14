@@ -1,7 +1,7 @@
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Header, UploadFile, File, Form
+from fastapi import APIRouter, Header, UploadFile, File, Form, HTTPException, Query
 
 from backend.auth_middleware import require_auth, require_role
 from backend.models.bulk_import import BulkImportResult
@@ -13,7 +13,6 @@ router = APIRouter(prefix="/patients", tags=["patients"])
 
 @router.post("", response_model=Patient)
 async def create_patient(
-    sap_id: str = Form(...),
     credential_id: Optional[str] = Form(None),
     provider_id: Optional[str] = Form(None),
     provider: Optional[str] = Form(None),
@@ -36,7 +35,6 @@ async def create_patient(
     require_role(user, ["administrador"])
     svc = get_patient_service()
     return svc.create(
-        sap_id=sap_id,
         credential_id=credential_id,
         provider_id=provider_id,
         provider=provider,
@@ -56,11 +54,31 @@ async def create_patient(
 
 
 @router.get("", response_model=PatientList)
-async def list_patients(authorization: Optional[str] = Header(default=None)):
-    """Lista todos los pacientes. Requiere autenticacion."""
+async def list_patients(
+    q: Optional[str] = Query(None, min_length=2, description="Buscar por nombre/apellido"),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Lista pacientes. Con ?q= busca por nombre/apellido."""
     require_auth(authorization)
     svc = get_patient_service()
+    if q:
+        patients = svc.search(q)
+        return PatientList(patients=patients)
     return svc.list_all()
+
+
+@router.get("/{patient_id}", response_model=Patient)
+async def get_patient(
+    patient_id: int,
+    authorization: Optional[str] = Header(default=None),
+):
+    """Obtiene un paciente por ID."""
+    require_auth(authorization)
+    svc = get_patient_service()
+    patient = svc.find_by_id(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return patient
 
 
 @router.post("/bulk-import", response_model=BulkImportResult)

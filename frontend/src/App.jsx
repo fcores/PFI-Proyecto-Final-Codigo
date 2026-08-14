@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
+import ErrorBoundary from "./components/ErrorBoundary";
 import PacientesPage from "./pages/PacientesPage";
 import HistorialPacientesPage from "./pages/HistorialPacientesPage";
 import AltaMedicamentosPage from "./pages/AltaMedicamentosPage";
@@ -16,6 +17,7 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route
@@ -67,5 +69,6 @@ export default function App() {
         } />
       </Route>
     </Routes>
+    </ErrorBoundary>
   );
 }

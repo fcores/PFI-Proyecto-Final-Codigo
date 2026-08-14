@@ -196,7 +196,7 @@ export default function AuditCasePage() {
     <>
       <TopBar
         title={`Caso ${caseId}`}
-        subtitle={`Prescripción ${prescription.prescription_code || ""} — Paciente ${prescription.patient_sap_id || ""}`}
+        subtitle={`Prescripción ${prescription.prescription_code || ""} — Paciente #${prescription.patient_id || ""}`}
         badge="Auditoría"
       />
 
@@ -212,8 +212,8 @@ export default function AuditCasePage() {
             />
 
             <div className="form-grid">
-              <FormField label="Paciente SAP" htmlFor="case_patient" span={4}>
-                <input id="case_patient" type="text" value={prescription.patient_sap_id || ""} readOnly />
+              <FormField label="Paciente ID" htmlFor="case_patient" span={4}>
+                <input id="case_patient" type="text" value={prescription.patient_id || ""} readOnly />
               </FormField>
               <FormField label="Diagnóstico (CIE-10)" htmlFor="case_diag" span={4}>
                 <input id="case_diag" type="text" value={prescription.diagnostico_cie10 || ""} readOnly />

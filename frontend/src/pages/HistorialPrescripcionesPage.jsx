@@ -11,7 +11,7 @@ import { shortHash } from "../utils/shortHash";
 
 const TABLE_COLUMNS = [
   "Código",
-  "Paciente SAP",
+  "Paciente ID",
   "Diagnóstico",
   "Estadio",
   "Régimen",
@@ -44,7 +44,7 @@ export default function HistorialPrescripcionesPage() {
     return prescriptions.filter((presc) => {
       const searchableText = [
         presc.prescription_code,
-        presc.patient_sap_id,
+        String(presc.patient_id),
         presc.diagnostico_cie10,
         presc.esquema,
         presc.id_regimen,
@@ -79,7 +79,7 @@ export default function HistorialPrescripcionesPage() {
     return (
       <tr key={presc.id}>
         <td>{presc.prescription_code}</td>
-        <td>{presc.patient_sap_id}</td>
+        <td>{presc.patient_id}</td>
         <td>{presc.diagnostico_cie10}</td>
         <td>{presc.estadio}</td>
         <td>{presc.id_regimen || presc.esquema}</td>

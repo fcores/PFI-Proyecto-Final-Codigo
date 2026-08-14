@@ -107,7 +107,7 @@ class PrescriptionService:
 
             payload = {
                 "prescription_code": self._build_code(seq),
-                "patient_sap_id": data_completa.patient_sap_id,
+                "patient_id": data_completa.patient_id,
                 "diagnostico_cie10": data_completa.diagnostico_cie10,
                 "estadio": data_completa.estadio,
                 "id_regimen": data_completa.id_regimen,
@@ -139,7 +139,7 @@ class PrescriptionService:
                     "pendiente",
                     snapshot={
                         "prescription_code": saved.prescription_code,
-                        "patient_sap_id": saved.patient_sap_id,
+                        "patient_id": saved.patient_id,
                         "diagnostico_cie10": saved.diagnostico_cie10,
                         "estadio": saved.estadio,
                         "esquema": saved.esquema,

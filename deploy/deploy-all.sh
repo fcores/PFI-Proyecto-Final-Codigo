@@ -9,7 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "============================================"
-echo " MedChain AI — Despliegue completo en AWS"
+echo " MedChain AI â€” Despliegue completo en AWS"
 echo "============================================"
 echo ""
 

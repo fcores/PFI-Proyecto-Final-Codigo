@@ -9,7 +9,6 @@ import { fetchPatients } from "../api/patients";
 
 const TABLE_COLUMNS = [
   "ID",
-  "ID SAP",
   "Paciente",
   "Diagnóstico",
   "Prestador",
@@ -48,7 +47,7 @@ export default function HistorialPacientesPage() {
 
     return patients.filter((patient) => {
       const searchableText = [
-        patient.sap_id,
+        String(patient.id),
         patient.first_name,
         patient.last_name,
         patient.provider,
@@ -86,7 +85,6 @@ export default function HistorialPacientesPage() {
     return (
       <tr key={patient.id}>
         <td>{patient.id}</td>
-        <td>{patient.sap_id || "-"}</td>
         <td>{fullName || "-"}</td>
         <td>{patient.treatment || "-"}</td>
         <td>{patient.provider || "-"}</td>
@@ -124,7 +122,7 @@ export default function HistorialPacientesPage() {
               <CardHeader
                 eyebrow="Consultas"
                 title="Filtros generales"
-                description="Filtrá por nombre, ID SAP, diagnóstico o prestador."
+                description="Filtrá por nombre, diagnóstico o prestador."
               />
 
               <div className="form-grid history-filters">
@@ -133,7 +131,7 @@ export default function HistorialPacientesPage() {
                     id="history_query"
                     name="history_query"
                     type="text"
-                    placeholder="Nombre, apellido, ID SAP o diagnóstico"
+                    placeholder="Nombre, apellido, ID o diagnóstico"
                     value={filters.query}
                     onChange={(event) => updateFilter("query", event.target.value)}
                   />

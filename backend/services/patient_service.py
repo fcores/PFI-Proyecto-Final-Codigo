@@ -13,7 +13,6 @@ class PatientService:
     """Gestiona el maestro de pacientes."""
 
     IMPORT_ALIASES = {
-        "sap_id": ["id paciente sap", "sap", "id sap paciente"],
         "credential_id": ["id credencial", "credencial"],
         "provider_id": ["id prestador"],
         "provider": ["prestador"],
@@ -25,14 +24,12 @@ class PatientService:
     }
 
     def __init__(self, repo: PatientRepository, excel_importer: ExcelImportService) -> None:
-        """Inicializa el servicio de pacientes."""
         self._repo = repo
         self._excel_importer = excel_importer
 
     def create(
         self,
         *,
-        sap_id: str,
         credential_id: Optional[str],
         provider_id: Optional[str],
         provider: Optional[str],
@@ -52,7 +49,6 @@ class PatientService:
         """Crea un paciente nuevo."""
         patient = Patient(
             id=self._repo.next_id(),
-            sap_id=sap_id,
             credential_id=credential_id,
             provider_id=provider_id,
             provider=provider,
@@ -71,6 +67,14 @@ class PatientService:
         )
         return self._repo.add(patient)
 
+    def find_by_id(self, patient_id: int) -> Optional[Patient]:
+        """Busca un paciente por ID."""
+        return self._repo.find_by_id(patient_id)
+
+    def search(self, query: str) -> List[Patient]:
+        """Busca pacientes por nombre/apellido."""
+        return self._repo.search(query)
+
     def list_all(self) -> PatientList:
         """Lista todos los pacientes."""
         return PatientList(patients=self._repo.list_all())
@@ -84,7 +88,6 @@ class PatientService:
         for index, row in enumerate(rows, start=2):
             try:
                 self.create(
-                    sap_id=self._excel_importer.as_required_str(row, "sap_id", "sap_id"),
                     credential_id=self._excel_importer.as_optional_str(row, "credential_id"),
                     provider_id=self._excel_importer.as_optional_str(row, "provider_id"),
                     provider=self._excel_importer.as_optional_str(row, "provider"),

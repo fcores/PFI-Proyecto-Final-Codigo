@@ -1,0 +1,8 @@
+title = "MedChain AI gitleaks config"
+
+[allowlist]
+paths = [
+    '''.env\.example''',
+    '''deploy/\.env\.deploy''',
+    '''fabric/network/organizations/''',
+]

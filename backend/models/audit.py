@@ -14,7 +14,7 @@ class AuditCase(BaseModel):
     assigned_auditor: Optional[str] = None
     created_at: datetime
     prescription_code: Optional[str] = None
-    patient_sap_id: Optional[str] = None
+    patient_id: Optional[int] = None
     diagnostico_cie10: Optional[str] = None
     estadio: Optional[str] = None
     esquema: Optional[str] = None

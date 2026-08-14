@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 
 
 class PatientBase(BaseModel):
-    sap_id: str = Field(..., title="ID Paciente SAP")
     credential_id: Optional[str] = Field(None, title="ID Credencial")
     provider_id: Optional[str] = Field(None, title="ID Prestador")
     provider: Optional[str] = Field(None, title="Prestador")

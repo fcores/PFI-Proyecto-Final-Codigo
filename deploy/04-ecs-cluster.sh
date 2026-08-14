@@ -50,10 +50,14 @@ cat > /tmp/task-def.json <<TASKDEF
           "protocol": "tcp"
         }
       ],
+      "environment": [
+        {"name": "ENVIRONMENT", "value": "production"}
+      ],
       "secrets": [
         {"name": "AUTH_USERNAME",     "valueFrom": "${SECRET_ARN}:AUTH_USERNAME::"},
         {"name": "AUTH_PASSWORD",     "valueFrom": "${SECRET_ARN}:AUTH_PASSWORD::"},
-        {"name": "AUTH_DISPLAY_NAME", "valueFrom": "${SECRET_ARN}:AUTH_DISPLAY_NAME::"}
+        {"name": "AUTH_DISPLAY_NAME", "valueFrom": "${SECRET_ARN}:AUTH_DISPLAY_NAME::"},
+        {"name": "DATABASE_URL",     "valueFrom": "${DB_SECRET_ARN}:DATABASE_URL::"}
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

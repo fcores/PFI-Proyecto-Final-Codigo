@@ -1,9 +1,11 @@
 import logging
-import os
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.config import get_settings
+from backend.db import init_db
+from backend.error_handlers import install_error_handlers
 from backend.ml.model_loader import cargar_modelo, modelo_disponible
 from backend.routers import (
     patient_router,
@@ -14,24 +16,28 @@ from backend.routers import (
     auth_router,
     audit_router,
 )
+from backend.security.phi_redactor import install_phi_filter
 
 logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
     """Crea y configura la instancia FastAPI con routers bajo /api."""
-    app = FastAPI(title="MedChain AI", version="0.6.0")
+    settings = get_settings()
+    install_phi_filter()
 
-    raw_origins = os.getenv("CORS_ORIGINS")
-    origins = [o.strip() for o in raw_origins.split(",") if o.strip()] if raw_origins else ["*"]
+    app = FastAPI(title="MedChain AI", version="0.7.0")
+    install_error_handlers(app)
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=settings.cors_origins_list,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    init_db()
 
     api = APIRouter(prefix="/api")
     api.include_router(patient_router)
@@ -45,20 +51,23 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     async def root():
-        """Health check (sin prefijo /api) que reporta el estado del modelo ML."""
+        """Health check que reporta el estado del modelo ML y la base de datos."""
+        from backend.db import is_db_available
+
         try:
             artefacto = cargar_modelo()
             version = artefacto.get("version_modelo") if artefacto else None
             return {
                 "status": "ok",
                 "service": "MedChain AI",
+                "database": "connected" if is_db_available() else "in-memory",
                 "modelo_disponible": modelo_disponible(),
                 "modelo_version": version,
             }
         except Exception as exc:
             logger.error("Error en health check root: %s", exc, exc_info=True)
             return {
-                "status": "ok",
+                "status": "degraded",
                 "service": "MedChain AI",
                 "modelo_disponible": False,
                 "modelo_version": None,
