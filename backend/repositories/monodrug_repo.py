@@ -1,6 +1,6 @@
 """Repositorio de monodrogas con soporte PostgreSQL y fallback en memoria."""
+
 import logging
-from typing import List, Optional
 
 from backend.models.monodrug import Monodrug
 
@@ -13,7 +13,7 @@ class MonodrugRepository:
     def __init__(self) -> None:
         """Inicializa el almacen de monodrogas."""
         try:
-            self._store: List[Monodrug] = []
+            self._store: list[Monodrug] = []
             self._next_id = 1
         except Exception as exc:
             logger.error("Error al inicializar MonodrugRepository: %s", exc, exc_info=True)
@@ -23,6 +23,7 @@ class MonodrugRepository:
         """Verifica si la base de datos esta disponible."""
         try:
             from backend.db import is_db_available
+
             return is_db_available()
         except Exception:
             return False
@@ -44,6 +45,7 @@ class MonodrugRepository:
         try:
             if self._db_available():
                 from backend.db import get_db
+
                 with get_db() as conn:
                     with conn.cursor() as cur:
                         cur.execute("SELECT COUNT(*) FROM monodrugs")
@@ -58,6 +60,7 @@ class MonodrugRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("monodrugs.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -74,11 +77,12 @@ class MonodrugRepository:
             logger.error("Error al agregar monodroga: %s", exc, exc_info=True)
             raise
 
-    def list_all(self) -> List[Monodrug]:
+    def list_all(self) -> list[Monodrug]:
         """Lista todas las monodrogas."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("monodrugs.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -95,11 +99,12 @@ class MonodrugRepository:
             logger.error("Error al listar monodrogas: %s", exc, exc_info=True)
             raise
 
-    def find_by_descripcion(self, descripcion: str) -> Optional[Monodrug]:
+    def find_by_descripcion(self, descripcion: str) -> Monodrug | None:
         """Busca una monodroga por su descripcion (case-insensitive)."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("monodrugs.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:

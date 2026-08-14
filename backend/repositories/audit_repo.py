@@ -1,7 +1,7 @@
 """Repositorio de auditoria con soporte PostgreSQL y fallback en memoria."""
+
 import logging
 from datetime import datetime
-from typing import List, Optional
 
 from backend.models.audit import AuditCase, Correction, Dictamen
 
@@ -14,9 +14,9 @@ class AuditRepository:
     def __init__(self) -> None:
         """Inicializa los almacenes en memoria."""
         try:
-            self._cases: List[AuditCase] = []
-            self._dictamenes: List[Dictamen] = []
-            self._corrections: List[Correction] = []
+            self._cases: list[AuditCase] = []
+            self._dictamenes: list[Dictamen] = []
+            self._corrections: list[Correction] = []
             self._next_case_id = 1
             self._next_dictamen_id = 1
             self._next_correction_id = 1
@@ -28,6 +28,7 @@ class AuditRepository:
         """Verifica si la base de datos esta disponible."""
         try:
             from backend.db import is_db_available
+
             return is_db_available()
         except Exception:
             return False
@@ -42,6 +43,7 @@ class AuditRepository:
             extra = snapshot or {}
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -72,11 +74,12 @@ class AuditRepository:
             logger.error("Error al agregar caso de auditoria: %s", exc, exc_info=True)
             raise
 
-    def list_pending(self) -> List[AuditCase]:
+    def list_pending(self) -> list[AuditCase]:
         """Lista los casos pendientes o en revision."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -93,11 +96,12 @@ class AuditRepository:
             logger.error("Error al listar casos pendientes: %s", exc, exc_info=True)
             raise
 
-    def find_case_by_id(self, case_id: int) -> Optional[AuditCase]:
+    def find_case_by_id(self, case_id: int) -> AuditCase | None:
         """Busca un caso de auditoria por su ID."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -121,6 +125,7 @@ class AuditRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -136,13 +141,18 @@ class AuditRepository:
             raise
 
     def add_dictamen(
-        self, case_id: int, resultado: str, justificacion: str,
-        auditor_username: str, blockchain_tx_id: str,
+        self,
+        case_id: int,
+        resultado: str,
+        justificacion: str,
+        auditor_username: str,
+        blockchain_tx_id: str,
     ) -> Dictamen:
         """Registra un dictamen para un caso de auditoria."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -178,11 +188,12 @@ class AuditRepository:
             logger.error("Error al agregar dictamen para caso %s: %s", case_id, exc, exc_info=True)
             raise
 
-    def find_dictamen_by_case(self, case_id: int) -> Optional[Dictamen]:
+    def find_dictamen_by_case(self, case_id: int) -> Dictamen | None:
         """Busca el dictamen mas reciente de un caso."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -202,21 +213,33 @@ class AuditRepository:
             raise
 
     def add_correction(
-        self, case_id: int, campo: str, valor_anterior: str,
-        valor_nuevo: str, justificacion: str, auditor_username: str,
+        self,
+        case_id: int,
+        campo: str,
+        valor_anterior: str,
+        valor_nuevo: str,
+        justificacion: str,
+        auditor_username: str,
         blockchain_tx_id: str,
     ) -> Correction:
         """Registra una correccion de dato clinico."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
-                        cur.execute(
-                            queries["insert_correction"],
-                            (case_id, campo, valor_anterior, valor_nuevo, justificacion, auditor_username, blockchain_tx_id),
+                        params = (
+                            case_id,
+                            campo,
+                            valor_anterior,
+                            valor_nuevo,
+                            justificacion,
+                            auditor_username,
+                            blockchain_tx_id,
                         )
+                        cur.execute(queries["insert_correction"], params)
                         row = cur.fetchone()
                         correction_id = row[0]
                 correction = Correction(
@@ -249,11 +272,12 @@ class AuditRepository:
             logger.error("Error al agregar correccion para caso %s: %s", case_id, exc, exc_info=True)
             raise
 
-    def list_corrections_by_case(self, case_id: int) -> List[Correction]:
+    def list_corrections_by_case(self, case_id: int) -> list[Correction]:
         """Lista las correcciones de un caso ordenadas por fecha."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("audit.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:

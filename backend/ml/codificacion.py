@@ -1,18 +1,35 @@
 """Codificacion categorica congelada, features del modelo y colapsadores TNM."""
+
 import logging
 import re
 
 logger = logging.getLogger(__name__)
 
 FEATURES_MODELO = [
-    "edad", "t", "n", "estadio", "superficie_corporal_m2", "peso_kg",
-    "n_farmacos", "tiene_anti_egfr", "tiene_antiangiogenico",
-    "es_inmunoterapia", "es_dirigido", "excedente_relativo",
+    "edad",
+    "t",
+    "n",
+    "estadio",
+    "superficie_corporal_m2",
+    "peso_kg",
+    "n_farmacos",
+    "tiene_anti_egfr",
+    "tiene_antiangiogenico",
+    "es_inmunoterapia",
+    "es_dirigido",
+    "excedente_relativo",
     "linea_tratamiento",
 ]
 
 FEATURES_CATEGORICAS_MODELO = [
-    "sexo", "lateralidad", "histologia", "msi", "ras", "braf_v600e", "m", "id_regimen",
+    "sexo",
+    "lateralidad",
+    "histologia",
+    "msi",
+    "ras",
+    "braf_v600e",
+    "m",
+    "id_regimen",
 ]
 
 CATEGORIAS_MODELO = {
@@ -29,9 +46,20 @@ CATEGORIAS_MODELO = {
     },
     "m": {"M0": 0, "M1": 1, "MX": 2},
     "id_regimen": {
-        "R00": 0, "R01": 1, "R02": 2, "R03": 3, "R04": 4,
-        "R05": 5, "R06": 6, "R07": 7, "R08": 8, "R09": 9,
-        "R10": 10, "R11": 11, "R12": 12, "R13": 13,
+        "R00": 0,
+        "R01": 1,
+        "R02": 2,
+        "R03": 3,
+        "R04": 4,
+        "R05": 5,
+        "R06": 6,
+        "R07": 7,
+        "R08": 8,
+        "R09": 9,
+        "R10": 10,
+        "R11": 11,
+        "R12": 12,
+        "R13": 13,
     },
 }
 
@@ -124,6 +152,7 @@ def normalizar_valor_categorico(columna, valor):
             return None
         if isinstance(valor, float):
             import math
+
             if math.isnan(valor):
                 return None
         if columna == "braf_v600e" and valor == "ausente":

@@ -1,4 +1,5 @@
 """Servicio de gestion de prescripciones medicas."""
+
 import json
 import logging
 import math
@@ -100,6 +101,7 @@ class PrescriptionService:
                     data_completa.peso_kg,
                 )
                 from backend.models.prescription import DosisFarmaco
+
                 dosis_objs = [DosisFarmaco(**item) for item in refs]
                 data_completa = data_completa.model_copy(update={"dosis_por_farmaco": dosis_objs})
 
@@ -154,9 +156,7 @@ class PrescriptionService:
                         "umbral_alto": validacion.umbral_alto,
                         "origen_validacion": validacion.origen,
                         "version_modelo": validacion.version_modelo,
-                        "features_relevantes": json.dumps(
-                            [f.model_dump() for f in validacion.features_relevantes]
-                        ),
+                        "features_relevantes": json.dumps([f.model_dump() for f in validacion.features_relevantes]),
                         "prescription_created_at": saved.created_at,
                     },
                 )

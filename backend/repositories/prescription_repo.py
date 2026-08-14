@@ -1,7 +1,7 @@
 """Repositorio de prescripciones con soporte PostgreSQL y fallback en memoria."""
+
 import json
 import logging
-from typing import List
 
 from backend.models.prescription import (
     DosisFarmaco,
@@ -17,11 +17,12 @@ class PrescriptionRepository:
     """Repositorio de prescripciones con soporte PostgreSQL y fallback en memoria."""
 
     def __init__(self) -> None:
-        self._store: List[Prescription] = []
+        self._store: list[Prescription] = []
         self._next_id = 1
 
     def _db_available(self) -> bool:
         from backend.db import is_db_available
+
         return is_db_available()
 
     def next_id(self) -> int:
@@ -30,6 +31,7 @@ class PrescriptionRepository:
         """
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("prescriptions.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:
@@ -85,6 +87,7 @@ class PrescriptionRepository:
         """Agrega una prescripcion al repositorio."""
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("prescriptions.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:
@@ -134,10 +137,11 @@ class PrescriptionRepository:
         self._store.append(prescription)
         return prescription
 
-    def list_all(self) -> List[Prescription]:
+    def list_all(self) -> list[Prescription]:
         """Lista todas las prescripciones."""
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("prescriptions.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:

@@ -3,6 +3,7 @@ Manejo de errores centralizado — formato RFC 7807 (Problem Details).
 Intercepta excepciones de dominio y genericas para respuestas uniformes
 sin filtrar stack traces ni PHI al cliente.
 """
+
 import logging
 import uuid
 

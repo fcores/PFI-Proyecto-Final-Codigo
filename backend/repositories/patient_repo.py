@@ -1,7 +1,7 @@
 """Repositorio de pacientes con soporte PostgreSQL y fallback en memoria."""
+
 import json
 import logging
-from typing import List, Optional
 
 from backend.models.patient import Patient
 
@@ -12,11 +12,12 @@ class PatientRepository:
     """Repositorio de pacientes con soporte PostgreSQL y fallback en memoria."""
 
     def __init__(self) -> None:
-        self._store: List[Patient] = []
+        self._store: list[Patient] = []
         self._next_id = 1
 
     def _db_available(self) -> bool:
         from backend.db import is_db_available
+
         return is_db_available()
 
     def next_id(self) -> int:
@@ -31,19 +32,28 @@ class PatientRepository:
         """Agrega un paciente al repositorio."""
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("patients.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         queries["insert_patient"],
                         (
-                            patient.credential_id, patient.provider_id,
-                            patient.provider, patient.first_name, patient.last_name,
-                            str(patient.birth_date), patient.gender, patient.treatment,
+                            patient.credential_id,
+                            patient.provider_id,
+                            patient.provider,
+                            patient.first_name,
+                            patient.last_name,
+                            str(patient.birth_date),
+                            patient.gender,
+                            patient.treatment,
                             json.dumps(patient.medications),
-                            patient.hc_filename, patient.ap_filename,
-                            patient.img_filename, patient.lab_filename,
-                            patient.receta_filename, patient.otros_filename,
+                            patient.hc_filename,
+                            patient.ap_filename,
+                            patient.img_filename,
+                            patient.lab_filename,
+                            patient.receta_filename,
+                            patient.otros_filename,
                             patient.blockchain_tx_id,
                         ),
                     )
@@ -53,10 +63,11 @@ class PatientRepository:
         self._store.append(patient)
         return patient
 
-    def find_by_id(self, patient_id: int) -> Optional[Patient]:
+    def find_by_id(self, patient_id: int) -> Patient | None:
         """Busca un paciente por ID."""
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("patients.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:
@@ -73,10 +84,11 @@ class PatientRepository:
                 return p
         return None
 
-    def search(self, query: str) -> List[Patient]:
+    def search(self, query: str) -> list[Patient]:
         """Busca pacientes por nombre o apellido (case-insensitive, substring)."""
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("patients.sql")
             pattern = f"%{query.lower()}%"
             with get_db() as conn:
@@ -91,15 +103,13 @@ class PatientRepository:
                 result.append(Patient(**data))
             return result
         q = query.lower()
-        return [
-            p for p in self._store
-            if q in p.first_name.lower() or q in p.last_name.lower()
-        ]
+        return [p for p in self._store if q in p.first_name.lower() or q in p.last_name.lower()]
 
-    def list_all(self) -> List[Patient]:
+    def list_all(self) -> list[Patient]:
         """Lista todos los pacientes."""
         if self._db_available():
             from backend.db import get_db, load_query
+
             queries = load_query("patients.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:

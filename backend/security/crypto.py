@@ -10,21 +10,21 @@ Implementa:
 
 La clave maestra NUNCA debe aparecer en logs, excepciones, repr ni respuestas.
 """
+
 import base64
-import hmac
 import hashlib
+import hmac
 import logging
 import os
-from typing import Optional
 
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
 
 _NONCE_BYTES = 12  # 96 bits
-_KEY_BYTES = 32    # 256 bits
+_KEY_BYTES = 32  # 256 bits
 _FORMAT_VERSION = "v1"
 
 _INFO_ENCRYPTION = b"medchain/field-encryption"
@@ -68,7 +68,7 @@ class CryptoService:
             String con formato v1:<key_version>:<nonce_b64>:<ct_tag_b64>
         """
         nonce = os.urandom(_NONCE_BYTES)
-        aad = f"patient:{patient_id}:{field_name}".encode("utf-8")
+        aad = f"patient:{patient_id}:{field_name}".encode()
         aesgcm = AESGCM(self._enc_key)
         ct_and_tag = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), aad)
 
@@ -99,7 +99,7 @@ class CryptoService:
         _version, key_ver, nonce_b64, ct_b64 = parts
         nonce = base64.b64decode(nonce_b64)
         ct_and_tag = base64.b64decode(ct_b64)
-        aad = f"patient:{patient_id}:{field_name}".encode("utf-8")
+        aad = f"patient:{patient_id}:{field_name}".encode()
 
         aesgcm = AESGCM(self._enc_key)
         plaintext_bytes = aesgcm.decrypt(nonce, ct_and_tag, aad)

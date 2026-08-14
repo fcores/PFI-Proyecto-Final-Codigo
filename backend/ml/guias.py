@@ -1,4 +1,5 @@
 """Recomendacion de regimen segun guias clinicas (NCCN/AAOC/ESMO)."""
+
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,5 @@
 """Catalogos de regimenes, dosis de referencia y monodrogas para cancer de colon."""
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,15 +39,30 @@ DOSIS_REFERENCIA = {
 }
 
 MONODROGAS_CATALOGO = [
-    "fluorouracilo", "leucovorina", "oxaliplatino", "irinotecan",
-    "capecitabina", "bevacizumab", "cetuximab", "panitumumab",
-    "encorafenib", "pembrolizumab", "nivolumab", "ipilimumab",
-    "regorafenib", "trifluridina_tipiracilo",
+    "fluorouracilo",
+    "leucovorina",
+    "oxaliplatino",
+    "irinotecan",
+    "capecitabina",
+    "bevacizumab",
+    "cetuximab",
+    "panitumumab",
+    "encorafenib",
+    "pembrolizumab",
+    "nivolumab",
+    "ipilimumab",
+    "regorafenib",
+    "trifluridina_tipiracilo",
 ]
 
-FARMACOS_ORALES = frozenset({
-    "capecitabina", "encorafenib", "regorafenib", "trifluridina_tipiracilo",
-})
+FARMACOS_ORALES = frozenset(
+    {
+        "capecitabina",
+        "encorafenib",
+        "regorafenib",
+        "trifluridina_tipiracilo",
+    }
+)
 
 
 def nombre_regimen(id_regimen):
@@ -92,11 +108,11 @@ def flags_regimen(id_regimen, farmacos=None, base_regimen=None):
             "n_farmacos": len(farmacos),
             "tiene_anti_egfr": 1 if ("cetuximab" in farmacos_set or "panitumumab" in farmacos_set) else 0,
             "tiene_antiangiogenico": 1 if "bevacizumab" in farmacos_set else 0,
-            "es_inmunoterapia": 1 if (
-                "pembrolizumab" in farmacos_set
-                or "nivolumab" in farmacos_set
-                or "ipilimumab" in farmacos_set
-            ) else 0,
+            "es_inmunoterapia": (
+                1
+                if ("pembrolizumab" in farmacos_set or "nivolumab" in farmacos_set or "ipilimumab" in farmacos_set)
+                else 0
+            ),
             "es_dirigido": 1 if "encorafenib" in farmacos_set else 0,
         }
     except Exception as exc:

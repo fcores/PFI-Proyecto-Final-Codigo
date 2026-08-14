@@ -2,9 +2,6 @@ import hashlib
 import logging
 import os
 import secrets
-from typing import Dict, Optional
-
-logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -12,6 +9,8 @@ from fastapi import HTTPException
 from backend.models.auth import LoginResponse, UserInfo
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -24,7 +23,7 @@ class AuthService:
     def __init__(self) -> None:
         """Inicializa el almacen de tokens y siembra usuarios iniciales si hay BD."""
         try:
-            self._tokens: Dict[str, UserInfo] = {}
+            self._tokens: dict[str, UserInfo] = {}
             self._seed_users()
         except Exception as exc:
             logger.error("Error al inicializar AuthService: %s", exc, exc_info=True)
@@ -34,6 +33,7 @@ class AuthService:
         """Verifica si la base de datos esta disponible."""
         try:
             from backend.db import is_db_available
+
             return is_db_available()
         except Exception:
             return False
@@ -54,6 +54,7 @@ class AuthService:
                 return
 
             from backend.db import get_db, load_query
+
             queries = load_query("users.sql")
 
             seed_users = [
@@ -104,6 +105,7 @@ class AuthService:
         """Autentica contra la base de datos."""
         try:
             from backend.db import get_db, load_query
+
             queries = load_query("users.sql")
 
             with get_db() as conn:
@@ -139,6 +141,7 @@ class AuthService:
         """Autentica contra variables de entorno (fallback)."""
         try:
             import hmac
+
             cfg_user, cfg_password, cfg_display = self._config()
 
             if not cfg_user or not cfg_password:
@@ -166,7 +169,7 @@ class AuthService:
             logger.error("Error en login_env: %s", exc, exc_info=True)
             raise
 
-    def resolve(self, token: Optional[str]) -> UserInfo:
+    def resolve(self, token: str | None) -> UserInfo:
         """Resuelve un token de sesion a la informacion del usuario."""
         try:
             if not token or token not in self._tokens:
@@ -178,7 +181,7 @@ class AuthService:
             logger.error("Error al resolver token: %s", exc, exc_info=True)
             raise
 
-    def logout(self, token: Optional[str]) -> None:
+    def logout(self, token: str | None) -> None:
         """Cierra la sesion invalidando el token."""
         try:
             if token and token in self._tokens:

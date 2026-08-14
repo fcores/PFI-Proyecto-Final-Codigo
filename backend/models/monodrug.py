@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -13,4 +11,4 @@ class Monodrug(MonodrugBase):
 
 
 class MonodrugList(BaseModel):
-    monodrugs: List[Monodrug]
+    monodrugs: list[Monodrug]

@@ -1,4 +1,5 @@
 """Capa de servicio para calculo de dosis y excedente relativo."""
+
 import logging
 
 from backend.ml.dosis import calcular_dosis_mg, resolver_presentaciones
@@ -103,9 +104,7 @@ class DosisService:
             costo_total = round(total, 2) if hay_precio else None
             return lista, costo_total
         except Exception as exc:
-            logger.error(
-                "Error al costear regimen %s: %s", id_regimen, exc, exc_info=True
-            )
+            logger.error("Error al costear regimen %s: %s", id_regimen, exc, exc_info=True)
             raise
 
     def calcular_excedente(self, id_regimen, dosis_por_farmaco, bsa, peso_kg):

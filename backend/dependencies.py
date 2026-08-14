@@ -6,22 +6,22 @@ no al importar este modulo.
 """
 
 from backend.repositories import (
-    PatientRepository,
+    AuditRepository,
+    LedgerRepository,
     MedicationRepository,
     MonodrugRepository,
+    PatientRepository,
     PrescriptionRepository,
-    LedgerRepository,
-    AuditRepository,
 )
 from backend.services import (
-    PatientService,
+    AuditService,
+    AuthService,
+    LedgerService,
     MedicationService,
     MonodrugService,
+    PatientService,
     PrescriptionService,
     ValidationService,
-    LedgerService,
-    AuthService,
-    AuditService,
 )
 from backend.services.dosis_service import DosisService
 from backend.services.excel_import_service import ExcelImportService
@@ -39,7 +39,10 @@ _dosis_service = DosisService(_medication_repo)
 _patient_service = PatientService(_patient_repo, _excel_import_service)
 _monodrug_service = MonodrugService(_monodrug_repo, _excel_import_service)
 _medication_service = MedicationService(
-    _medication_repo, _monodrug_repo, _excel_import_service, _monodrug_service,
+    _medication_repo,
+    _monodrug_repo,
+    _excel_import_service,
+    _monodrug_service,
 )
 _validation_service = ValidationService(_dosis_service)
 _ledger_service = LedgerService(_ledger_repo)

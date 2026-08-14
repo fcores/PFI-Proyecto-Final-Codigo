@@ -1,7 +1,7 @@
 """Repositorio del ledger blockchain con soporte PostgreSQL y fallback en memoria."""
+
 import json
 import logging
-from typing import List
 
 from backend.models.ledger import Block
 
@@ -14,7 +14,7 @@ class LedgerRepository:
     def __init__(self) -> None:
         """Inicializa el almacen de bloques."""
         try:
-            self._chain: List[Block] = []
+            self._chain: list[Block] = []
         except Exception as exc:
             logger.error("Error al inicializar LedgerRepository: %s", exc, exc_info=True)
             raise
@@ -23,6 +23,7 @@ class LedgerRepository:
         """Verifica si la base de datos esta disponible."""
         try:
             from backend.db import is_db_available
+
             return is_db_available()
         except Exception:
             return False
@@ -32,14 +33,19 @@ class LedgerRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("ledger.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
                             queries["insert_block"],
                             (
-                                block.index, block.timestamp, block.tx_type,
-                                json.dumps(block.payload), block.prev_hash, block.hash,
+                                block.index,
+                                block.timestamp,
+                                block.tx_type,
+                                json.dumps(block.payload),
+                                block.prev_hash,
+                                block.hash,
                             ),
                         )
                 return block
@@ -54,6 +60,7 @@ class LedgerRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("ledger.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -76,6 +83,7 @@ class LedgerRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("ledger.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -87,11 +95,12 @@ class LedgerRepository:
             logger.error("Error al verificar si ledger esta vacio: %s", exc, exc_info=True)
             raise
 
-    def list_all(self) -> List[Block]:
+    def list_all(self) -> list[Block]:
         """Lista todos los bloques del ledger."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("ledger.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:

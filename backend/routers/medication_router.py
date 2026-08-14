@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, File, Form, Header, UploadFile
 
 from backend.auth_middleware import require_auth, require_role
@@ -19,11 +17,11 @@ async def create_medication(
     laboratorio: str = Form(...),
     monodroga: str = Form(...),
     tamano_dimension: str = Form(...),
-    potencia_mg: Optional[float] = Form(default=None),
-    unidad_potencia: Optional[str] = Form(default=None),
-    precio: Optional[float] = Form(default=None),
-    via_administracion: Optional[str] = Form(default=None),
-    authorization: Optional[str] = Header(default=None),
+    potencia_mg: float | None = Form(default=None),
+    unidad_potencia: str | None = Form(default=None),
+    precio: float | None = Form(default=None),
+    via_administracion: str | None = Form(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Crea un medicamento nuevo con codigo autogenerado. Requiere rol administrador."""
     user = require_auth(authorization)
@@ -45,7 +43,7 @@ async def create_medication(
 
 
 @router.get("", response_model=MedicationList)
-async def list_medications(authorization: Optional[str] = Header(default=None)):
+async def list_medications(authorization: str | None = Header(default=None)):
     """Lista todos los medicamentos. Requiere autenticacion."""
     require_auth(authorization)
     svc = get_medication_service()
@@ -55,7 +53,7 @@ async def list_medications(authorization: Optional[str] = Header(default=None)):
 @router.post("/bulk-import", response_model=BulkImportResult)
 async def bulk_import_medications(
     file: UploadFile = File(...),
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Importa medicamentos masivamente desde Excel. Requiere rol administrador."""
     user = require_auth(authorization)

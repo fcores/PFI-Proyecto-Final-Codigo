@@ -2,8 +2,8 @@
 Configuracion tipada y validada del backend.
 Usa pydantic-settings para cargar variables de entorno con fail-fast en produccion.
 """
+
 from functools import lru_cache
-from typing import Optional
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     environment: str = "local"
-    database_url: Optional[str] = None
+    database_url: str | None = None
     cors_origins: str = ""
     log_level: str = "INFO"
 
@@ -27,10 +27,10 @@ class Settings(BaseSettings):
 
     ml_model_path: str = "ml_models/artefactos/modelo_gbm.joblib"
 
-    encryption_key_dev: Optional[str] = None
-    encryption_secret_arn: Optional[str] = None
+    encryption_key_dev: str | None = None
+    encryption_secret_arn: str | None = None
 
-    fabric_gateway_url: Optional[str] = None
+    fabric_gateway_url: str | None = None
 
     @field_validator("environment")
     @classmethod

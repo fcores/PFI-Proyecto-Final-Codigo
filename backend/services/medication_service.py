@@ -1,4 +1,5 @@
 """Servicio de alta e importacion de medicamentos."""
+
 import logging
 
 from backend.models.bulk_import import BulkImportError, BulkImportResult
@@ -17,30 +18,48 @@ class MedicationService:
         "descripcion": ["descripcion", "descripción", "texto largo de material"],
         "ean": ["ean", "código ean/upc", "codigo ean/upc"],
         "codigo_alfabeta": [
-            "codigo_alfabeta", "codigo alfabeta", "código alfabeta",
-            "nro troquel alfabeta", "troquel",
+            "codigo_alfabeta",
+            "codigo alfabeta",
+            "código alfabeta",
+            "nro troquel alfabeta",
+            "troquel",
         ],
         "tipo_conservacion": [
-            "tipo_conservacion", "tipo conservacion", "tipo de conservacion",
-            "cadena de frío", "cadena de frio",
+            "tipo_conservacion",
+            "tipo conservacion",
+            "tipo de conservacion",
+            "cadena de frío",
+            "cadena de frio",
         ],
         "laboratorio": ["laboratorio"],
         "monodroga": [
-            "monodroga", "monodroga_id", "código de monodroga", "codigo de monodroga",
-            "id monodroga", "id de monodroga",
+            "monodroga",
+            "monodroga_id",
+            "código de monodroga",
+            "codigo de monodroga",
+            "id monodroga",
+            "id de monodroga",
         ],
         "tamano_dimension": [
-            "tamano_dimension", "tamano dimension", "tamaño dimension",
-            "tamaño/dimension", "tamaño/dimensión",
+            "tamano_dimension",
+            "tamano dimension",
+            "tamaño dimension",
+            "tamaño/dimension",
+            "tamaño/dimensión",
         ],
         "potencia_mg": ["potencia_mg", "valor de potencia", "potencia"],
         "unidad_potencia": [
-            "unidad_potencia", "códigos de potencia", "codigos de potencia",
+            "unidad_potencia",
+            "códigos de potencia",
+            "codigos de potencia",
         ],
         "precio": ["precio", "precio de venta al publico", "precio de venta al público"],
         "via_administracion": [
-            "via_administracion", "vía de administración", "via de administracion",
-            "código de vías de administración", "codigo de vias de administracion",
+            "via_administracion",
+            "vía de administración",
+            "via de administracion",
+            "código de vías de administración",
+            "codigo de vias de administracion",
         ],
     }
 
@@ -149,7 +168,9 @@ class MedicationService:
             for index, row in enumerate(rows, start=2):
                 try:
                     mono_raw = self._excel_importer.as_required_str(
-                        row, "monodroga", "código de monodroga",
+                        row,
+                        "monodroga",
+                        "código de monodroga",
                     )
                     if self._monodrug_service is not None:
                         self._monodrug_service.create_if_missing(mono_raw)
@@ -163,13 +184,17 @@ class MedicationService:
                         descripcion=self._excel_importer.as_required_str(row, "descripcion", "descripción"),
                         ean=self._excel_importer.as_required_str(row, "ean"),
                         codigo_alfabeta=self._excel_importer.as_required_str(
-                            row, "codigo_alfabeta", "nro troquel alfabeta",
+                            row,
+                            "codigo_alfabeta",
+                            "nro troquel alfabeta",
                         ),
                         tipo_conservacion=tipo_conservacion,
                         laboratorio=self._excel_importer.as_required_str(row, "laboratorio"),
                         monodroga=mono_raw.strip(),
                         tamano_dimension=self._excel_importer.as_required_str(
-                            row, "tamano_dimension", "tamaño / dimensión",
+                            row,
+                            "tamano_dimension",
+                            "tamaño / dimensión",
                         ),
                         potencia_mg=self._parse_optional_float(row, "potencia_mg"),
                         unidad_potencia=(

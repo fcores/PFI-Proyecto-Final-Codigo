@@ -1,6 +1,6 @@
 """Repositorio de medicamentos con soporte PostgreSQL y fallback en memoria."""
+
 import logging
-from typing import List
 
 from backend.models.medication import Medication
 
@@ -13,7 +13,7 @@ class MedicationRepository:
     def __init__(self) -> None:
         """Inicializa el almacen de medicamentos."""
         try:
-            self._store: List[Medication] = []
+            self._store: list[Medication] = []
             self._next_id = 1
         except Exception as exc:
             logger.error("Error al inicializar MedicationRepository: %s", exc, exc_info=True)
@@ -23,6 +23,7 @@ class MedicationRepository:
         """Verifica si la base de datos esta disponible."""
         try:
             from backend.db import is_db_available
+
             return is_db_available()
         except Exception:
             return False
@@ -44,6 +45,7 @@ class MedicationRepository:
         try:
             if self._db_available():
                 from backend.db import get_db
+
                 with get_db() as conn:
                     with conn.cursor() as cur:
                         cur.execute("SELECT COUNT(*) FROM medications")
@@ -58,18 +60,25 @@ class MedicationRepository:
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("medications.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
                             queries["insert_medication"],
                             (
-                                medication.codigo, medication.descripcion, medication.ean,
-                                medication.codigo_alfabeta, medication.tipo_conservacion,
-                                medication.laboratorio, medication.monodroga,
+                                medication.codigo,
+                                medication.descripcion,
+                                medication.ean,
+                                medication.codigo_alfabeta,
+                                medication.tipo_conservacion,
+                                medication.laboratorio,
+                                medication.monodroga,
                                 medication.tamano_dimension,
-                                medication.potencia_mg, medication.unidad_potencia,
-                                medication.precio, medication.via_administracion,
+                                medication.potencia_mg,
+                                medication.unidad_potencia,
+                                medication.precio,
+                                medication.via_administracion,
                             ),
                         )
                         row = cur.fetchone()
@@ -81,11 +90,12 @@ class MedicationRepository:
             logger.error("Error al agregar medicamento: %s", exc, exc_info=True)
             raise
 
-    def list_all(self) -> List[Medication]:
+    def list_all(self) -> list[Medication]:
         """Lista todos los medicamentos."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("medications.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
@@ -102,11 +112,12 @@ class MedicationRepository:
             logger.error("Error al listar medicamentos: %s", exc, exc_info=True)
             raise
 
-    def find_by_monodroga(self, monodroga: str) -> List[Medication]:
+    def find_by_monodroga(self, monodroga: str) -> list[Medication]:
         """Lista presentaciones filtradas por monodroga, ordenadas por potencia."""
         try:
             if self._db_available():
                 from backend.db import get_db, load_query
+
                 queries = load_query("medications.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:

@@ -8,13 +8,13 @@ from backend.db import init_db
 from backend.error_handlers import install_error_handlers
 from backend.ml.model_loader import cargar_modelo, modelo_disponible
 from backend.routers import (
-    patient_router,
+    audit_router,
+    auth_router,
+    ledger_router,
     medication_router,
     monodrug_router,
+    patient_router,
     prescription_router,
-    ledger_router,
-    auth_router,
-    audit_router,
 )
 from backend.security.phi_redactor import install_phi_filter
 

@@ -1,8 +1,8 @@
 """Servicio de auditoria: gestiona cola, dictamenes y correcciones."""
+
 import logging
 
 from backend.models.audit import (
-    AuditCase,
     AuditCaseDetail,
     AuditCaseList,
     Correction,
@@ -42,6 +42,7 @@ class AuditService:
             case = self._repo.find_case_by_id(case_id)
             if case is None:
                 from fastapi import HTTPException
+
                 raise HTTPException(status_code=404, detail="Caso de auditoria no encontrado.")
             dictamen = self._repo.find_dictamen_by_case(case_id)
             corrections = self._repo.list_corrections_by_case(case_id)
@@ -51,7 +52,11 @@ class AuditService:
             raise
 
     def create_dictamen(
-        self, case_id: int, resultado: str, justificacion: str, auditor_username: str,
+        self,
+        case_id: int,
+        resultado: str,
+        justificacion: str,
+        auditor_username: str,
     ) -> Dictamen:
         """Registra un dictamen para un caso de auditoria."""
         try:
@@ -64,7 +69,11 @@ class AuditService:
             block = self._ledger.append("dictamen", payload)
 
             dictamen = self._repo.add_dictamen(
-                case_id, resultado, justificacion, auditor_username, block.hash,
+                case_id,
+                resultado,
+                justificacion,
+                auditor_username,
+                block.hash,
             )
 
             new_status = "dictaminado"
@@ -76,8 +85,13 @@ class AuditService:
             raise
 
     def create_correction(
-        self, case_id: int, campo: str, valor_anterior: str,
-        valor_nuevo: str, justificacion: str, auditor_username: str,
+        self,
+        case_id: int,
+        campo: str,
+        valor_anterior: str,
+        valor_nuevo: str,
+        justificacion: str,
+        auditor_username: str,
     ) -> Correction:
         """Registra una correccion de dato clinico."""
         try:
@@ -91,8 +105,13 @@ class AuditService:
             block = self._ledger.append("correction", payload)
 
             correction = self._repo.add_correction(
-                case_id, campo, valor_anterior, valor_nuevo,
-                justificacion, auditor_username, block.hash,
+                case_id,
+                campo,
+                valor_anterior,
+                valor_nuevo,
+                justificacion,
+                auditor_username,
+                block.hash,
             )
             return correction
         except Exception as exc:

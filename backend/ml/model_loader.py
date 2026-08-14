@@ -1,4 +1,5 @@
 """Carga perezosa y cacheada del artefacto LightGBM."""
+
 import logging
 import os
 from pathlib import Path
@@ -14,12 +15,7 @@ _CARGA_INTENTADA = False
 def _ruta_default():
     """Construye la ruta por defecto del artefacto dentro del repositorio."""
     try:
-        return (
-            Path(__file__).resolve().parent.parent.parent
-            / "ml_models"
-            / "artefactos"
-            / "modelo_gbm.joblib"
-        )
+        return Path(__file__).resolve().parent.parent.parent / "ml_models" / "artefactos" / "modelo_gbm.joblib"
     except Exception as exc:
         logger.error("Error al construir ruta default del modelo: %s", exc, exc_info=True)
         raise

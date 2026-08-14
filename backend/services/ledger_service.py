@@ -1,7 +1,6 @@
 import hashlib
 import json
 from datetime import datetime
-from typing import Dict
 
 from backend.models.ledger import Block, LedgerList, LedgerVerification
 from backend.repositories.ledger_repo import LedgerRepository
@@ -17,7 +16,7 @@ class LedgerService:
         self._ensure_genesis()
 
     @staticmethod
-    def _compute_hash(index: int, timestamp: str, tx_type: str, payload: Dict, prev_hash: str) -> str:
+    def _compute_hash(index: int, timestamp: str, tx_type: str, payload: dict, prev_hash: str) -> str:
         contenido = {
             "index": index,
             "timestamp": timestamp,
@@ -42,7 +41,7 @@ class LedgerService:
             )
             self._repo.add(genesis)
 
-    def append(self, tx_type: str, payload: Dict) -> Block:
+    def append(self, tx_type: str, payload: dict) -> Block:
         prev = self._repo.last()
         index = prev.index + 1
         timestamp = datetime.now().isoformat()

@@ -3,15 +3,14 @@ Filtro de logging que redacta informacion de salud protegida (PHI) antes de
 emitirla a cualquier handler. Previene filtraciones accidentales de datos
 personales/clinicos en logs, excepciones y telemetria.
 """
+
 import logging
 import re
-from typing import List, Pattern
+from re import Pattern
 
-
-_PHI_PATTERNS: List[Pattern] = [
+_PHI_PATTERNS: list[Pattern] = [
     re.compile(
-        r"\b(first_name|last_name|nombre|apellido|patient_name)"
-        r"\s*[=:]\s*['\"]?[A-Za-zÀ-ÿ\s]{2,}['\"]?",
+        r"\b(first_name|last_name|nombre|apellido|patient_name)" r"\s*[=:]\s*['\"]?[A-Za-zÀ-ÿ\s]{2,}['\"]?",
         re.IGNORECASE,
     ),
     re.compile(
@@ -39,15 +38,9 @@ class PHIRedactionFilter(logging.Filter):
             record.msg = _redact(record.msg)
         if record.args:
             if isinstance(record.args, dict):
-                record.args = {
-                    k: _redact(str(v)) if isinstance(v, str) else v
-                    for k, v in record.args.items()
-                }
+                record.args = {k: _redact(str(v)) if isinstance(v, str) else v for k, v in record.args.items()}
             elif isinstance(record.args, tuple):
-                record.args = tuple(
-                    _redact(str(a)) if isinstance(a, str) else a
-                    for a in record.args
-                )
+                record.args = tuple(_redact(str(a)) if isinstance(a, str) else a for a in record.args)
         return True
 
 

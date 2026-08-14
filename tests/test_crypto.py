@@ -1,4 +1,5 @@
 """Tests obligatorios de la capa criptografica (R3.8 del plan)."""
+
 import os
 
 import pytest
@@ -50,6 +51,7 @@ class TestTamperDetection:
         ct = crypto.encrypt_field("secret", patient_id=1, field_name="first_name")
         parts = ct.split(":")
         import base64
+
         ct_bytes = bytearray(base64.b64decode(parts[3]))
         ct_bytes[0] ^= 0xFF  # Flip a byte
         parts[3] = base64.b64encode(bytes(ct_bytes)).decode()

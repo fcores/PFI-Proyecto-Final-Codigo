@@ -5,12 +5,12 @@ Reemplaza SHA-256+salt por Argon2id (resistente a GPU/ASIC).
 Soporta migracion transparente: si un hash existente es SHA-256,
 lo verifica con el metodo legacy y re-hashea con Argon2id en el proximo login.
 """
+
 import hashlib
 import secrets
-from typing import Tuple
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, InvalidHashError
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 _hasher = PasswordHasher(
     time_cost=3,
@@ -21,7 +21,7 @@ _hasher = PasswordHasher(
 )
 
 
-def hash_password(password: str) -> Tuple[str, str]:
+def hash_password(password: str) -> tuple[str, str]:
     """Hashea una contrasena con Argon2id.
 
     Returns:

@@ -1,4 +1,5 @@
 """Motor hibrido de validacion: reglas deterministicas + LightGBM."""
+
 import logging
 import math
 
@@ -53,9 +54,7 @@ class ValidationService:
             if estadio == "IV" and m != "M1":
                 motivos.append("Inconsistencia: estadio IV requiere metástasis M1.")
             if estadio in self.ESTADIOS_LOCALIZADOS and m == "M1":
-                motivos.append(
-                    "Inconsistencia: estadio localizado no puede presentar metástasis M1."
-                )
+                motivos.append("Inconsistencia: estadio localizado no puede presentar metástasis M1.")
             return motivos
         except Exception as exc:
             logger.error("Error en chequeos de completitud: %s", exc, exc_info=True)
@@ -68,15 +67,12 @@ class ValidationService:
             motivo = None
             if id_sugerido != id_regimen_prescrito:
                 regla = reglas[0] if reglas else "guia_clinica"
-                motivo = (
-                    "Las guías indican %s (%s) por %s; se prescribió %s (%s)."
-                    % (
-                        id_sugerido,
-                        nombre_regimen(id_sugerido),
-                        regla,
-                        id_regimen_prescrito,
-                        nombre_regimen(id_regimen_prescrito),
-                    )
+                motivo = "Las guías indican %s (%s) por %s; se prescribió %s (%s)." % (
+                    id_sugerido,
+                    nombre_regimen(id_sugerido),
+                    regla,
+                    id_regimen_prescrito,
+                    nombre_regimen(id_regimen_prescrito),
                 )
             return id_sugerido, reglas, motivo
         except Exception as exc:
@@ -139,7 +135,9 @@ class ValidationService:
             costo_total = None
             if self._dosis_service is not None:
                 costo_por_farmaco, costo_total = self._dosis_service.costear_regimen(
-                    data.id_regimen, superficie, data.peso_kg,
+                    data.id_regimen,
+                    superficie,
+                    data.peso_kg,
                 )
 
             datos_modelo = prescription_a_datos_modelo(data, superficie, excedente)
@@ -166,9 +164,7 @@ class ValidationService:
                 )
 
             if not modelo_disponible():
-                motivos = [
-                    "Motor ML no disponible. Se deriva a revisión humana (modo solo-reglas)."
-                ]
+                motivos = ["Motor ML no disponible. Se deriva a revisión humana (modo solo-reglas)."]
                 if motivo_contraste:
                     motivos.append(motivo_contraste)
                 return ValidationResult(
@@ -209,16 +205,10 @@ class ValidationService:
                 motivos = ["Prescripción concordante según motor híbrido reglas + ML."]
             elif probabilidad <= t_bajo:
                 estado = ESTADO_RECHAZADO
-                motivos = [
-                    "Probabilidad de concordancia baja (%.2f). Se rechaza la prescripción."
-                    % probabilidad
-                ]
+                motivos = ["Probabilidad de concordancia baja (%.2f). Se rechaza la prescripción." % probabilidad]
             else:
                 estado = ESTADO_REVISION
-                motivos = [
-                    "Probabilidad intermedia (%.2f). Se deriva a revisión humana."
-                    % probabilidad
-                ]
+                motivos = ["Probabilidad intermedia (%.2f). Se deriva a revisión humana." % probabilidad]
 
             if motivo_contraste:
                 motivos.append(motivo_contraste)

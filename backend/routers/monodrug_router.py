@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, File, Form, Header, UploadFile
 
 from backend.auth_middleware import require_auth, require_role
@@ -13,7 +11,7 @@ router = APIRouter(prefix="/monodrugs", tags=["monodrugs"])
 @router.post("", response_model=Monodrug)
 async def create_monodrug(
     descripcion: str = Form(...),
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Crea una monodroga nueva con codigo autogenerado. Requiere rol administrador."""
     user = require_auth(authorization)
@@ -23,7 +21,7 @@ async def create_monodrug(
 
 
 @router.get("", response_model=MonodrugList)
-async def list_monodrugs(authorization: Optional[str] = Header(default=None)):
+async def list_monodrugs(authorization: str | None = Header(default=None)):
     """Lista todas las monodrogas. Requiere autenticacion."""
     require_auth(authorization)
     svc = get_monodrug_service()
@@ -33,7 +31,7 @@ async def list_monodrugs(authorization: Optional[str] = Header(default=None)):
 @router.post("/bulk-import", response_model=BulkImportResult)
 async def bulk_import_monodrugs(
     file: UploadFile = File(...),
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Importa monodrogas masivamente desde Excel. Requiere rol administrador."""
     user = require_auth(authorization)

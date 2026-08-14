@@ -1,6 +1,6 @@
 """Modelos Pydantic para el flujo de auditoria, dictamenes y correcciones."""
+
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,32 +11,32 @@ class AuditCase(BaseModel):
     id: int
     prescription_id: int
     status: str = Field(..., title="Estado del caso")
-    assigned_auditor: Optional[str] = None
+    assigned_auditor: str | None = None
     created_at: datetime
-    prescription_code: Optional[str] = None
-    patient_id: Optional[int] = None
-    diagnostico_cie10: Optional[str] = None
-    estadio: Optional[str] = None
-    esquema: Optional[str] = None
-    dosis_mg_m2: Optional[float] = None
-    superficie_corporal_m2: Optional[float] = None
-    id_regimen: Optional[str] = None
-    estado_validacion: Optional[str] = None
-    motivos_validacion: Optional[str] = None
-    probabilidad_concordante: Optional[float] = None
-    nivel_confianza: Optional[str] = None
-    umbral_bajo: Optional[float] = None
-    umbral_alto: Optional[float] = None
-    origen_validacion: Optional[str] = None
-    version_modelo: Optional[str] = None
-    features_relevantes: Optional[str] = None
-    prescription_created_at: Optional[datetime] = None
+    prescription_code: str | None = None
+    patient_id: int | None = None
+    diagnostico_cie10: str | None = None
+    estadio: str | None = None
+    esquema: str | None = None
+    dosis_mg_m2: float | None = None
+    superficie_corporal_m2: float | None = None
+    id_regimen: str | None = None
+    estado_validacion: str | None = None
+    motivos_validacion: str | None = None
+    probabilidad_concordante: float | None = None
+    nivel_confianza: str | None = None
+    umbral_bajo: float | None = None
+    umbral_alto: float | None = None
+    origen_validacion: str | None = None
+    version_modelo: str | None = None
+    features_relevantes: str | None = None
+    prescription_created_at: datetime | None = None
 
 
 class AuditCaseList(BaseModel):
     """Lista de casos de auditoria."""
 
-    cases: List[AuditCase]
+    cases: list[AuditCase]
 
 
 class DictamenRequest(BaseModel):
@@ -54,7 +54,7 @@ class Dictamen(BaseModel):
     resultado: str
     justificacion: str
     auditor_username: str
-    blockchain_tx_id: Optional[str] = None
+    blockchain_tx_id: str | None = None
     created_at: datetime
 
 
@@ -76,19 +76,19 @@ class Correction(BaseModel):
     valor_nuevo: str
     justificacion: str
     auditor_username: str
-    blockchain_tx_id: Optional[str] = None
+    blockchain_tx_id: str | None = None
     created_at: datetime
 
 
 class CorrectionList(BaseModel):
     """Lista de correcciones de un caso."""
 
-    corrections: List[Correction]
+    corrections: list[Correction]
 
 
 class AuditCaseDetail(BaseModel):
     """Detalle completo de un caso: caso + dictamen + correcciones."""
 
     case: AuditCase
-    dictamen: Optional[Dictamen] = None
-    corrections: List[Correction] = Field(default_factory=list)
+    dictamen: Dictamen | None = None
+    corrections: list[Correction] = Field(default_factory=list)

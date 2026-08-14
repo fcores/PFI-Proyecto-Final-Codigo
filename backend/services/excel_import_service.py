@@ -72,9 +72,7 @@ class ExcelImportService:
             try:
                 return date.fromisoformat(value.strip())
             except ValueError as exc:
-                raise ValueError(
-                    f"El campo '{label or field}' debe tener formato YYYY-MM-DD."
-                ) from exc
+                raise ValueError(f"El campo '{label or field}' debe tener formato YYYY-MM-DD.") from exc
 
         raise ValueError(f"El campo '{label or field}' debe ser una fecha válida.")
 

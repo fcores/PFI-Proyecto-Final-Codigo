@@ -5,11 +5,11 @@ En produccion: carga desde AWS Secrets Manager via boto3 con cache y TTL.
 En local/test: acepta una clave de desarrollo via variable de entorno
 ENCRYPTION_KEY_DEV (base64, solo para desarrollo).
 """
+
 import base64
 import json
 import logging
 import time
-from typing import Optional, Tuple
 
 from backend.config import get_settings
 from backend.security.crypto import CryptoService
@@ -17,11 +17,11 @@ from backend.security.crypto import CryptoService
 logger = logging.getLogger(__name__)
 
 _CACHE_TTL_SECONDS = 300  # 5 minutos
-_cached_service: Optional[CryptoService] = None
+_cached_service: CryptoService | None = None
 _cache_timestamp: float = 0.0
 
 
-def _load_from_secrets_manager(secret_arn: str) -> Tuple[bytes, str]:
+def _load_from_secrets_manager(secret_arn: str) -> tuple[bytes, str]:
     """Carga la clave maestra desde AWS Secrets Manager.
 
     El secreto debe contener un JSON con estructura:
@@ -41,23 +41,21 @@ def _load_from_secrets_manager(secret_arn: str) -> Tuple[bytes, str]:
         key_b64 = secret_data[active_version]
         key_bytes = base64.b64decode(key_b64)
         if len(key_bytes) != 32:
-            raise ValueError(
-                f"La clave version '{active_version}' no tiene 32 bytes"
-            )
+            raise ValueError(f"La clave version '{active_version}' no tiene 32 bytes")
         return key_bytes, active_version
     except ClientError as e:
         logger.error("Error al leer secreto de cifrado: %s", e.response["Error"]["Code"])
         raise RuntimeError("No se pudo obtener la clave de cifrado de Secrets Manager") from e
 
 
-def _load_dev_key() -> Tuple[bytes, str]:
+def _load_dev_key() -> tuple[bytes, str]:
     """Carga la clave de desarrollo desde la variable de entorno."""
     settings = get_settings()
     key_b64 = settings.encryption_key_dev
     if not key_b64:
         raise RuntimeError(
             "ENCRYPTION_KEY_DEV no configurada. "
-            "Generar con: python -c \"import os,base64; print(base64.b64encode(os.urandom(32)).decode())\""
+            'Generar con: python -c "import os,base64; print(base64.b64encode(os.urandom(32)).decode())"'
         )
     key_bytes = base64.b64decode(key_b64)
     if len(key_bytes) != 32:
@@ -81,8 +79,7 @@ def get_crypto_service() -> CryptoService:
         key_bytes, version = _load_dev_key()
     else:
         raise RuntimeError(
-            "ENCRYPTION_SECRET_ARN requerido en produccion/staging. "
-            "En local/test usar ENCRYPTION_KEY_DEV."
+            "ENCRYPTION_SECRET_ARN requerido en produccion/staging. " "En local/test usar ENCRYPTION_KEY_DEV."
         )
 
     _cached_service = CryptoService(key_bytes, key_version=version)

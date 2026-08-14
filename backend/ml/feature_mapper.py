@@ -1,4 +1,5 @@
 """Traduce PrescriptionBase a las 21 features del modelo."""
+
 import logging
 
 from backend.ml.codificacion import (

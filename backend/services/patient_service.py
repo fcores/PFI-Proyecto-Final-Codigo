@@ -1,5 +1,4 @@
 from datetime import date
-from typing import List, Optional
 
 from fastapi import UploadFile
 
@@ -30,21 +29,21 @@ class PatientService:
     def create(
         self,
         *,
-        credential_id: Optional[str],
-        provider_id: Optional[str],
-        provider: Optional[str],
+        credential_id: str | None,
+        provider_id: str | None,
+        provider: str | None,
         first_name: str,
         last_name: str,
         birth_date: date,
         gender: str,
-        treatment: Optional[str],
-        medications: List[str],
-        hc_file: Optional[UploadFile],
-        ap_file: Optional[UploadFile],
-        img_file: Optional[UploadFile],
-        lab_file: Optional[UploadFile],
-        receta_file: Optional[UploadFile],
-        otros_file: Optional[UploadFile],
+        treatment: str | None,
+        medications: list[str],
+        hc_file: UploadFile | None,
+        ap_file: UploadFile | None,
+        img_file: UploadFile | None,
+        lab_file: UploadFile | None,
+        receta_file: UploadFile | None,
+        otros_file: UploadFile | None,
     ) -> Patient:
         """Crea un paciente nuevo."""
         patient = Patient(
@@ -67,11 +66,11 @@ class PatientService:
         )
         return self._repo.add(patient)
 
-    def find_by_id(self, patient_id: int) -> Optional[Patient]:
+    def find_by_id(self, patient_id: int) -> Patient | None:
         """Busca un paciente por ID."""
         return self._repo.find_by_id(patient_id)
 
-    def search(self, query: str) -> List[Patient]:
+    def search(self, query: str) -> list[Patient]:
         """Busca pacientes por nombre/apellido."""
         return self._repo.search(query)
 

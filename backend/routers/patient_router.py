@@ -1,34 +1,33 @@
 from datetime import date
-from typing import List, Optional
 
-from fastapi import APIRouter, Header, UploadFile, File, Form, HTTPException, Query
+from fastapi import APIRouter, File, Form, Header, HTTPException, Query, UploadFile
 
 from backend.auth_middleware import require_auth, require_role
+from backend.dependencies import get_patient_service
 from backend.models.bulk_import import BulkImportResult
 from backend.models.patient import Patient, PatientList
-from backend.dependencies import get_patient_service
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
 
 @router.post("", response_model=Patient)
 async def create_patient(
-    credential_id: Optional[str] = Form(None),
-    provider_id: Optional[str] = Form(None),
-    provider: Optional[str] = Form(None),
+    credential_id: str | None = Form(None),
+    provider_id: str | None = Form(None),
+    provider: str | None = Form(None),
     first_name: str = Form(...),
     last_name: str = Form(...),
     birth_date: date = Form(...),
     gender: str = Form(...),
-    treatment: Optional[str] = Form(None),
-    medications: List[str] = Form(default=[]),
-    hc_file: Optional[UploadFile] = File(None),
-    ap_file: Optional[UploadFile] = File(None),
-    img_file: Optional[UploadFile] = File(None),
-    lab_file: Optional[UploadFile] = File(None),
-    receta_file: Optional[UploadFile] = File(None),
-    otros_file: Optional[UploadFile] = File(None),
-    authorization: Optional[str] = Header(default=None),
+    treatment: str | None = Form(None),
+    medications: list[str] = Form(default=[]),
+    hc_file: UploadFile | None = File(None),
+    ap_file: UploadFile | None = File(None),
+    img_file: UploadFile | None = File(None),
+    lab_file: UploadFile | None = File(None),
+    receta_file: UploadFile | None = File(None),
+    otros_file: UploadFile | None = File(None),
+    authorization: str | None = Header(default=None),
 ):
     """Crea un paciente nuevo. Requiere rol administrador."""
     user = require_auth(authorization)
@@ -55,8 +54,8 @@ async def create_patient(
 
 @router.get("", response_model=PatientList)
 async def list_patients(
-    q: Optional[str] = Query(None, min_length=2, description="Buscar por nombre/apellido"),
-    authorization: Optional[str] = Header(default=None),
+    q: str | None = Query(None, min_length=2, description="Buscar por nombre/apellido"),
+    authorization: str | None = Header(default=None),
 ):
     """Lista pacientes. Con ?q= busca por nombre/apellido."""
     require_auth(authorization)
@@ -70,7 +69,7 @@ async def list_patients(
 @router.get("/{patient_id}", response_model=Patient)
 async def get_patient(
     patient_id: int,
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Obtiene un paciente por ID."""
     require_auth(authorization)
@@ -84,7 +83,7 @@ async def get_patient(
 @router.post("/bulk-import", response_model=BulkImportResult)
 async def bulk_import_patients(
     file: UploadFile = File(...),
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Importa pacientes masivamente desde Excel. Requiere rol administrador."""
     user = require_auth(authorization)

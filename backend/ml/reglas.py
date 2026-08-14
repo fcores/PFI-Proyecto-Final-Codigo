@@ -1,4 +1,5 @@
 """Capa de reglas deterministicas para deteccion de errores en prescripciones."""
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,17 +37,11 @@ def aplicar_reglas(datos):
         n_farmacos = datos.get("n_farmacos", 0)
         id_regimen = datos.get("id_regimen")
         if estadio == 1 and n_farmacos > 0 and id_regimen != "R00":
-            motivos.append(
-                "Estadio I no requiere tratamiento sistemico. "
-                "El regimen debe ser R00 (sin tratamiento)."
-            )
+            motivos.append("Estadio I no requiere tratamiento sistemico. " "El regimen debe ser R00 (sin tratamiento).")
 
         m = datos.get("m")
         if m == "M1" and estadio == 1:
-            motivos.append(
-                "Inconsistencia: M1 (metastasis) con estadio I. "
-                "Verificar estadificacion."
-            )
+            motivos.append("Inconsistencia: M1 (metastasis) con estadio I. " "Verificar estadificacion.")
 
         excedente_relativo = datos.get("excedente_relativo", 0)
         if excedente_relativo > UMBRAL_EXCEDENTE_ALTO:

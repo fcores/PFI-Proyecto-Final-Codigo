@@ -1,4 +1,5 @@
 """Configuracion de pytest y fixtures compartidas."""
+
 import os
 
 os.environ.setdefault("ENVIRONMENT", "test")

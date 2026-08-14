@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,7 @@ class CostoFarmaco(BaseModel):
 
     monodroga: str = Field(..., title="Monodroga")
     dosis_mg: float = Field(..., title="Dosis requerida (mg)")
-    costo: Optional[float] = Field(None, title="Costo estimado")
+    costo: float | None = Field(None, title="Costo estimado")
     presentaciones_usadas: int = Field(0, title="Cantidad de presentaciones")
 
 
@@ -31,24 +31,24 @@ class ValidationResult(BaseModel):
     """Resultado de la validacion hibrida reglas + ML."""
 
     estado: str = Field(..., title="Estado de validación")
-    motivos: List[str] = Field(default_factory=list, title="Motivos")
-    probabilidad_concordante: Optional[float] = Field(None, title="Probabilidad concordante")
-    nivel_confianza: Optional[str] = Field(None, title="Nivel de confianza")
-    umbral_bajo: Optional[float] = Field(None, title="Umbral bajo")
-    umbral_alto: Optional[float] = Field(None, title="Umbral alto")
-    origen: Optional[str] = Field(None, title="Origen del veredicto")
-    version_modelo: Optional[str] = Field(None, title="Versión del modelo")
-    features_relevantes: List[FeatureAporte] = Field(
+    motivos: list[str] = Field(default_factory=list, title="Motivos")
+    probabilidad_concordante: float | None = Field(None, title="Probabilidad concordante")
+    nivel_confianza: str | None = Field(None, title="Nivel de confianza")
+    umbral_bajo: float | None = Field(None, title="Umbral bajo")
+    umbral_alto: float | None = Field(None, title="Umbral alto")
+    origen: str | None = Field(None, title="Origen del veredicto")
+    version_modelo: str | None = Field(None, title="Versión del modelo")
+    features_relevantes: list[FeatureAporte] = Field(
         default_factory=list,
         title="Features relevantes",
     )
-    regimen_sugerido: Optional[str] = Field(None, title="Régimen sugerido por guías")
-    reglas_guias: List[str] = Field(default_factory=list, title="Reglas de guías aplicadas")
-    costo_por_farmaco: List[CostoFarmaco] = Field(
+    regimen_sugerido: str | None = Field(None, title="Régimen sugerido por guías")
+    reglas_guias: list[str] = Field(default_factory=list, title="Reglas de guías aplicadas")
+    costo_por_farmaco: list[CostoFarmaco] = Field(
         default_factory=list,
         title="Costo por fármaco",
     )
-    costo_total: Optional[float] = Field(None, title="Costo total estimado")
+    costo_total: float | None = Field(None, title="Costo total estimado")
 
 
 class PrescriptionBase(BaseModel):
@@ -81,12 +81,12 @@ class PrescriptionBase(BaseModel):
 
     linea_tratamiento: str = Field(..., title="Línea de tratamiento")
     id_regimen: str = Field(..., title="ID de régimen")
-    esquema: Optional[str] = Field(None, title="Esquema y medicamento prescrito")
-    dosis_por_farmaco: List[DosisFarmaco] = Field(
+    esquema: str | None = Field(None, title="Esquema y medicamento prescrito")
+    dosis_por_farmaco: list[DosisFarmaco] = Field(
         default_factory=list,
         title="Dosis por fármaco",
     )
-    dosis_mg_m2: Optional[float] = Field(None, title="Dosis (mg/m²) derivada")
+    dosis_mg_m2: float | None = Field(None, title="Dosis (mg/m²) derivada")
     medico_prescriptor: str = Field(..., title="Médico prescriptor")
     matricula: str = Field(..., title="Matrícula")
 
@@ -97,33 +97,33 @@ class Prescription(PrescriptionBase):
     superficie_corporal_m2: float = Field(..., title="Superficie corporal (m²)")
     created_at: datetime = Field(..., title="Fecha de creación")
     validacion: ValidationResult = Field(..., title="Resultado de validación")
-    blockchain_tx_id: Optional[str] = Field(None, title="ID de transacción en blockchain")
-    block_index: Optional[int] = Field(None, title="Índice del bloque en el ledger")
+    blockchain_tx_id: str | None = Field(None, title="ID de transacción en blockchain")
+    block_index: int | None = Field(None, title="Índice del bloque en el ledger")
 
 
 class PrescriptionList(BaseModel):
-    prescriptions: List[Prescription]
+    prescriptions: list[Prescription]
 
 
 class RecomendacionRequest(BaseModel):
     """Datos clinicos para sugerir regimen segun guias."""
 
-    edad: Optional[int] = None
-    sexo: Optional[str] = None
+    edad: int | None = None
+    sexo: str | None = None
     estadio: str = Field(..., title="Estadio")
-    t: Optional[str] = None
-    n: Optional[str] = None
-    m: Optional[str] = None
-    localizacion_tumor: Optional[str] = None
+    t: str | None = None
+    n: str | None = None
+    m: str | None = None
+    localizacion_tumor: str | None = None
     msi: Literal["MSI-H", "MSS", "no_evaluado"] = "no_evaluado"
     ras: Literal["wild_type", "mutado", "no_evaluado"] = "no_evaluado"
     braf_v600e: Literal["presente", "wild_type", "no_evaluado"] = "no_evaluado"
-    linea_tratamiento: Optional[str] = None
-    ganglios_examinados: Optional[int] = None
-    lvi: Optional[int] = None
-    pni: Optional[int] = None
-    peso_kg: Optional[float] = Field(None, gt=0, title="Peso (kg)")
-    talla_cm: Optional[float] = Field(None, gt=0, title="Talla (cm)")
+    linea_tratamiento: str | None = None
+    ganglios_examinados: int | None = None
+    lvi: int | None = None
+    pni: int | None = None
+    peso_kg: float | None = Field(None, gt=0, title="Peso (kg)")
+    talla_cm: float | None = Field(None, gt=0, title="Talla (cm)")
 
 
 class RecomendacionResponse(BaseModel):
@@ -132,10 +132,10 @@ class RecomendacionResponse(BaseModel):
     id_regimen: str
     base_regimen: str
     nombre_regimen: str
-    reglas_aplicadas: List[str]
-    farmacos: List[str]
-    costo_por_farmaco: List[CostoFarmaco] = Field(
+    reglas_aplicadas: list[str]
+    farmacos: list[str]
+    costo_por_farmaco: list[CostoFarmaco] = Field(
         default_factory=list,
         title="Costo por fármaco",
     )
-    costo_total: Optional[float] = Field(None, title="Costo total estimado")
+    costo_total: float | None = Field(None, title="Costo total estimado")

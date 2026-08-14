@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional
 
 from fastapi import HTTPException
 
@@ -9,7 +8,7 @@ from backend.models.auth import UserInfo
 logger = logging.getLogger(__name__)
 
 
-def extract_token(authorization: Optional[str]) -> Optional[str]:
+def extract_token(authorization: str | None) -> str | None:
     """Extrae el token Bearer del header Authorization."""
     try:
         if not authorization:
@@ -23,7 +22,7 @@ def extract_token(authorization: Optional[str]) -> Optional[str]:
         raise
 
 
-def require_auth(authorization: Optional[str]) -> UserInfo:
+def require_auth(authorization: str | None) -> UserInfo:
     """Valida el token y devuelve la informacion del usuario autenticado."""
     try:
         token = extract_token(authorization)
@@ -36,7 +35,7 @@ def require_auth(authorization: Optional[str]) -> UserInfo:
         raise
 
 
-def require_role(user: UserInfo, allowed_roles: List[str]) -> None:
+def require_role(user: UserInfo, allowed_roles: list[str]) -> None:
     """Verifica que el usuario tenga uno de los roles permitidos."""
     try:
         if user.role not in allowed_roles:

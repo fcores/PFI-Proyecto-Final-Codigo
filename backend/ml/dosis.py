@@ -1,4 +1,5 @@
 """Funciones puras de calculo de dosis y resolucion de presentaciones."""
+
 import logging
 from itertools import combinations_with_replacement
 
@@ -75,8 +76,10 @@ def resolver_presentaciones(dosis_mg, farmaco, presentaciones):
                 if total_mg >= req:
                     excedente = total_mg - req
                     costo = sum(p["precio"] for p in combo)
-                    if mejor is None or excedente < mejor["excedente"] or (
-                        excedente == mejor["excedente"] and costo < mejor["costo"]
+                    if (
+                        mejor is None
+                        or excedente < mejor["excedente"]
+                        or (excedente == mejor["excedente"] and costo < mejor["costo"])
                     ):
                         mejor = {"mg": total_mg, "excedente": excedente, "costo": costo, "combo": combo}
             if mejor is not None and mejor["excedente"] == 0:
@@ -90,10 +93,7 @@ def resolver_presentaciones(dosis_mg, farmaco, presentaciones):
         return {
             "mg_cubiertos": mejor["mg"],
             "excedente_mg": mejor["excedente"],
-            "presentaciones": [
-                {"ean": p.get("ean", ""), "potencia_mg": p["potencia_mg"]}
-                for p in mejor["combo"]
-            ],
+            "presentaciones": [{"ean": p.get("ean", ""), "potencia_mg": p["potencia_mg"]} for p in mejor["combo"]],
             "costo": mejor["costo"],
         }
     except Exception as exc:

@@ -4,6 +4,7 @@ Provee pool de conexiones, context manager y utilidades de carga de queries.
 Si DATABASE_URL no esta configurada, el sistema opera en modo in-memory (solo local/test).
 En produccion sin DATABASE_URL el arranque falla (fail-fast via config.py).
 """
+
 import logging
 from pathlib import Path
 
@@ -32,6 +33,7 @@ def _init_pool():
             _use_db = False
             return
         from psycopg2.pool import SimpleConnectionPool
+
         _pool = SimpleConnectionPool(minconn=1, maxconn=10, dsn=database_url)
         _use_db = True
         logger.info("Pool de conexiones PostgreSQL creado exitosamente")
@@ -87,7 +89,7 @@ def init_db():
         logger.info("Base de datos no disponible, omitiendo inicializacion de schema")
         return
     schema_path = Path(__file__).resolve().parent.parent / "sql" / "schema.sql"
-    with open(str(schema_path), "r", encoding="utf-8") as f:
+    with open(str(schema_path), encoding="utf-8") as f:
         schema_sql = f.read()
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -101,7 +103,7 @@ def load_query(filename):
     Parsea comentarios con formato '-- name: nombre_query' como delimitadores.
     """
     sql_path = Path(__file__).resolve().parent.parent / "sql" / filename
-    with open(str(sql_path), "r", encoding="utf-8") as f:
+    with open(str(sql_path), encoding="utf-8") as f:
         content = f.read()
     queries = {}
     current_name = None

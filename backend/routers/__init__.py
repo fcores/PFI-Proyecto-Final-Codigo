@@ -1,10 +1,10 @@
-from .patient_router import router as patient_router
+from .audit_router import router as audit_router
+from .auth_router import router as auth_router
+from .ledger_router import router as ledger_router
 from .medication_router import router as medication_router
 from .monodrug_router import router as monodrug_router
+from .patient_router import router as patient_router
 from .prescription_router import router as prescription_router
-from .ledger_router import router as ledger_router
-from .auth_router import router as auth_router
-from .audit_router import router as audit_router
 
 __all__ = [
     "patient_router",

@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -11,10 +9,10 @@ class MedicationBase(BaseModel):
     laboratorio: str = Field(..., title="Laboratorio")
     monodroga: str = Field(..., title="Código de monodroga (nombre de la droga)")
     tamano_dimension: str = Field(..., title="Tamaño / Dimensión")
-    potencia_mg: Optional[float] = Field(None, title="Valor de Potencia (mg)")
-    unidad_potencia: Optional[str] = Field(None, title="Códigos de Potencia (ej. MG)")
-    precio: Optional[float] = Field(None, title="Precio de Venta al Público")
-    via_administracion: Optional[str] = Field(None, title="Código de vías de administración")
+    potencia_mg: float | None = Field(None, title="Valor de Potencia (mg)")
+    unidad_potencia: str | None = Field(None, title="Códigos de Potencia (ej. MG)")
+    precio: float | None = Field(None, title="Precio de Venta al Público")
+    via_administracion: str | None = Field(None, title="Código de vías de administración")
 
 
 class Medication(MedicationBase):
@@ -23,4 +21,4 @@ class Medication(MedicationBase):
 
 
 class MedicationList(BaseModel):
-    medications: List[Medication]
+    medications: list[Medication]

@@ -1,6 +1,5 @@
-from typing import List, Optional
-
 from fastapi import APIRouter, Header, Query
+from pydantic import BaseModel
 
 from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import (
@@ -17,7 +16,6 @@ from backend.models.prescription import (
     RecomendacionRequest,
     RecomendacionResponse,
 )
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/prescriptions", tags=["prescriptions"])
 
@@ -27,17 +25,17 @@ class RegimenInfo(BaseModel):
 
     id_regimen: str
     nombre: str
-    farmacos: List[str]
+    farmacos: list[str]
 
 
 class RegimenList(BaseModel):
     """Lista de regimenes disponibles."""
 
-    regimenes: List[RegimenInfo]
+    regimenes: list[RegimenInfo]
 
 
 @router.get("/regimenes", response_model=RegimenList)
-async def listar_regimenes(authorization: Optional[str] = Header(default=None)):
+async def listar_regimenes(authorization: str | None = Header(default=None)):
     """Lista los regimenes R00-R13 del nucleo compartido."""
     require_auth(authorization)
     items = []
@@ -52,16 +50,17 @@ async def listar_regimenes(authorization: Optional[str] = Header(default=None)):
     return RegimenList(regimenes=items)
 
 
-@router.get("/dosis-referencia", response_model=List[DosisFarmaco])
+@router.get("/dosis-referencia", response_model=list[DosisFarmaco])
 async def dosis_referencia(
     id_regimen: str = Query(...),
     peso_kg: float = Query(..., gt=0),
     talla_cm: float = Query(..., gt=0),
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Devuelve la dosis de referencia por farmaco para un regimen."""
     require_auth(authorization)
     import math
+
     bsa = math.sqrt((talla_cm * peso_kg) / 3600.0)
     svc = get_dosis_service()
     refs = svc.dosis_referencia_regimen(id_regimen, bsa, peso_kg)
@@ -71,7 +70,7 @@ async def dosis_referencia(
 @router.post("/recomendacion", response_model=RecomendacionResponse)
 async def recomendar_regimen(
     data: RecomendacionRequest,
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Sugiere un regimen segun guias clinicas. No usa el modelo ML."""
     user = require_auth(authorization)
@@ -83,7 +82,7 @@ async def recomendar_regimen(
 @router.post("", response_model=Prescription)
 async def create_prescription(
     data: PrescriptionBase,
-    authorization: Optional[str] = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
     """Crea una prescripcion nueva. Requiere rol prescriptor o administrador."""
     user = require_auth(authorization)
@@ -93,7 +92,7 @@ async def create_prescription(
 
 
 @router.get("", response_model=PrescriptionList)
-async def list_prescriptions(authorization: Optional[str] = Header(default=None)):
+async def list_prescriptions(authorization: str | None = Header(default=None)):
     """Lista todas las prescripciones. Requiere autenticacion."""
     require_auth(authorization)
     svc = get_prescription_service()

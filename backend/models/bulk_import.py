@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -12,4 +10,4 @@ class BulkImportResult(BaseModel):
     total_rows: int = Field(..., title="Total de filas")
     imported_count: int = Field(..., title="Registros importados")
     failed_count: int = Field(..., title="Registros fallidos")
-    errors: List[BulkImportError] = Field(default_factory=list, title="Errores")
+    errors: list[BulkImportError] = Field(default_factory=list, title="Errores")

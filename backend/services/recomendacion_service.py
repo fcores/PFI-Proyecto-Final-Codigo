@@ -1,4 +1,5 @@
 """Servicio de recomendacion de regimen segun guias clinicas."""
+
 import logging
 import math
 
@@ -41,14 +42,12 @@ class RecomendacionService:
 
             costo_por_farmaco = []
             costo_total = None
-            if (
-                self._dosis_service is not None
-                and data.peso_kg is not None
-                and data.talla_cm is not None
-            ):
+            if self._dosis_service is not None and data.peso_kg is not None and data.talla_cm is not None:
                 bsa = math.sqrt((data.talla_cm * data.peso_kg) / 3600.0)
                 costo_por_farmaco, costo_total = self._dosis_service.costear_regimen(
-                    id_regimen, bsa, data.peso_kg,
+                    id_regimen,
+                    bsa,
+                    data.peso_kg,
                 )
 
             return RecomendacionResponse(
