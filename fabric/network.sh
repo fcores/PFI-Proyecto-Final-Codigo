@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# network.sh — Punto de entrada para operar la red Hyperledger Fabric de prueba.
+# network.sh — Punto de entrada para operar la red Hyperledger Fabric de MedChain.
 #
 # Uso:
 #   ./network.sh install                 Descarga binarios + imágenes Docker
