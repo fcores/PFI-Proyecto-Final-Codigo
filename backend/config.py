@@ -32,6 +32,11 @@ class Settings(BaseSettings):
 
     fabric_gateway_url: str | None = None
 
+    # Patron outbox hacia Fabric. Apagado por defecto: con el flag en false el
+    # comportamiento es el mismo que antes de cablearlo.
+    outbox_enabled: bool = False
+    outbox_interval_seconds: float = 10.0
+
     @field_validator("environment")
     @classmethod
     def validate_environment(cls, v: str) -> str:

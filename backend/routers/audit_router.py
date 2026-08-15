@@ -1,10 +1,11 @@
 """Router de endpoints de auditoria."""
 
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, HTTPException
 
 from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import get_audit_service
 from backend.models.audit import (
+    CAMPOS_CORREGIBLES,
     AuditCaseDetail,
     AuditCaseList,
     Correction,
@@ -60,8 +61,16 @@ async def create_correction(case_id: int, data: CorrectionRequest, authorization
         user = require_auth(authorization)
         require_role(user, ["auditor", "administrador"])
         svc = get_audit_service()
-        svc.get_case_detail(case_id)
-        valor_anterior = ""
+        if data.campo not in CAMPOS_CORREGIBLES:
+            raise HTTPException(
+                status_code=422,
+                detail="Campo no corregible: %s. Validos: %s" % (data.campo, ", ".join(CAMPOS_CORREGIBLES)),
+            )
+        detail = svc.get_case_detail(case_id)
+        # El valor anterior se lee del caso para que la correccion quede
+        # trazable; antes se guardaba siempre vacio.
+        actual = getattr(detail.case, data.campo, None)
+        valor_anterior = "" if actual is None else str(actual)
         return svc.create_correction(
             case_id,
             data.campo,

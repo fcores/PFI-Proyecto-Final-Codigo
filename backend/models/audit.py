@@ -4,6 +4,21 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+# Campos clinicos de la prescripcion sobre los que un auditor puede registrar
+# una correccion. Debe mantenerse en espejo con CAMPO_OPTIONS de
+# frontend/src/pages/AuditCasePage.jsx. Todos deben existir en AuditCase para
+# que audit_router pueda leer el valor anterior.
+CAMPOS_CORREGIBLES = (
+    "diagnostico_cie10",
+    "estadio",
+    "esquema",
+    "id_regimen",
+    "dosis_mg_m2",
+    "localizacion_tumor",
+    "tipo_histologico",
+    "linea_tratamiento",
+)
+
 
 class AuditCase(BaseModel):
     """Representacion completa de un caso de auditoria."""
@@ -21,6 +36,9 @@ class AuditCase(BaseModel):
     dosis_mg_m2: float | None = None
     superficie_corporal_m2: float | None = None
     id_regimen: str | None = None
+    localizacion_tumor: str | None = None
+    tipo_histologico: str | None = None
+    linea_tratamiento: str | None = None
     estado_validacion: str | None = None
     motivos_validacion: str | None = None
     probabilidad_concordante: float | None = None
@@ -30,6 +48,8 @@ class AuditCase(BaseModel):
     origen_validacion: str | None = None
     version_modelo: str | None = None
     features_relevantes: str | None = None
+    costo_por_farmaco: str | None = None
+    costo_total: float | None = None
     prescription_created_at: datetime | None = None
 
 

@@ -6,6 +6,7 @@ INSERT INTO prescriptions (
     medico_prescriptor, matricula, estado_validacion, motivos_validacion,
     probabilidad_concordante, nivel_confianza, umbral_bajo, umbral_alto,
     origen_validacion, version_modelo, features_relevantes,
+    costo_por_farmaco, costo_total,
     blockchain_tx_id, block_index
 )
 VALUES (
@@ -15,6 +16,7 @@ VALUES (
     %s, %s, %s, %s,
     %s, %s, %s, %s,
     %s, %s, %s,
+    %s, %s,
     %s, %s
 )
 RETURNING id;
@@ -26,8 +28,14 @@ SELECT id, prescription_code, patient_id, edad, sexo, peso_kg, talla_cm, superfi
     medico_prescriptor, matricula, estado_validacion, motivos_validacion,
     probabilidad_concordante, nivel_confianza, umbral_bajo, umbral_alto,
     origen_validacion, version_modelo, features_relevantes,
+    costo_por_farmaco, costo_total,
     blockchain_tx_id, block_index, created_at
 FROM prescriptions ORDER BY id;
 
 -- name: next_prescription_id
 SELECT nextval('prescription_id_seq');
+
+-- name: insert_outbox
+INSERT INTO prescription_outbox (prescription_id, idempotency_key, payload)
+VALUES (%s, %s, %s)
+ON CONFLICT (idempotency_key) DO NOTHING;

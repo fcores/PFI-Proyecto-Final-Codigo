@@ -21,6 +21,29 @@ from backend.security.phi_redactor import install_phi_filter
 logger = logging.getLogger(__name__)
 
 
+def _start_outbox_worker(settings) -> None:
+    """Arranca el worker del outbox en un thread daemon, si esta habilitado.
+
+    Apagado por defecto (OUTBOX_ENABLED). El SELECT ... FOR UPDATE SKIP LOCKED
+    del worker lo hace seguro con varias tasks corriendo en paralelo.
+    """
+    if not (settings.outbox_enabled and settings.fabric_gateway_url):
+        return
+    try:
+        import threading
+
+        from backend.blockchain.outbox_worker import run_outbox_loop
+
+        threading.Thread(
+            target=run_outbox_loop,
+            args=(settings.outbox_interval_seconds,),
+            daemon=True,
+        ).start()
+        logger.info("Outbox worker iniciado")
+    except Exception as exc:
+        logger.error("No se pudo iniciar el outbox worker: %s", exc, exc_info=True)
+
+
 def create_app() -> FastAPI:
     """Crea y configura la instancia FastAPI con routers bajo /api."""
     settings = get_settings()
@@ -38,6 +61,7 @@ def create_app() -> FastAPI:
     )
 
     init_db()
+    _start_outbox_worker(settings)
 
     api = APIRouter(prefix="/api")
     api.include_router(patient_router)

@@ -91,71 +91,83 @@ class PatientRepository:
     def add(self, patient: Patient) -> Patient:
         """Agrega un paciente cifrando PHI."""
         if self._db_available():
+            import psycopg2
+
             from backend.db import get_db, load_query
+            from backend.error_handlers import ConflictError
 
             queries = load_query("patients.sql")
 
             enc = self._encrypt_phi(patient, patient.id or 0)
 
-            with get_db() as conn:
+            try:
+                return self._insert(patient, enc, queries, get_db)
+            except psycopg2.errors.UniqueViolation as exc:
+                # uq_patients_name_dob_bidx: mismo nombre, apellido y fecha de nacimiento
+                logger.warning("Paciente duplicado rechazado por la base: %s", exc)
+                raise ConflictError("Ya existe un paciente con ese nombre, apellido y fecha de nacimiento.") from exc
+        self._store.append(patient)
+        return patient
+
+    def _insert(self, patient: Patient, enc: dict, queries: dict, get_db) -> Patient:
+        """Ejecuta el INSERT del paciente y el re-cifrado con el ID real."""
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    queries["insert_patient"],
+                    (
+                        patient.credential_id,
+                        patient.provider_id,
+                        patient.provider,
+                        patient.first_name,
+                        patient.last_name,
+                        str(patient.birth_date),
+                        patient.gender,
+                        patient.treatment,
+                        json.dumps(patient.medications),
+                        patient.hc_filename,
+                        patient.ap_filename,
+                        patient.img_filename,
+                        patient.lab_filename,
+                        patient.receta_filename,
+                        patient.otros_filename,
+                        patient.blockchain_tx_id,
+                        enc["first_name_enc"],
+                        enc["last_name_enc"],
+                        enc["birth_date_enc"],
+                        enc["gender_enc"],
+                        enc["treatment_enc"],
+                        enc["first_name_bidx"],
+                        enc["last_name_bidx"],
+                        enc["birth_date_bidx"],
+                    ),
+                )
+                row = cur.fetchone()
+                new_id = row[0]
+
+            # Re-encrypt with actual ID if we used 0
+            if (patient.id or 0) == 0 and _get_crypto():
+                patient_with_id = patient.model_copy(update={"id": new_id})
+                enc2 = self._encrypt_phi(patient_with_id, new_id)
                 with conn.cursor() as cur:
+                    sql = (
+                        "UPDATE patients SET first_name_enc=%s, last_name_enc=%s,"
+                        " birth_date_enc=%s, gender_enc=%s, treatment_enc=%s"
+                        " WHERE id=%s"
+                    )
                     cur.execute(
-                        queries["insert_patient"],
+                        sql,
                         (
-                            patient.credential_id,
-                            patient.provider_id,
-                            patient.provider,
-                            patient.first_name,
-                            patient.last_name,
-                            str(patient.birth_date),
-                            patient.gender,
-                            patient.treatment,
-                            json.dumps(patient.medications),
-                            patient.hc_filename,
-                            patient.ap_filename,
-                            patient.img_filename,
-                            patient.lab_filename,
-                            patient.receta_filename,
-                            patient.otros_filename,
-                            patient.blockchain_tx_id,
-                            enc["first_name_enc"],
-                            enc["last_name_enc"],
-                            enc["birth_date_enc"],
-                            enc["gender_enc"],
-                            enc["treatment_enc"],
-                            enc["first_name_bidx"],
-                            enc["last_name_bidx"],
-                            enc["birth_date_bidx"],
+                            enc2["first_name_enc"],
+                            enc2["last_name_enc"],
+                            enc2["birth_date_enc"],
+                            enc2["gender_enc"],
+                            enc2["treatment_enc"],
+                            new_id,
                         ),
                     )
-                    row = cur.fetchone()
-                    new_id = row[0]
 
-                # Re-encrypt with actual ID if we used 0
-                if (patient.id or 0) == 0 and _get_crypto():
-                    patient_with_id = patient.model_copy(update={"id": new_id})
-                    enc2 = self._encrypt_phi(patient_with_id, new_id)
-                    with conn.cursor() as cur:
-                        sql = (
-                            "UPDATE patients SET first_name_enc=%s, last_name_enc=%s,"
-                            " birth_date_enc=%s, gender_enc=%s, treatment_enc=%s"
-                            " WHERE id=%s"
-                        )
-                        cur.execute(
-                            sql,
-                            (
-                                enc2["first_name_enc"],
-                                enc2["last_name_enc"],
-                                enc2["birth_date_enc"],
-                                enc2["gender_enc"],
-                                enc2["treatment_enc"],
-                                new_id,
-                            ),
-                        )
-
-                patient = patient.model_copy(update={"id": new_id})
-            return patient
-        self._store.append(patient)
+            patient = patient.model_copy(update={"id": new_id})
         return patient
 
     def find_by_id(self, patient_id: int) -> Patient | None:

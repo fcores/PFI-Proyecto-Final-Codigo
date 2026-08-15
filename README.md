@@ -34,8 +34,7 @@ Proyecto Final de Ingeniería Informática (UADE).
 │   ├── medications.sql      Queries de medicamentos
 │   ├── monodrugs.sql        Queries de monodrogas
 │   ├── ledger.sql           Queries del ledger
-│   ├── users.sql            Queries de usuarios
-│   └── migrations/          Migraciones incrementales
+│   └── users.sql            Queries de usuarios
 ├── frontend/                Aplicacion web React
 │   ├── src/
 │   │   ├── api/             Clientes HTTP al backend (patients, medications, monodrugs, prescriptions, audit)

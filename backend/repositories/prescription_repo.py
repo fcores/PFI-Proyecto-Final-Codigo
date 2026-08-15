@@ -4,6 +4,7 @@ import json
 import logging
 
 from backend.models.prescription import (
+    CostoFarmaco,
     DosisFarmaco,
     FeatureAporte,
     Prescription,
@@ -42,23 +43,21 @@ class PrescriptionRepository:
         self._next_id += 1
         return current
 
-    def _features_to_json(self, features):
+    def _models_to_json(self, items):
+        """Serializa una lista de modelos (o dicts) a JSON para columnas TEXT."""
         payload = []
-        for item in features or []:
+        for item in items or []:
             if hasattr(item, "model_dump"):
                 payload.append(item.model_dump())
             else:
                 payload.append(item)
         return json.dumps(payload)
 
+    def _features_to_json(self, features):
+        return self._models_to_json(features)
+
     def _dosis_to_json(self, dosis_por_farmaco):
-        payload = []
-        for item in dosis_por_farmaco or []:
-            if hasattr(item, "model_dump"):
-                payload.append(item.model_dump())
-            else:
-                payload.append(item)
-        return json.dumps(payload)
+        return self._models_to_json(dosis_por_farmaco)
 
     def _row_to_prescription(self, data):
         """Mapea una fila de DB a Prescription."""
@@ -67,6 +66,9 @@ class PrescriptionRepository:
 
         features_raw = json.loads(data.pop("features_relevantes", "[]") or "[]")
         features = [FeatureAporte(**item) for item in features_raw]
+
+        costos_raw = json.loads(data.pop("costo_por_farmaco", "[]") or "[]")
+        costos = [CostoFarmaco(**item) for item in costos_raw]
 
         validacion = ValidationResult(
             estado=data.pop("estado_validacion", ""),
@@ -78,13 +80,25 @@ class PrescriptionRepository:
             origen=data.pop("origen_validacion", None),
             version_modelo=data.pop("version_modelo", None),
             features_relevantes=features,
+            costo_por_farmaco=costos,
+            costo_total=data.pop("costo_total", None),
         )
         data["dosis_por_farmaco"] = dosis
         data["validacion"] = validacion
         return Prescription(**data)
 
-    def add(self, prescription: Prescription) -> Prescription:
-        """Agrega una prescripcion al repositorio."""
+    def add(
+        self,
+        prescription: Prescription,
+        outbox_payload: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> Prescription:
+        """Agrega una prescripcion al repositorio.
+
+        Si se pasa outbox_payload, la entrada del outbox se inserta en la MISMA
+        transaccion que la prescripcion: que ambas cosas sean atomicas es el
+        punto del patron outbox.
+        """
         if self._db_available():
             from backend.db import get_db, load_query
 
@@ -127,12 +141,25 @@ class PrescriptionRepository:
                             prescription.validacion.origen,
                             prescription.validacion.version_modelo,
                             self._features_to_json(prescription.validacion.features_relevantes),
+                            self._models_to_json(prescription.validacion.costo_por_farmaco),
+                            prescription.validacion.costo_total,
                             prescription.blockchain_tx_id,
                             prescription.block_index,
                         ),
                     )
                     row = cur.fetchone()
-                    prescription = prescription.model_copy(update={"id": row[0]})
+                    new_id = row[0]
+                    prescription = prescription.model_copy(update={"id": new_id})
+
+                    if outbox_payload is not None:
+                        cur.execute(
+                            queries["insert_outbox"],
+                            (
+                                new_id,
+                                idempotency_key or "presc:%d" % new_id,
+                                outbox_payload,
+                            ),
+                        )
             return prescription
         self._store.append(prescription)
         return prescription

@@ -45,14 +45,26 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Ejecuta migraciones contra la base conectada."""
-    from sqlalchemy import create_engine
+    """Ejecuta migraciones contra la base conectada.
+
+    transaction_per_migration=True: cada revision commitea por separado, de modo
+    que un fallo en la revision N deja aplicadas 1..N-1 con alembic_version
+    coherente y el proceso es reintentable.
+
+    El lock de exclusion mutua entre tasks de ECS lo toma backend/db_bootstrap.py;
+    no agregarlo aca tambien o las dos sesiones se bloquean entre si.
+    """
+    from sqlalchemy import create_engine, pool
 
     url = get_url()
-    connectable = create_engine(url)
+    connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            transaction_per_migration=True,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

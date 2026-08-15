@@ -10,6 +10,9 @@ on:
       - "blockchain/**"
       - "fabric/**"
       - "ml_models/artefactos/**"
+      - "sql/**"
+      - "alembic/**"
+      - "alembic.ini"
       - "Dockerfile"
       - "requirements.txt"
 
@@ -59,6 +62,9 @@ jobs:
             backend:
               - 'backend/**'
               - 'ml_models/artefactos/**'
+              - 'sql/**'
+              - 'alembic/**'
+              - 'alembic.ini'
               - 'Dockerfile'
               - 'requirements.txt'
             frontend:
@@ -98,6 +104,16 @@ jobs:
             --cluster "${{ env.ECS_CLUSTER }}" \
             --service "${{ env.ECS_SERVICE }}" \
             --force-new-deployment \
+            --region "${{ env.AWS_REGION }}"
+
+      # El contenedor corre 'alembic upgrade head' al arrancar. Si una migracion
+      # falla, la task no llega a estado healthy y este paso marca el job en rojo
+      # en vez de reportar un deploy exitoso.
+      - name: Esperar a que el servicio quede estable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --services "${{ env.ECS_SERVICE }}" \
             --region "${{ env.AWS_REGION }}"
 
   deploy-frontend:

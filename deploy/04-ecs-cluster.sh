@@ -72,7 +72,7 @@ cat > /tmp/task-def.json <<TASKDEF
         "interval": 30,
         "timeout": 5,
         "retries": 3,
-        "startPeriod": 15
+        "startPeriod": 60
       }
     }
   ]

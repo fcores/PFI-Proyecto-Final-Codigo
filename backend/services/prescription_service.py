@@ -37,6 +37,16 @@ class PrescriptionService:
             logger.error("Error al inicializar PrescriptionService: %s", exc, exc_info=True)
             raise
 
+    def _outbox_enabled(self) -> bool:
+        """Indica si hay que encolar el commit a Fabric en el outbox."""
+        try:
+            from backend.config import get_settings
+
+            settings = get_settings()
+            return bool(settings.outbox_enabled and settings.fabric_gateway_url)
+        except Exception:
+            return False
+
     def _build_code(self, seq: int) -> str:
         """Genera el codigo de prescripcion a partir del numero de secuencia."""
         try:
@@ -133,7 +143,8 @@ class PrescriptionService:
                 block_index=block.index,
                 **data_completa.model_dump(),
             )
-            saved = self._repo.add(prescription)
+            outbox_payload = json.dumps(payload) if self._outbox_enabled() else None
+            saved = self._repo.add(prescription, outbox_payload=outbox_payload)
 
             if validacion.estado == "REVISION":
                 self._audit_repo.add_case(
@@ -148,6 +159,11 @@ class PrescriptionService:
                         "id_regimen": saved.id_regimen,
                         "dosis_mg_m2": saved.dosis_mg_m2,
                         "superficie_corporal_m2": saved.superficie_corporal_m2,
+                        "localizacion_tumor": saved.localizacion_tumor,
+                        "tipo_histologico": saved.tipo_histologico,
+                        "linea_tratamiento": saved.linea_tratamiento,
+                        "costo_por_farmaco": json.dumps([c.model_dump() for c in validacion.costo_por_farmaco]),
+                        "costo_total": validacion.costo_total,
                         "estado_validacion": validacion.estado,
                         "motivos_validacion": json.dumps(validacion.motivos),
                         "probabilidad_concordante": validacion.probabilidad_concordante,

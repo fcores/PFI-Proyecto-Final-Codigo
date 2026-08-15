@@ -11,9 +11,11 @@ ORDER BY ac.created_at;
 -- name: find_audit_case_by_id
 SELECT ac.*, p.prescription_code, p.patient_id, p.diagnostico_cie10, p.estadio, p.esquema,
        p.dosis_mg_m2, p.superficie_corporal_m2, p.id_regimen,
+       p.localizacion_tumor, p.tipo_histologico, p.linea_tratamiento,
        p.estado_validacion, p.motivos_validacion,
        p.probabilidad_concordante, p.nivel_confianza, p.umbral_bajo, p.umbral_alto,
        p.origen_validacion, p.version_modelo, p.features_relevantes,
+       p.costo_por_farmaco, p.costo_total,
        p.created_at AS prescription_created_at
 FROM audit_cases ac
 JOIN prescriptions p ON ac.prescription_id = p.id

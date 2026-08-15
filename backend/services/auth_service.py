@@ -111,12 +111,12 @@ class AuthService:
             with get_db() as conn:
                 with conn.cursor() as cur:
                     cur.execute(queries["find_user_by_username"], (username,))
+                    columns = [desc[0] for desc in cur.description]
                     row = cur.fetchone()
 
             if row is None:
                 raise HTTPException(status_code=401, detail="Usuario o contrasena incorrectos.")
 
-            columns = ["id", "username", "password_hash", "salt", "display_name", "role", "active", "created_at"]
             user_data = dict(zip(columns, row))
 
             computed_hash = self._hash_password(password, user_data["salt"])

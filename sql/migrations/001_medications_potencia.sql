@@ -1,3 +1,0 @@
-ALTER TABLE medications ADD COLUMN IF NOT EXISTS potencia_mg NUMERIC(12,4);
-ALTER TABLE medications ADD COLUMN IF NOT EXISTS precio NUMERIC(14,2);
-ALTER TABLE medications ADD COLUMN IF NOT EXISTS via_administracion VARCHAR(100);

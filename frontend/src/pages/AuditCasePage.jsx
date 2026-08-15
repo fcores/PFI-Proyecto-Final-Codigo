@@ -15,7 +15,13 @@ import ConfidenceBar from "../components/ConfidenceBar";
 import { ESTADO_VARIANT } from "../constants/estadoVariant";
 import { formatDate } from "../utils/formatDate";
 
-const CORRECTION_COLUMNS = ["Campo", "Valor nuevo", "Justificación", "Fecha"];
+const CORRECTION_COLUMNS = [
+  "Campo",
+  "Valor anterior",
+  "Valor nuevo",
+  "Justificación",
+  "Fecha",
+];
 
 const CAMPO_OPTIONS = [
   "diagnostico_cie10",
@@ -111,9 +117,10 @@ export default function AuditCasePage() {
     return (
       <tr key={idx}>
         <td>{item.campo}</td>
+        <td>{item.valor_anterior}</td>
         <td>{item.valor_nuevo}</td>
         <td>{item.justificacion}</td>
-        <td>{formatDate(item.fecha)}</td>
+        <td>{formatDate(item.created_at)}</td>
       </tr>
     );
   }
@@ -340,9 +347,9 @@ export default function AuditCasePage() {
                       style={{ minHeight: "80px" }}
                     />
                   </FormField>
-                  {dictamen.fecha && (
+                  {dictamen.created_at && (
                     <FormField label="Fecha" htmlFor="dict_fecha" span={4}>
-                      <input id="dict_fecha" type="text" value={formatDate(dictamen.fecha)} readOnly />
+                      <input id="dict_fecha" type="text" value={formatDate(dictamen.created_at)} readOnly />
                     </FormField>
                   )}
                 </div>

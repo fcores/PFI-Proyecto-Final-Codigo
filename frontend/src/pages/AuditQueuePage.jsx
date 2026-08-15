@@ -106,7 +106,7 @@ export default function AuditQueuePage() {
             label={item.estado_validacion}
           />
         </td>
-        <td>{formatDate(item.fecha)}</td>
+        <td>{formatDate(item.created_at)}</td>
       </tr>
     );
   }
@@ -168,7 +168,6 @@ export default function AuditQueuePage() {
                     <option value="REVISION">Revisión</option>
                     <option value="APROBADO">Aprobado</option>
                     <option value="RECHAZADO">Rechazado</option>
-                    <option value="PENDIENTE_DOCS">Pendiente Docs</option>
                   </select>
                 </FormField>
               </div>
