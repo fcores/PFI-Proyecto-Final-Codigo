@@ -36,13 +36,13 @@ CATEGORIAS_MODELO = {
     "sexo": {"female": 0, "male": 1},
     "lateralidad": {"derecho": 0, "izquierdo": 1, "transverso": 2},
     "histologia": {"adenocarcinoma_nos": 0, "mucinoso": 1, "otros": 2},
-    "msi": {"MSI-H": 0, "MSS": 1, "no_evaluado": 2},
-    "ras": {"mutado": 0, "no_evaluado": 1, "wild_type": 2},
+    "msi": {"MSS": 0, "MSI-H": 1, "no_evaluado": 2},
+    "ras": {"wild_type": 0, "mutado": 1, "no_evaluado": 2},
     "braf_v600e": {
-        "no_evaluado": 0,
+        "ausente": 0,
         "presente": 1,
-        "wild_type": 2,
-        "ausente": 2,
+        "no_evaluado": 2,
+        "wild_type": 0,
     },
     "m": {"M0": 0, "M1": 1, "MX": 2},
     "id_regimen": {

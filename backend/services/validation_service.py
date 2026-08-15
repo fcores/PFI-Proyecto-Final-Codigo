@@ -194,8 +194,8 @@ class ValidationService:
                 probabilidad = proba_raw
 
             umbrales = artefacto.get("umbrales", {})
-            t_bajo = float(umbrales.get("t_bajo", 0.35))
-            t_alto = float(umbrales.get("t_alto", 0.65))
+            t_bajo = float(umbrales.get("t_bajo", 0.45))
+            t_alto = float(umbrales.get("t_alto", 0.7679))
             version = artefacto.get("version_modelo")
             aportes = self._aportes_pred_contrib(model, X_row, feature_names)
             nivel = self._nivel_confianza(probabilidad, t_bajo, t_alto)
@@ -204,8 +204,12 @@ class ValidationService:
                 estado = ESTADO_APROBADO
                 motivos = ["Prescripción concordante según motor híbrido reglas + ML."]
             elif probabilidad <= t_bajo:
-                estado = ESTADO_RECHAZADO
-                motivos = ["Probabilidad de concordancia baja (%.2f). Se rechaza la prescripción." % probabilidad]
+                # RNF-15: the model alone cannot reject without an attributable rule;
+                # degrade to REVISION so a human auditor makes the final decision.
+                estado = ESTADO_REVISION
+                motivos = [
+                    "Probabilidad de concordancia baja (%.2f). Se deriva a revisión humana." % probabilidad
+                ]
             else:
                 estado = ESTADO_REVISION
                 motivos = ["Probabilidad intermedia (%.2f). Se deriva a revisión humana." % probabilidad]

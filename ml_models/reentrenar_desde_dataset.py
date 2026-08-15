@@ -25,6 +25,7 @@ from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import (
     average_precision_score,
     brier_score_loss,
+    precision_score,
     recall_score,
     roc_auc_score,
 )
@@ -175,9 +176,8 @@ def entrenar_modelo(dataset, semilla):
         iso_reg.fit(y_proba_lgb, y)
         y_proba_calibrada = iso_reg.predict(y_proba_lgb)
 
-        sorted_proba = np.sort(y_proba_calibrada)
-        t_bajo = float(np.percentile(sorted_proba[y == 0], 70))
-        t_alto = float(np.percentile(sorted_proba[y == 1], 30))
+        t_bajo = float(np.percentile(y_proba_calibrada[y == 0], 70))
+        t_alto = float(np.percentile(y_proba_calibrada[y == 1], 30))
         if t_bajo >= t_alto:
             t_bajo, t_alto = 0.35, 0.65
 
@@ -186,20 +186,113 @@ def entrenar_modelo(dataset, semilla):
         auc_pr = average_precision_score(1 - y, 1 - y_proba_calibrada)
         brier = brier_score_loss(y, y_proba_calibrada)
 
+        # Hybrid detection: rules OR model flags as non-concordant
+        pred_hibrido = np.where((pred_reglas == 0) | (y_pred_lgb == 0), 0, 1)
+        recall_hibrido = recall_score(y == 0, pred_hibrido == 0)
+        precision_hibrido = precision_score(y == 0, pred_hibrido == 0, zero_division=0)
+        vp_hibrido = int(((y == 0) & (pred_hibrido == 0)).sum())
+        fp_hibrido = int(((y == 1) & (pred_hibrido == 0)).sum())
+
+        # Detection stats per layer
+        vp_reglas = int(((y == 0) & (pred_reglas == 0)).sum())
+        fp_reglas = int(((y == 1) & (pred_reglas == 0)).sum())
+        precision_reglas = vp_reglas / max(vp_reglas + fp_reglas, 1)
+        vp_ml = int(((y == 0) & (y_pred_lgb == 0)).sum())
+        fp_ml = int(((y == 1) & (y_pred_lgb == 0)).sum())
+        precision_ml = vp_ml / max(vp_ml + fp_ml, 1)
+
+        # Recall by alcance_reglas (if column present)
+        recall_por_alcance = {}
+        if "alcance_reglas" in dataset.columns:
+            for scope in ["dentro", "fuera"]:
+                mask = dataset["alcance_reglas"].values == scope
+                if mask.sum() > 0:
+                    y_scope = y[mask]
+                    if (y_scope == 0).sum() > 0:
+                        recall_ml_scope = recall_score(
+                            y_scope == 0, y_pred_lgb[mask] == 0
+                        )
+                        recall_reglas_scope = recall_score(
+                            y_scope == 0, pred_reglas[mask] == 0
+                        )
+                        recall_por_alcance[scope] = {
+                            "n": int(mask.sum()),
+                            "recall_ml": round(float(recall_ml_scope), 4),
+                            "recall_reglas": round(float(recall_reglas_scope), 4),
+                        }
+
+        # Three-state policy
+        aprobados = y_proba_calibrada >= t_alto
+        rechazados = y_proba_calibrada <= t_bajo
+        revision = ~aprobados & ~rechazados
+        n_total = len(y)
+        politica_tres_estados = {
+            "tasa_aprobacion_automatica": round(float(aprobados.sum() / n_total), 4),
+            "tasa_derivacion_revision": round(float(revision.sum() / n_total), 4),
+            "tasa_no_autorizacion": round(float(rechazados.sum() / n_total), 4),
+        }
+
+        # Recall at fixed 20% revision rate
+        sorted_idx = np.argsort(y_proba_calibrada)
+        n_review = int(0.20 * n_total)
+        review_idx = sorted_idx[:n_review]
+        recall_at_20 = float((y[review_idx] == 0).sum() / max((y == 0).sum(), 1))
+
+        # Train final model
         dtrain_full = lgb.Dataset(X, label=y)
         model_final = lgb.train(params, dtrain_full, num_boost_round=200)
 
+        # SHAP importance via pred_contrib
+        shap_importance = {}
+        try:
+            contrib = model_final.predict(X, pred_contrib=True)
+            feature_names = list(X.columns)
+            abs_mean = np.abs(contrib[:, :-1]).mean(axis=0)
+            shap_importance = {
+                feature_names[i]: round(float(abs_mean[i]), 4)
+                for i in range(len(feature_names))
+            }
+            shap_importance = dict(
+                sorted(shap_importance.items(), key=lambda x: -x[1])
+            )
+        except Exception as e:
+            logger.warning("SHAP computation failed: %s", e)
+
         metricas = {
             "lgbm_recall_no_concordante": round(float(recall_lgb), 4),
+            "recall_por_alcance_reglas": recall_por_alcance,
             "lgbm_auc_roc": round(float(auc_roc), 4),
             "lgbm_auc_pr": round(float(auc_pr), 4),
             "lgbm_brier_score": round(float(brier), 4),
+            "lgbm_recall_at_20pct_revision": round(float(recall_at_20), 4),
             "reglas_recall_no_concordante": round(float(recall_reglas), 4),
             "delta_ml_sobre_reglas": round(float(recall_lgb - recall_reglas), 4),
             "umbral_bajo": round(t_bajo, 4),
             "umbral_alto": round(t_alto, 4),
+            "umbrales_por_fallback": bool(t_bajo >= t_alto),
+            "deteccion_reglas": {
+                "recall": round(float(recall_reglas), 4),
+                "precision": round(float(precision_reglas), 4),
+                "verdaderos_positivos": vp_reglas,
+                "falsos_positivos": fp_reglas,
+            },
+            "deteccion_ml": {
+                "recall": round(float(recall_lgb), 4),
+                "precision": round(float(precision_ml), 4),
+                "verdaderos_positivos": vp_ml,
+                "falsos_positivos": fp_ml,
+            },
+            "deteccion_hibrido": {
+                "recall": round(float(recall_hibrido), 4),
+                "precision": round(float(precision_hibrido), 4),
+                "verdaderos_positivos": vp_hibrido,
+                "falsos_positivos": fp_hibrido,
+            },
+            "delta_hibrido_sobre_reglas": round(float(recall_hibrido - recall_reglas), 4),
+            "politica_tres_estados": politica_tres_estados,
             "n_features": int(X.shape[1]),
             "n_filas_entrenamiento": int(len(y)),
+            "shap_importance": shap_importance,
             "version_modelo": VERSION_MODELO,
             "semilla": semilla,
         }
