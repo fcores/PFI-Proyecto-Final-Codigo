@@ -1,7 +1,8 @@
 import { get, postJson } from "./client";
 
 export async function fetchAuditQueue() {
-  return get("/audit/queue");
+  const data = await get("/audit/queue");
+  return data.cases ?? [];
 }
 
 export async function fetchAuditCase(caseId) {
@@ -21,5 +22,6 @@ export async function createCorrection(caseId, campo, valorNuevo, justificacion)
 }
 
 export async function fetchCorrectionHistory(caseId) {
-  return get(`/audit/cases/${caseId}/history`);
+  const data = await get(`/audit/cases/${caseId}/history`);
+  return data.corrections ?? [];
 }
