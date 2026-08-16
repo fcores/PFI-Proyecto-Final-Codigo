@@ -61,6 +61,17 @@ def create_app() -> FastAPI:
     )
 
     init_db()
+
+    from backend.db import is_db_available
+
+    if not is_db_available():
+        logger.warning(
+            "MODO IN-MEMORY ACTIVO (solo desarrollo): sin cifrado PHI, sin UNIQUE constraints, "
+            "sin phi_access_log, sin outbox. Configurar DATABASE_URL para produccion.",
+        )
+        if settings.is_production:
+            raise RuntimeError("DATABASE_URL es obligatoria en produccion")
+
     _start_outbox_worker(settings)
 
     api = APIRouter(prefix="/api")

@@ -26,23 +26,6 @@ class PrescriptionRepository:
 
         return is_db_available()
 
-    def next_id(self) -> int:
-        """Devuelve el proximo ID disponible.
-        En modo DB usa la secuencia prescription_id_seq para evitar PRESC-0000.
-        """
-        if self._db_available():
-            from backend.db import get_db, load_query
-
-            queries = load_query("prescriptions.sql")
-            with get_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(queries["next_prescription_id"])
-                    row = cur.fetchone()
-                    return row[0]
-        current = self._next_id
-        self._next_id += 1
-        return current
-
     def _models_to_json(self, items):
         """Serializa una lista de modelos (o dicts) a JSON para columnas TEXT."""
         payload = []
@@ -87,18 +70,8 @@ class PrescriptionRepository:
         data["validacion"] = validacion
         return Prescription(**data)
 
-    def add(
-        self,
-        prescription: Prescription,
-        outbox_payload: str | None = None,
-        idempotency_key: str | None = None,
-    ) -> Prescription:
-        """Agrega una prescripcion al repositorio.
-
-        Si se pasa outbox_payload, la entrada del outbox se inserta en la MISMA
-        transaccion que la prescripcion: que ambas cosas sean atomicas es el
-        punto del patron outbox.
-        """
+    def add(self, prescription: Prescription) -> Prescription:
+        """Agrega una prescripcion al repositorio y devuelve la instancia con el ID real."""
         if self._db_available():
             from backend.db import get_db, load_query
 
@@ -150,29 +123,54 @@ class PrescriptionRepository:
                     row = cur.fetchone()
                     new_id = row[0]
                     prescription = prescription.model_copy(update={"id": new_id})
-
-                    if outbox_payload is not None:
-                        cur.execute(
-                            queries["insert_outbox"],
-                            (
-                                new_id,
-                                idempotency_key or "presc:%d" % new_id,
-                                outbox_payload,
-                            ),
-                        )
             return prescription
+        if prescription.id == 0:
+            prescription = prescription.model_copy(update={"id": self._next_id})
+            self._next_id += 1
         self._store.append(prescription)
         return prescription
 
-    def list_all(self) -> list[Prescription]:
-        """Lista todas las prescripciones."""
+    def update_code(self, prescription_id: int, new_code: str) -> None:
+        """Actualiza el prescription_code despues de conocer el ID real."""
+        if self._db_available():
+            from backend.db import get_db
+
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE prescriptions SET prescription_code = %s WHERE id = %s",
+                        (new_code, prescription_id),
+                    )
+        else:
+            for p in self._store:
+                if p.id == prescription_id:
+                    idx = self._store.index(p)
+                    self._store[idx] = p.model_copy(update={"prescription_code": new_code})
+                    break
+
+    def enqueue_outbox(self, prescription_id: int, payload: str) -> None:
+        """Encola una entrada en el outbox para commit a Fabric."""
+        if not self._db_available():
+            return
+        from backend.db import get_db, load_query
+
+        queries = load_query("prescriptions.sql")
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    queries["insert_outbox"],
+                    (prescription_id, "presc:%d" % prescription_id, payload),
+                )
+
+    def list_all(self, limit: int = 100, offset: int = 0) -> list[Prescription]:
+        """Lista prescripciones con paginacion."""
         if self._db_available():
             from backend.db import get_db, load_query
 
             queries = load_query("prescriptions.sql")
             with get_db() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(queries["select_all_prescriptions"])
+                    cur.execute(queries["select_all_prescriptions"], (limit, offset))
                     columns = [desc[0] for desc in cur.description]
                     rows = cur.fetchall()
             result = []
@@ -180,4 +178,4 @@ class PrescriptionRepository:
                 data = dict(zip(columns, row))
                 result.append(self._row_to_prescription(data))
             return result
-        return list(self._store)
+        return list(self._store[offset : offset + limit])

@@ -92,7 +92,6 @@ class PrescriptionService:
     def create(self, data: PrescriptionBase) -> Prescription:
         """Crea una prescripcion, la valida, registra en blockchain y genera caso de auditoria si aplica."""
         try:
-            seq = self._repo.next_id()
             superficie = self._body_surface_area(data.peso_kg, data.talla_cm)
             esquema = self._asegurar_esquema(data)
             dosis_mg_m2 = self._derivar_dosis_mg_m2(data, superficie)
@@ -117,8 +116,24 @@ class PrescriptionService:
 
             validacion = self._validation_service.validate(data_completa)
 
+            prescription = Prescription(
+                id=0,
+                prescription_code="PRESC-TEMP",
+                superficie_corporal_m2=superficie,
+                created_at=datetime.now(),
+                validacion=validacion,
+                **data_completa.model_dump(),
+            )
+
+            saved = self._repo.add(prescription)
+            saved = saved.model_copy(
+                update={"prescription_code": self._build_code(saved.id)},
+            )
+            self._repo.update_code(saved.id, saved.prescription_code)
+
             payload = {
-                "prescription_code": self._build_code(seq),
+                "prescription_code": saved.prescription_code,
+                "id": saved.id,
                 "patient_id": data_completa.patient_id,
                 "diagnostico_cie10": data_completa.diagnostico_cie10,
                 "estadio": data_completa.estadio,
@@ -131,22 +146,16 @@ class PrescriptionService:
                 "origen_validacion": validacion.origen,
                 "version_modelo": validacion.version_modelo,
             }
+
+            if self._outbox_enabled():
+                self._repo.enqueue_outbox(saved.id, json.dumps(payload))
+
             block = self._ledger_service.append("prescription", payload)
-
-            prescription = Prescription(
-                id=seq,
-                prescription_code=self._build_code(seq),
-                superficie_corporal_m2=superficie,
-                created_at=datetime.now(),
-                validacion=validacion,
-                blockchain_tx_id=block.hash,
-                block_index=block.index,
-                **data_completa.model_dump(),
+            saved = saved.model_copy(
+                update={"blockchain_tx_id": block.hash, "block_index": block.index},
             )
-            outbox_payload = json.dumps(payload) if self._outbox_enabled() else None
-            saved = self._repo.add(prescription, outbox_payload=outbox_payload)
 
-            if validacion.estado == "REVISION":
+            if validacion.estado in ("REVISION", "RECHAZADO"):
                 self._audit_repo.add_case(
                     saved.id,
                     "pendiente",
@@ -182,10 +191,10 @@ class PrescriptionService:
             logger.error("Error al crear prescripcion: %s", exc, exc_info=True)
             raise
 
-    def list_all(self) -> PrescriptionList:
-        """Lista todas las prescripciones."""
+    def list_all(self, limit: int = 100, offset: int = 0) -> PrescriptionList:
+        """Lista prescripciones con paginacion."""
         try:
-            return PrescriptionList(prescriptions=self._repo.list_all())
+            return PrescriptionList(prescriptions=self._repo.list_all(limit=limit, offset=offset))
         except Exception as exc:
             logger.error("Error al listar prescripciones: %s", exc, exc_info=True)
             raise

@@ -92,8 +92,12 @@ async def create_prescription(
 
 
 @router.get("", response_model=PrescriptionList)
-async def list_prescriptions(authorization: str | None = Header(default=None)):
-    """Lista todas las prescripciones. Requiere autenticacion."""
+async def list_prescriptions(
+    limit: int = Query(100, ge=1, le=500, description="Cantidad maxima de resultados"),
+    offset: int = Query(0, ge=0, description="Desplazamiento para paginacion"),
+    authorization: str | None = Header(default=None),
+):
+    """Lista prescripciones con paginacion. Requiere autenticacion."""
     require_auth(authorization)
     svc = get_prescription_service()
-    return svc.list_all()
+    return svc.list_all(limit=limit, offset=offset)

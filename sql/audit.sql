@@ -24,6 +24,12 @@ WHERE ac.id = %s;
 -- name: update_audit_case_status
 UPDATE audit_cases SET status = %s, assigned_auditor = %s WHERE id = %s;
 
+-- name: claim_audit_case
+UPDATE audit_cases
+SET status = 'en_revision', assigned_auditor = %s
+WHERE id = %s AND status = 'pendiente' AND assigned_auditor IS NULL
+RETURNING id;
+
 -- name: insert_dictamen
 INSERT INTO dictamenes (audit_case_id, resultado, justificacion, auditor_username, blockchain_tx_id)
 VALUES (%s, %s, %s, %s, %s)
@@ -39,3 +45,9 @@ SELECT * FROM corrections WHERE audit_case_id = %s ORDER BY created_at;
 
 -- name: select_dictamen_by_case
 SELECT * FROM dictamenes WHERE audit_case_id = %s ORDER BY created_at DESC LIMIT 1;
+
+-- name: update_prescription_estado
+UPDATE prescriptions SET estado_validacion = %s, updated_at = NOW() WHERE id = %s;
+
+-- name: update_prescription_field
+UPDATE prescriptions SET updated_at = NOW() WHERE id = %s;

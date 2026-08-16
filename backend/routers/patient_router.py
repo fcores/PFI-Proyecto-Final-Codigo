@@ -55,15 +55,17 @@ async def create_patient(
 @router.get("", response_model=PatientList)
 async def list_patients(
     q: str | None = Query(None, min_length=2, description="Buscar por nombre/apellido"),
+    limit: int = Query(100, ge=1, le=500, description="Cantidad maxima de resultados"),
+    offset: int = Query(0, ge=0, description="Desplazamiento para paginacion"),
     authorization: str | None = Header(default=None),
 ):
-    """Lista pacientes. Con ?q= busca por nombre/apellido."""
+    """Lista pacientes con paginacion. Con ?q= busca por nombre/apellido."""
     require_auth(authorization)
     svc = get_patient_service()
     if q:
         patients = svc.search(q)
         return PatientList(patients=patients)
-    return svc.list_all()
+    return svc.list_all(limit=limit, offset=offset)
 
 
 @router.get("/{patient_id}", response_model=Patient)

@@ -30,7 +30,8 @@ SELECT id, prescription_code, patient_id, edad, sexo, peso_kg, talla_cm, superfi
     origen_validacion, version_modelo, features_relevantes,
     costo_por_farmaco, costo_total,
     blockchain_tx_id, block_index, created_at
-FROM prescriptions ORDER BY id;
+FROM prescriptions ORDER BY id
+LIMIT %s OFFSET %s;
 
 -- name: next_prescription_id
 SELECT nextval('prescription_id_seq');

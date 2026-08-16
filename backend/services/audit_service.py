@@ -51,6 +51,11 @@ class AuditService:
             logger.error("Error al obtener detalle del caso %s: %s", case_id, exc, exc_info=True)
             raise
 
+    _RESULTADO_A_ESTADO = {
+        "aprobado": "APROBADO_AUDITORIA",
+        "rechazado": "RECHAZADO_AUDITORIA",
+    }
+
     def create_dictamen(
         self,
         case_id: int,
@@ -58,7 +63,7 @@ class AuditService:
         justificacion: str,
         auditor_username: str,
     ) -> Dictamen:
-        """Registra un dictamen para un caso de auditoria."""
+        """Registra un dictamen, propaga el resultado a la prescripcion y cierra el caso."""
         try:
             payload = {
                 "audit_case_id": case_id,
@@ -79,6 +84,12 @@ class AuditService:
             new_status = "dictaminado"
             self._repo.update_case_status(case_id, new_status, auditor_username)
 
+            case = self._repo.find_case_by_id(case_id)
+            if case:
+                nuevo_estado = self._RESULTADO_A_ESTADO.get(resultado.lower())
+                if nuevo_estado:
+                    self._repo.update_prescription_estado(case.prescription_id, nuevo_estado)
+
             return dictamen
         except Exception as exc:
             logger.error("Error al crear dictamen para caso %s: %s", case_id, exc, exc_info=True)
@@ -93,7 +104,7 @@ class AuditService:
         justificacion: str,
         auditor_username: str,
     ) -> Correction:
-        """Registra una correccion de dato clinico."""
+        """Registra una correccion de dato clinico y la aplica al registro de la prescripcion."""
         try:
             payload = {
                 "audit_case_id": case_id,
@@ -113,10 +124,21 @@ class AuditService:
                 auditor_username,
                 block.hash,
             )
+
+            case = self._repo.find_case_by_id(case_id)
+            if case:
+                self._repo.apply_correction_to_prescription(
+                    case.prescription_id, campo, valor_nuevo,
+                )
+
             return correction
         except Exception as exc:
             logger.error("Error al crear correccion para caso %s: %s", case_id, exc, exc_info=True)
             raise
+
+    def claim_case(self, case_id: int, auditor_username: str) -> bool:
+        """Intenta reservar un caso para el auditor. Retorna False si ya estaba tomado."""
+        return self._repo.claim_case(case_id, auditor_username)
 
     def list_corrections(self, case_id: int) -> CorrectionList:
         """Lista las correcciones de un caso."""

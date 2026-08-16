@@ -93,9 +93,12 @@ def _record_success(conn, outbox_id: int, prescription_id: int, tx_id: str | Non
 
 
 def _record_failure(conn, outbox_id: int, prescription_id: int, attempts: int, error_msg: str) -> None:
-    """Contabiliza el intento fallido y marca la prescripcion si se agotaron."""
+    """Contabiliza el intento fallido. Mueve a dead_letter si se agotaron los intentos."""
     new_attempts = attempts + 1
-    new_status = "failed" if new_attempts >= _MAX_ATTEMPTS else "pending"
+    if new_attempts >= _MAX_ATTEMPTS:
+        new_status = "dead_letter"
+    else:
+        new_status = "pending"
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -105,7 +108,7 @@ def _record_failure(conn, outbox_id: int, prescription_id: int, attempts: int, e
         """,
             (new_status, new_attempts, error_msg, outbox_id),
         )
-        if new_status == "failed":
+        if new_status == "dead_letter":
             cur.execute(
                 """
                 UPDATE prescriptions
@@ -115,9 +118,11 @@ def _record_failure(conn, outbox_id: int, prescription_id: int, attempts: int, e
                 (prescription_id,),
             )
             logger.error(
-                "Prescription %d: commit fallido definitivamente tras %d intentos",
+                "Prescription %d: movida a dead_letter tras %d intentos. "
+                "Ultimo error: %s. Requiere intervencion manual.",
                 prescription_id,
                 new_attempts,
+                error_msg,
             )
 
 

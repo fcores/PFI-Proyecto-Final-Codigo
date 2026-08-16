@@ -74,9 +74,9 @@ class PatientService:
         """Busca pacientes por nombre/apellido."""
         return self._repo.search(query)
 
-    def list_all(self) -> PatientList:
-        """Lista todos los pacientes."""
-        return PatientList(patients=self._repo.list_all())
+    def list_all(self, limit: int = 100, offset: int = 0) -> PatientList:
+        """Lista pacientes con paginacion."""
+        return PatientList(patients=self._repo.list_all(limit=limit, offset=offset))
 
     def bulk_import(self, file_bytes: bytes, filename: str) -> BulkImportResult:
         """Importa pacientes masivamente desde Excel."""

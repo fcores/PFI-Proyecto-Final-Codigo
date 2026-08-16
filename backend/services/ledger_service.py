@@ -9,7 +9,16 @@ GENESIS_PREV_HASH = "0" * 64
 
 
 class LedgerService:
-    """Blockchain simulada: cadena de bloques enlazados por hash SHA-256 en memoria."""
+    """Ledger interno: cadena de bloques enlazados por hash SHA-256 persistida en PostgreSQL.
+
+    Fuente de verdad local para trazabilidad inmediata y siempre disponible.
+    Complementa (no reemplaza) a Hyperledger Fabric: el ledger interno es
+    sincrono y local; Fabric es asincrono, distribuido y opcional (via outbox).
+
+    Columnas en prescriptions:
+        blockchain_tx_id / block_index  -> referencia al bloque del ledger interno.
+        tx_id / block_number / payload_hash / estado_commit -> referencia a Fabric.
+    """
 
     def __init__(self, repo: LedgerRepository) -> None:
         self._repo = repo

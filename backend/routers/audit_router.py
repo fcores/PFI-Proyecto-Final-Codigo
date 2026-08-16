@@ -30,6 +30,21 @@ async def list_audit_queue(authorization: str | None = Header(default=None)):
         raise
 
 
+@router.post("/cases/{case_id}/claim")
+async def claim_audit_case(case_id: int, authorization: str | None = Header(default=None)):
+    """Reserva un caso pendiente para el auditor actual (control de concurrencia)."""
+    try:
+        user = require_auth(authorization)
+        require_role(user, ["auditor", "administrador"])
+        svc = get_audit_service()
+        claimed = svc.claim_case(case_id, user.username)
+        if not claimed:
+            raise HTTPException(status_code=409, detail="El caso ya fue tomado por otro auditor.")
+        return {"claimed": True, "case_id": case_id, "auditor": user.username}
+    except Exception:
+        raise
+
+
 @router.get("/cases/{case_id}", response_model=AuditCaseDetail)
 async def get_audit_case(case_id: int, authorization: str | None = Header(default=None)):
     """Obtiene el detalle completo de un caso de auditoria."""

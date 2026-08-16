@@ -91,7 +91,25 @@ class PrescriptionBase(BaseModel):
     matricula: str = Field(..., title="Matrícula")
 
 
+ESTADOS_PRESCRIPCION = (
+    "APROBADO",
+    "RECHAZADO",
+    "REVISION",
+    "APROBADO_AUDITORIA",
+    "RECHAZADO_AUDITORIA",
+)
+
+
 class Prescription(PrescriptionBase):
+    """Prescripcion medica con ciclo de vida:
+
+    APROBADO   - motor hibrido la aprueba automaticamente.
+    RECHAZADO  - reglas deterministicas rechazan; se genera caso de auditoria.
+    REVISION   - probabilidad intermedia/baja; se genera caso de auditoria.
+    APROBADO_AUDITORIA  - auditor emite dictamen aprobatorio.
+    RECHAZADO_AUDITORIA - auditor emite dictamen de rechazo.
+    """
+
     id: int
     prescription_code: str = Field(..., title="Código de prescripción")
     superficie_corporal_m2: float = Field(..., title="Superficie corporal (m²)")

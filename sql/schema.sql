@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(256) NOT NULL,
     salt VARCHAR(64) NOT NULL,
     display_name VARCHAR(200) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'prescriptor',
+    role VARCHAR(50) NOT NULL DEFAULT 'prescriptor'
+        CONSTRAINT chk_users_role CHECK (role IN ('administrador', 'prescriptor', 'auditor')),
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -12,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS monodrugs (
     id SERIAL PRIMARY KEY,
     descripcion VARCHAR(500) NOT NULL,
-    codigo VARCHAR(100) NOT NULL,
+    codigo VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS patients (
     birth_date DATE NOT NULL,
     gender VARCHAR(50) NOT NULL,
     treatment VARCHAR(500),
-    medications TEXT DEFAULT '[]',
+    medications JSONB DEFAULT '[]',
     hc_filename VARCHAR(500),
     ap_filename VARCHAR(500),
     img_filename VARCHAR(500),
@@ -75,8 +76,8 @@ CREATE SEQUENCE IF NOT EXISTS prescription_id_seq START WITH 1 INCREMENT BY 1;
 
 CREATE TABLE IF NOT EXISTS prescriptions (
     id SERIAL PRIMARY KEY,
-    prescription_code VARCHAR(50) NOT NULL,
-    patient_id BIGINT NOT NULL CONSTRAINT fk_prescriptions_patient_id REFERENCES patients(id),
+    prescription_code VARCHAR(50) NOT NULL UNIQUE,
+    patient_id BIGINT NOT NULL CONSTRAINT fk_prescriptions_patient_id REFERENCES patients(id) ON DELETE RESTRICT,
     edad INTEGER NOT NULL,
     sexo VARCHAR(50) NOT NULL,
     peso_kg NUMERIC(10,2) NOT NULL,
@@ -89,31 +90,38 @@ CREATE TABLE IF NOT EXISTS prescriptions (
     n VARCHAR(50) NOT NULL,
     m VARCHAR(50) NOT NULL,
     estadio VARCHAR(50) NOT NULL,
-    msi VARCHAR(20) NOT NULL DEFAULT 'no_evaluado',
-    ras VARCHAR(20) NOT NULL DEFAULT 'no_evaluado',
-    braf_v600e VARCHAR(20) NOT NULL DEFAULT 'no_evaluado',
+    msi VARCHAR(20) NOT NULL DEFAULT 'no_evaluado'
+        CONSTRAINT chk_prescriptions_msi CHECK (msi IN ('MSI-H', 'MSS', 'no_evaluado')),
+    ras VARCHAR(20) NOT NULL DEFAULT 'no_evaluado'
+        CONSTRAINT chk_prescriptions_ras CHECK (ras IN ('wild_type', 'mutado', 'no_evaluado')),
+    braf_v600e VARCHAR(20) NOT NULL DEFAULT 'no_evaluado'
+        CONSTRAINT chk_prescriptions_braf CHECK (braf_v600e IN ('presente', 'wild_type', 'no_evaluado')),
     linea_tratamiento VARCHAR(100) NOT NULL,
     id_regimen VARCHAR(10) NOT NULL,
     esquema VARCHAR(500) NOT NULL,
-    dosis_por_farmaco TEXT DEFAULT '[]',
+    dosis_por_farmaco JSONB DEFAULT '[]',
     dosis_mg_m2 NUMERIC(10,2) NOT NULL,
     medico_prescriptor VARCHAR(200) NOT NULL,
     matricula VARCHAR(100) NOT NULL,
-    estado_validacion VARCHAR(50) NOT NULL,
-    motivos_validacion TEXT DEFAULT '[]',
+    estado_validacion VARCHAR(50) NOT NULL
+        CONSTRAINT chk_prescriptions_estado_validacion
+        CHECK (estado_validacion IN ('APROBADO', 'RECHAZADO', 'REVISION', 'APROBADO_AUDITORIA', 'RECHAZADO_AUDITORIA')),
+    motivos_validacion JSONB DEFAULT '[]',
     probabilidad_concordante NUMERIC(10,6),
     nivel_confianza VARCHAR(50),
     umbral_bajo NUMERIC(10,6),
     umbral_alto NUMERIC(10,6),
     origen_validacion VARCHAR(50),
     version_modelo VARCHAR(50),
-    features_relevantes TEXT DEFAULT '[]',
-    costo_por_farmaco TEXT DEFAULT '[]',
+    features_relevantes JSONB DEFAULT '[]',
+    costo_por_farmaco JSONB DEFAULT '[]',
     costo_total NUMERIC(14,2),
+    -- Referencia al ledger interno (sincrono, siempre disponible)
     blockchain_tx_id VARCHAR(256),
     block_index INTEGER,
-    -- Estado del commit a Fabric (patron outbox)
-    estado_commit VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    -- Referencia a Hyperledger Fabric (asincrono via outbox, opcional)
+    estado_commit VARCHAR(20) NOT NULL DEFAULT 'pendiente'
+        CONSTRAINT chk_prescriptions_estado_commit CHECK (estado_commit IN ('pendiente', 'confirmado', 'fallido')),
     tx_id VARCHAR(256),
     block_number INTEGER,
     payload_hash VARCHAR(64),
@@ -126,7 +134,7 @@ CREATE INDEX IF NOT EXISTS ix_prescriptions_estado_commit ON prescriptions(estad
 
 CREATE TABLE IF NOT EXISTS ledger_blocks (
     index INTEGER PRIMARY KEY,
-    timestamp VARCHAR(100) NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
     tx_type VARCHAR(100) NOT NULL,
     payload JSONB NOT NULL DEFAULT '{}',
     prev_hash VARCHAR(256) NOT NULL,
@@ -135,33 +143,42 @@ CREATE TABLE IF NOT EXISTS ledger_blocks (
 
 CREATE TABLE IF NOT EXISTS audit_cases (
     id SERIAL PRIMARY KEY,
-    prescription_id INTEGER NOT NULL REFERENCES prescriptions(id),
-    status VARCHAR(50) NOT NULL DEFAULT 'pendiente',
-    assigned_auditor VARCHAR(100),
+    prescription_id INTEGER NOT NULL REFERENCES prescriptions(id) ON DELETE RESTRICT,
+    status VARCHAR(50) NOT NULL DEFAULT 'pendiente'
+        CONSTRAINT chk_audit_cases_status CHECK (status IN ('pendiente', 'en_revision', 'dictaminado')),
+    assigned_auditor VARCHAR(100) REFERENCES users(username) ON DELETE SET NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS ix_audit_cases_prescription_id ON audit_cases(prescription_id);
+CREATE INDEX IF NOT EXISTS ix_audit_cases_status ON audit_cases(status);
+
 CREATE TABLE IF NOT EXISTS dictamenes (
     id SERIAL PRIMARY KEY,
-    audit_case_id INTEGER NOT NULL REFERENCES audit_cases(id),
-    resultado VARCHAR(50) NOT NULL,
+    audit_case_id INTEGER NOT NULL REFERENCES audit_cases(id) ON DELETE CASCADE,
+    resultado VARCHAR(50) NOT NULL
+        CONSTRAINT chk_dictamenes_resultado CHECK (resultado IN ('aprobado', 'rechazado')),
     justificacion TEXT NOT NULL,
-    auditor_username VARCHAR(100) NOT NULL,
+    auditor_username VARCHAR(100) NOT NULL REFERENCES users(username) ON DELETE RESTRICT,
     blockchain_tx_id VARCHAR(256),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS ix_dictamenes_audit_case_id ON dictamenes(audit_case_id);
+
 CREATE TABLE IF NOT EXISTS corrections (
     id SERIAL PRIMARY KEY,
-    audit_case_id INTEGER NOT NULL REFERENCES audit_cases(id),
+    audit_case_id INTEGER NOT NULL REFERENCES audit_cases(id) ON DELETE CASCADE,
     campo VARCHAR(200) NOT NULL,
     valor_anterior TEXT NOT NULL,
     valor_nuevo TEXT NOT NULL,
     justificacion TEXT NOT NULL,
-    auditor_username VARCHAR(100) NOT NULL,
+    auditor_username VARCHAR(100) NOT NULL REFERENCES users(username) ON DELETE RESTRICT,
     blockchain_tx_id VARCHAR(256),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS ix_corrections_audit_case_id ON corrections(audit_case_id);
 
 -- Auditoria de acceso a datos PHI
 CREATE TABLE IF NOT EXISTS phi_access_log (
@@ -180,19 +197,21 @@ CREATE INDEX IF NOT EXISTS ix_phi_access_log_created_at ON phi_access_log(create
 -- Busqueda de pacientes por palabra suelta via indice ciego
 CREATE TABLE IF NOT EXISTS patient_name_tokens (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    patient_id BIGINT NOT NULL REFERENCES patients(id),
+    patient_id BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     token_bidx BYTEA NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS ix_patient_name_tokens_bidx ON patient_name_tokens(token_bidx);
+CREATE INDEX IF NOT EXISTS ix_patient_name_tokens_patient_id ON patient_name_tokens(patient_id);
 
 -- Cola durable de commits a Fabric (patron outbox, con idempotencia)
 CREATE TABLE IF NOT EXISTS prescription_outbox (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    prescription_id BIGINT NOT NULL REFERENCES prescriptions(id),
+    prescription_id BIGINT NOT NULL REFERENCES prescriptions(id) ON DELETE RESTRICT,
     idempotency_key VARCHAR(100) NOT NULL UNIQUE,
     payload TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CONSTRAINT chk_outbox_status CHECK (status IN ('pending', 'processing', 'committed', 'failed', 'dead_letter')),
     attempts INTEGER NOT NULL DEFAULT 0,
     last_error TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -200,3 +219,4 @@ CREATE TABLE IF NOT EXISTS prescription_outbox (
 );
 
 CREATE INDEX IF NOT EXISTS ix_outbox_status ON prescription_outbox(status);
+CREATE INDEX IF NOT EXISTS ix_outbox_prescription_id ON prescription_outbox(prescription_id);

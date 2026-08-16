@@ -120,6 +120,31 @@ class AuditRepository:
             logger.error("Error al buscar caso de auditoria %s: %s", case_id, exc, exc_info=True)
             raise
 
+    def claim_case(self, case_id: int, auditor: str) -> bool:
+        """Intenta reservar un caso pendiente para un auditor (control de concurrencia).
+
+        Returns True si el caso fue reservado, False si ya estaba tomado.
+        """
+        try:
+            if self._db_available():
+                from backend.db import get_db, load_query
+
+                queries = load_query("audit.sql")
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(queries["claim_audit_case"], (auditor, case_id))
+                        row = cur.fetchone()
+                        return row is not None
+            for case in self._cases:
+                if case.id == case_id and case.status == "pendiente" and case.assigned_auditor is None:
+                    case.status = "en_revision"
+                    case.assigned_auditor = auditor
+                    return True
+            return False
+        except Exception as exc:
+            logger.error("Error al reservar caso %s: %s", case_id, exc, exc_info=True)
+            raise
+
     def update_case_status(self, case_id: int, new_status: str, auditor: str) -> None:
         """Actualiza el estado y auditor asignado de un caso."""
         try:
@@ -270,6 +295,43 @@ class AuditRepository:
             return correction
         except Exception as exc:
             logger.error("Error al agregar correccion para caso %s: %s", case_id, exc, exc_info=True)
+            raise
+
+    def update_prescription_estado(self, prescription_id: int, new_estado: str) -> None:
+        """Propaga el resultado del dictamen al estado de la prescripcion."""
+        try:
+            if self._db_available():
+                from backend.db import get_db, load_query
+
+                queries = load_query("audit.sql")
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(queries["update_prescription_estado"], (new_estado, prescription_id))
+        except Exception as exc:
+            logger.error(
+                "Error al actualizar estado de prescripcion %s: %s", prescription_id, exc, exc_info=True,
+            )
+            raise
+
+    def apply_correction_to_prescription(self, prescription_id: int, campo: str, valor_nuevo: str) -> None:
+        """Aplica una correccion directamente al registro de la prescripcion."""
+        from backend.models.audit import CAMPOS_CORREGIBLES
+
+        if campo not in CAMPOS_CORREGIBLES:
+            return
+        try:
+            if self._db_available():
+                from backend.db import get_db
+
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        sql = "UPDATE prescriptions SET %s = %%s, updated_at = NOW() WHERE id = %%s" % campo
+                        cur.execute(sql, (valor_nuevo, prescription_id))
+        except Exception as exc:
+            logger.error(
+                "Error al aplicar correccion campo=%s a prescripcion %s: %s",
+                campo, prescription_id, exc, exc_info=True,
+            )
             raise
 
     def list_corrections_by_case(self, case_id: int) -> list[Correction]:
