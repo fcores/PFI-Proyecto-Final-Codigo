@@ -7,7 +7,7 @@
 #   ./network.sh generate                Genera cripto + bloque de génesis
 #   ./network.sh up                      Genera artefactos (si faltan) y levanta contenedores
 #   ./network.sh createChannel [nombre]  Crea el canal y une los peers (default: mychannel)
-#   ./network.sh deployCC [nombre]       Despliega el chaincode de ejemplo
+#   ./network.sh deployCC [nombre]       Despliega el chaincode de prescripciones
 #   ./network.sh down                    Apaga la red y limpia artefactos
 #   ./network.sh restart                 down + up
 #

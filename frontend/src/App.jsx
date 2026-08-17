@@ -12,8 +12,20 @@ import HistorialPrescripcionesPage from "./pages/HistorialPrescripcionesPage";
 import TrazabilidadPage from "./pages/TrazabilidadPage";
 import AuditQueuePage from "./pages/AuditQueuePage";
 import AuditCasePage from "./pages/AuditCasePage";
+import UsuariosPage from "./pages/UsuariosPage";
+import SaludPage from "./pages/SaludPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
+import { useAuth } from "./auth/AuthContext";
+
+// Landing segun rol: cada perfil aterriza en su pantalla principal.
+function HomeRedirect() {
+  const { user } = useAuth();
+  const role = user?.role;
+  if (role === "auditor") return <Navigate to="/auditoria/cola" replace />;
+  if (role === "administrador") return <Navigate to="/pacientes/alta" replace />;
+  return <Navigate to="/prescripciones/alta" replace />;
+}
 
 export default function App() {
   return (
@@ -27,45 +39,56 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to="/prescripciones/alta" replace />} />
+        <Route path="/" element={<HomeRedirect />} />
 
         <Route path="/prescripciones" element={<Navigate to="/prescripciones/alta" replace />} />
-        <Route path="/prescripciones/alta" element={<PrescripcionPage />} />
-        <Route path="/prescripciones/historial" element={<HistorialPrescripcionesPage />} />
+        <Route path="/prescripciones/alta" element={
+          <ProtectedRoute roles={["prescriptor", "super_admin"]}><PrescripcionPage /></ProtectedRoute>
+        } />
+        <Route path="/prescripciones/historial" element={
+          <ProtectedRoute roles={["prescriptor", "auditor", "super_admin"]}><HistorialPrescripcionesPage /></ProtectedRoute>
+        } />
 
         <Route path="/pacientes" element={<Navigate to="/pacientes/alta" replace />} />
         <Route path="/pacientes/alta" element={
-          <ProtectedRoute roles={["administrador", "prescriptor"]}><PacientesPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "prescriptor", "super_admin"]}><PacientesPage /></ProtectedRoute>
         } />
         <Route path="/pacientes/historial" element={
-          <ProtectedRoute roles={["administrador", "prescriptor"]}><HistorialPacientesPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "prescriptor", "super_admin"]}><HistorialPacientesPage /></ProtectedRoute>
         } />
 
         <Route path="/medicamentos" element={<Navigate to="/medicamentos/alta" replace />} />
         <Route path="/medicamentos/alta" element={
-          <ProtectedRoute roles={["administrador"]}><AltaMedicamentosPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "super_admin"]}><AltaMedicamentosPage /></ProtectedRoute>
         } />
         <Route path="/medicamentos/historial" element={
-          <ProtectedRoute roles={["administrador"]}><HistorialMedicamentosPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "super_admin"]}><HistorialMedicamentosPage /></ProtectedRoute>
         } />
 
         <Route path="/monodrogas" element={<Navigate to="/monodrogas/alta" replace />} />
         <Route path="/monodrogas/alta" element={
-          <ProtectedRoute roles={["administrador"]}><MonodrogasPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "super_admin"]}><MonodrogasPage /></ProtectedRoute>
         } />
         <Route path="/monodrogas/historial" element={
-          <ProtectedRoute roles={["administrador"]}><HistorialMonodrogasPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "super_admin"]}><HistorialMonodrogasPage /></ProtectedRoute>
         } />
 
         <Route path="/trazabilidad" element={
-          <ProtectedRoute roles={["administrador", "auditor"]}><TrazabilidadPage /></ProtectedRoute>
+          <ProtectedRoute roles={["prescriptor", "auditor", "super_admin"]}><TrazabilidadPage /></ProtectedRoute>
         } />
 
         <Route path="/auditoria/cola" element={
-          <ProtectedRoute roles={["administrador", "auditor"]}><AuditQueuePage /></ProtectedRoute>
+          <ProtectedRoute roles={["auditor", "super_admin"]}><AuditQueuePage /></ProtectedRoute>
         } />
-        <Route path="/auditoria/caso/:caseId" element={
-          <ProtectedRoute roles={["administrador", "auditor"]}><AuditCasePage /></ProtectedRoute>
+        <Route path="/auditoria/caso/:prescriptionId" element={
+          <ProtectedRoute roles={["auditor", "super_admin"]}><AuditCasePage /></ProtectedRoute>
+        } />
+
+        <Route path="/usuarios" element={
+          <ProtectedRoute roles={["super_admin"]}><UsuariosPage /></ProtectedRoute>
+        } />
+        <Route path="/salud" element={
+          <ProtectedRoute roles={["super_admin"]}><SaludPage /></ProtectedRoute>
         } />
       </Route>
     </Routes>

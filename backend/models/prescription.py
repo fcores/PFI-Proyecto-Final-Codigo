@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -91,36 +90,79 @@ class PrescriptionBase(BaseModel):
     matricula: str = Field(..., title="Matrícula")
 
 
-ESTADOS_PRESCRIPCION = (
+# Veredictos posibles del motor hibrido reglas + ML (soporte de decision).
+ESTADOS_VALIDACION_ML = (
     "APROBADO",
     "RECHAZADO",
     "REVISION",
-    "APROBADO_AUDITORIA",
-    "RECHAZADO_AUDITORIA",
+)
+
+# Ciclo de vida on-chain de la prescripcion (lo administra el chaincode).
+ESTADOS_PRESCRIPCION = (
+    "PENDIENTE_AUDITORIA",
+    "EN_REVISION",
+    "APROBADA",
+    "RECHAZADA",
 )
 
 
-class Prescription(PrescriptionBase):
-    """Prescripcion medica con ciclo de vida:
+class ClinicalData(PrescriptionBase):
+    """Bloque clinico del asset on-chain: los datos de entrada mas la BSA."""
 
-    APROBADO   - motor hibrido la aprueba automaticamente.
-    RECHAZADO  - reglas deterministicas rechazan; se genera caso de auditoria.
-    REVISION   - probabilidad intermedia/baja; se genera caso de auditoria.
-    APROBADO_AUDITORIA  - auditor emite dictamen aprobatorio.
-    RECHAZADO_AUDITORIA - auditor emite dictamen de rechazo.
+    superficie_corporal_m2: float = Field(..., title="Superficie corporal (m²)")
+
+
+class AuditEvent(BaseModel):
+    """Eslabon de la cadena de auditoria de una prescripcion on-chain."""
+
+    seq: int
+    accion: str
+    estado_resultante: str
+    auditor: str
+    justificacion: str
+    timestamp: str
+    tx_id: str
+    prev_hash: str
+    event_hash: str
+
+
+class Prescription(BaseModel):
+    """Asset on-chain de una prescripcion. Vive SOLO en Fabric (sin copia en RDS).
+
+    Ciclo de vida (validado por el chaincode):
+    PENDIENTE_AUDITORIA - toda prescripcion nace pendiente; el veredicto del
+                          motor ML (bloque `ml`) es soporte de decision.
+    EN_REVISION         - el auditor la marco en revision.
+    APROBADA/RECHAZADA  - dictamen final del auditor (estados terminales).
     """
 
-    id: int
+    prescription_id: str = Field(..., title="ID (ULID)")
     prescription_code: str = Field(..., title="Código de prescripción")
-    superficie_corporal_m2: float = Field(..., title="Superficie corporal (m²)")
-    created_at: datetime = Field(..., title="Fecha de creación")
-    validacion: ValidationResult = Field(..., title="Resultado de validación")
-    blockchain_tx_id: str | None = Field(None, title="ID de transacción en blockchain")
-    block_index: int | None = Field(None, title="Índice del bloque en el ledger")
+    estado: str = Field(..., title="Estado del ciclo de auditoría")
+    clinical: ClinicalData = Field(..., title="Datos clínicos")
+    ml: ValidationResult = Field(..., title="Veredicto del motor reglas + ML")
+    created_at: str = Field(..., title="Fecha de creación (RFC3339)")
+    created_by_msp: str | None = Field(None, title="MSP que creó el asset")
+    payload_hash: str = Field(..., title="SHA-256 del payload canónico")
+    current_hash: str = Field(..., title="Último eslabón de la cadena de hashes")
+    audit_events: list[AuditEvent] = Field(default_factory=list, title="Eventos de auditoría")
+    tx_id: str | None = Field(None, title="TxID de Fabric de la última escritura conocida")
 
 
 class PrescriptionList(BaseModel):
     prescriptions: list[Prescription]
+    bookmark: str | None = Field(None, title="Bookmark para la página siguiente")
+    fetched_count: int = Field(0, title="Cantidad de resultados de esta página")
+
+
+class VerifyResult(BaseModel):
+    """Resultado de la verificación externa de la cadena de hashes."""
+
+    prescription_id: str
+    valido: bool
+    errores: list[str] = Field(default_factory=list)
+    payload_hash: str | None = None
+    current_hash: str | None = None
 
 
 class RecomendacionRequest(BaseModel):

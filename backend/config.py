@@ -30,12 +30,11 @@ class Settings(BaseSettings):
     encryption_key_dev: str | None = None
     encryption_secret_arn: str | None = None
 
+    # Puente hacia la red Fabric (fabric-gateway-svc). La red es la unica
+    # fuente de verdad de las prescripciones: ambas variables son obligatorias
+    # en produccion.
     fabric_gateway_url: str | None = None
-
-    # Patron outbox hacia Fabric. Apagado por defecto: con el flag en false el
-    # comportamiento es el mismo que antes de cablearlo.
-    outbox_enabled: bool = False
-    outbox_interval_seconds: float = 10.0
+    gateway_auth_token: str | None = None
 
     @field_validator("environment")
     @classmethod
@@ -56,11 +55,23 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def validate_production_requirements(self) -> None:
-        """Fail-fast: en produccion no se puede operar sin base de datos."""
-        if self.is_production and not self.database_url:
+        """Fail-fast: en produccion no se puede operar sin base ni sin la red Fabric."""
+        if not self.is_production:
+            return
+        if not self.database_url:
             raise RuntimeError(
                 "DATABASE_URL es obligatoria en ENVIRONMENT=production. "
                 "El backend no puede operar en modo in-memory en produccion."
+            )
+        if not self.fabric_gateway_url:
+            raise RuntimeError(
+                "FABRIC_GATEWAY_URL es obligatoria en ENVIRONMENT=production: "
+                "las prescripciones viven exclusivamente en la red Fabric."
+            )
+        if not self.gateway_auth_token:
+            raise RuntimeError(
+                "GATEWAY_AUTH_TOKEN es obligatorio en ENVIRONMENT=production "
+                "(autenticacion del puente fabric-gateway-svc)."
             )
 
 

@@ -15,15 +15,16 @@ async def create_monodrug(
 ):
     """Crea una monodroga nueva con codigo autogenerado. Requiere rol administrador."""
     user = require_auth(authorization)
-    require_role(user, ["administrador"])
+    require_role(user, ["administrador", "super_admin"])
     svc = get_monodrug_service()
     return svc.create(descripcion=descripcion)
 
 
 @router.get("", response_model=MonodrugList)
 async def list_monodrugs(authorization: str | None = Header(default=None)):
-    """Lista todas las monodrogas. Requiere autenticacion."""
-    require_auth(authorization)
+    """Lista todas las monodrogas (lectura para prescribir o administrar)."""
+    user = require_auth(authorization)
+    require_role(user, ["prescriptor", "administrador", "super_admin"])
     svc = get_monodrug_service()
     return svc.list_all()
 
@@ -35,7 +36,7 @@ async def bulk_import_monodrugs(
 ):
     """Importa monodrogas masivamente desde Excel. Requiere rol administrador."""
     user = require_auth(authorization)
-    require_role(user, ["administrador"])
+    require_role(user, ["administrador", "super_admin"])
     svc = get_monodrug_service()
     file_bytes = await file.read()
     return svc.bulk_import(file_bytes, file.filename or "monodrogas.xlsx")

@@ -141,12 +141,12 @@ export default function PrescripcionPage() {
       matricula: (data.get("matricula") || "").trim(),
     };
 
-    setLoading("Validando y registrando prescripción...");
+    setLoading("Validando y registrando en la blockchain (endoso de las 3 organizaciones)...");
     setResult(null);
 
     try {
       const created = await createPrescription(body);
-      setSuccess(`Prescripción ${created.prescription_code} registrada.`);
+      setSuccess(`Prescripción ${created.prescription_code} registrada en la blockchain.`);
       setResult(created);
       form.reset();
       setPreview({ peso: "", talla: "" });
@@ -412,48 +412,61 @@ export default function PrescripcionPage() {
               <section className="card card-form">
                 <CardHeader
                   split
-                  eyebrow="Resultado de la validación"
+                  eyebrow="Registrada en blockchain"
                   title={`Prescripción ${result.prescription_code}`}
-                  description="Veredicto del motor híbrido reglas + ML y registro en la blockchain simulada."
-                  badge={`Superficie: ${result.superficie_corporal_m2} m²`}
+                  description="Asset inmutable en Hyperledger Fabric, endosado por las 3 organizaciones. Queda pendiente de auditoría; el veredicto del modelo es soporte de decisión."
+                  badge={`Superficie: ${result.clinical?.superficie_corporal_m2} m²`}
                 />
                 <div className="form-grid">
-                  <FormField label="Estado" htmlFor="result_estado" span={4}>
+                  <FormField label="Estado on-chain" htmlFor="result_estado_chain" span={4}>
                     <div>
                       <StatusChip
-                        variant={ESTADO_VARIANT[result.validacion.estado] || "neutral"}
-                        label={result.validacion.estado}
+                        variant={ESTADO_VARIANT[result.estado] || "neutral"}
+                        label={result.estado}
                       />
                     </div>
                   </FormField>
-                  <FormField label="Origen" htmlFor="result_origen" span={4}>
-                    <input id="result_origen" type="text" value={result.validacion.origen || "—"} readOnly />
+                  <FormField label="Veredicto ML" htmlFor="result_estado" span={4}>
+                    <div>
+                      <StatusChip
+                        variant={ESTADO_VARIANT[result.ml.estado] || "neutral"}
+                        label={result.ml.estado}
+                      />
+                    </div>
                   </FormField>
-                  <FormField label="Versión modelo" htmlFor="result_version" span={4}>
-                    <input id="result_version" type="text" value={result.validacion.version_modelo || "—"} readOnly />
+                  <FormField label="Origen / Modelo" htmlFor="result_origen" span={4}>
+                    <input
+                      id="result_origen"
+                      type="text"
+                      value={`${result.ml.origen || "—"} · ${result.ml.version_modelo || "—"}`}
+                      readOnly
+                    />
                   </FormField>
                   <FormField label="Confianza" htmlFor="result_confianza" span={12}>
                     <ConfidenceBar
-                      value={result.validacion.probabilidad_concordante}
-                      low={result.validacion.umbral_bajo}
-                      high={result.validacion.umbral_alto}
-                      label={`Nivel: ${result.validacion.nivel_confianza || "—"}`}
+                      value={result.ml.probabilidad_concordante}
+                      low={result.ml.umbral_bajo}
+                      high={result.ml.umbral_alto}
+                      label={`Nivel: ${result.ml.nivel_confianza || "—"}`}
                     />
                   </FormField>
-                  <FormField label="Hash del bloque (tx)" htmlFor="result_hash" span={12}>
-                    <input id="result_hash" type="text" value={result.blockchain_tx_id || ""} readOnly />
+                  <FormField label="TxID de Fabric" htmlFor="result_tx" span={6}>
+                    <input id="result_tx" type="text" value={result.tx_id || ""} readOnly />
+                  </FormField>
+                  <FormField label="Hash del contenido" htmlFor="result_hash" span={6}>
+                    <input id="result_hash" type="text" value={result.payload_hash || ""} readOnly />
                   </FormField>
                 </div>
                 <ul className="muted">
-                  {result.validacion.motivos.map((motivo, idx) => (
+                  {result.ml.motivos.map((motivo, idx) => (
                     <li key={idx}>{motivo}</li>
                   ))}
                 </ul>
-                {result.validacion.features_relevantes?.length > 0 && (
+                {result.ml.features_relevantes?.length > 0 && (
                   <div className="features-aportes">
                     <h4>Aportes principales</h4>
                     <ul>
-                      {result.validacion.features_relevantes.map((item) => (
+                      {result.ml.features_relevantes.map((item) => (
                         <li key={item.feature}>
                           {item.feature}: {item.aporte}
                         </li>
@@ -461,13 +474,13 @@ export default function PrescripcionPage() {
                     </ul>
                   </div>
                 )}
-                {result.validacion.costo_total != null && (
+                {result.ml.costo_total != null && (
                   <div className="features-aportes">
                     <h4>Costo estimado del régimen</h4>
                     <p style={{ fontWeight: 600, fontSize: "1.1em", margin: "0.5em 0" }}>
-                      Total: ${result.validacion.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      Total: ${result.ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </p>
-                    {result.validacion.costo_por_farmaco?.length > 0 && (
+                    {result.ml.costo_por_farmaco?.length > 0 && (
                       <table className="dosis-table" style={{ marginTop: "0.5em" }}>
                         <thead>
                           <tr>
@@ -477,7 +490,7 @@ export default function PrescripcionPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {result.validacion.costo_por_farmaco.map((item) => (
+                          {result.ml.costo_por_farmaco.map((item) => (
                             <tr key={item.monodroga}>
                               <td>{item.monodroga}</td>
                               <td>{item.dosis_mg}</td>

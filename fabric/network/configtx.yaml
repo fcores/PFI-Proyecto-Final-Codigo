@@ -1,9 +1,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# configtx.yaml
+# configtx.yaml — Configuración del canal de la red MedChain.
 #
-# Define la configuración del canal: organizaciones, políticas, capacidades y
-# perfiles. Lo consume `configtxgen` para producir el bloque de génesis del
-# canal de aplicación.
+# Tres organizaciones de aplicación monitorean el ciclo de vida de las
+# prescripciones: el centro prescriptor (PrescriptorMSP), la empresa auditora
+# MedChain (MedChainMSP) y la prepaga/financiador (PrepagaMSP).
+#
+# La política de endorsement del chaincode se fija explícitamente en el deploy
+# (--signature-policy AND de las tres orgs); acá quedan las políticas del canal.
 #
 # A partir de Fabric 2.3 se usa la "Channel Participation API": ya no existe el
 # system channel. El bloque de génesis se genera directamente para el canal de
@@ -19,7 +22,7 @@ Organizations:
   - &OrdererOrg
     Name: OrdererOrg
     ID: OrdererMSP
-    MSPDir: ./organizations/ordererOrganizations/example.com/msp
+    MSPDir: ./organizations/ordererOrganizations/medchain.com/msp
     Policies:
       Readers:
         Type: Signature
@@ -31,43 +34,61 @@ Organizations:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
     OrdererEndpoints:
-      - orderer.example.com:7050
+      - orderer.medchain.com:7050
 
-  - &Org1
-    Name: Org1MSP
-    ID: Org1MSP
-    MSPDir: ./organizations/peerOrganizations/org1.example.com/msp
+  - &Prescriptor
+    Name: PrescriptorMSP
+    ID: PrescriptorMSP
+    MSPDir: ./organizations/peerOrganizations/prescriptor.medchain.com/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('Org1MSP.admin', 'Org1MSP.peer', 'Org1MSP.client')"
+        Rule: "OR('PrescriptorMSP.admin', 'PrescriptorMSP.peer', 'PrescriptorMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('Org1MSP.admin', 'Org1MSP.client')"
+        Rule: "OR('PrescriptorMSP.admin', 'PrescriptorMSP.client')"
       Admins:
         Type: Signature
-        Rule: "OR('Org1MSP.admin')"
+        Rule: "OR('PrescriptorMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('Org1MSP.peer')"
+        Rule: "OR('PrescriptorMSP.peer')"
 
-  - &Org2
-    Name: Org2MSP
-    ID: Org2MSP
-    MSPDir: ./organizations/peerOrganizations/org2.example.com/msp
+  - &MedChain
+    Name: MedChainMSP
+    ID: MedChainMSP
+    MSPDir: ./organizations/peerOrganizations/auditoria.medchain.com/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
+        Rule: "OR('MedChainMSP.admin', 'MedChainMSP.peer', 'MedChainMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('Org2MSP.admin', 'Org2MSP.client')"
+        Rule: "OR('MedChainMSP.admin', 'MedChainMSP.client')"
       Admins:
         Type: Signature
-        Rule: "OR('Org2MSP.admin')"
+        Rule: "OR('MedChainMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('Org2MSP.peer')"
+        Rule: "OR('MedChainMSP.peer')"
+
+  - &Prepaga
+    Name: PrepagaMSP
+    ID: PrepagaMSP
+    MSPDir: ./organizations/peerOrganizations/prepaga.medchain.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('PrepagaMSP.admin', 'PrepagaMSP.peer', 'PrepagaMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('PrepagaMSP.admin', 'PrepagaMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('PrepagaMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('PrepagaMSP.peer')"
 
 ################################################################################
 #   Capacidades (capabilities) — habilitan features según versión de Fabric
@@ -110,15 +131,16 @@ Application: &ApplicationDefaults
 Orderer: &OrdererDefaults
   OrdererType: etcdraft
   Addresses:
-    - orderer.example.com:7050
+    - orderer.medchain.com:7050
   EtcdRaft:
     Consenters:
-      - Host: orderer.example.com
+      - Host: orderer.medchain.com
         Port: 7050
-        ClientTLSCert: ./organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-        ServerTLSCert: ./organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-  # Tamaño de bloque y tiempos de batch
-  BatchTimeout: 2s
+        ClientTLSCert: ./organizations/ordererOrganizations/medchain.com/orderers/orderer.medchain.com/tls/server.crt
+        ServerTLSCert: ./organizations/ordererOrganizations/medchain.com/orderers/orderer.medchain.com/tls/server.crt
+  # Tamaño de bloque y tiempos de batch. BatchTimeout bajo porque el alta de
+  # prescripciones espera el commit de forma síncrona en el request HTTP.
+  BatchTimeout: 1s
   BatchSize:
     MaxMessageCount: 10
     AbsoluteMaxBytes: 99 MB
@@ -172,6 +194,7 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *Org1
-        - *Org2
+        - *Prescriptor
+        - *MedChain
+        - *Prepaga
       Capabilities: *ApplicationCapabilities

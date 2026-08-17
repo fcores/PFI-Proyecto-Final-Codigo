@@ -1,18 +1,59 @@
-"""Servicio de gestion de prescripciones medicas."""
+"""Servicio de gestion de prescripciones medicas 100% on-chain.
 
-import json
+Flujo de alta (sincrono, dentro del request):
+  1. Deriva BSA (Mosteller), esquema y dosis por defecto.
+  2. Ejecuta la validacion hibrida reglas + ML (soporte de decision).
+  3. Genera el ID (ULID) y arma el payload canonico {clinical, created_at, ml}.
+  4. Invoca CreatePrescription en Fabric (firma PrescriptorMSP, endorsement de
+     las 3 orgs). Si la red no responde, el alta falla con 503: NO hay copia
+     off-chain ni cola de reintentos.
+
+Toda prescripcion nace en estado PENDIENTE_AUDITORIA; solo el auditor cierra
+el ciclo (ver AuditService).
+"""
+
+# Annotations diferidas: la clase define un metodo `list` que ensombrece al
+# builtin dentro del cuerpo de la clase.
+from __future__ import annotations
+
 import logging
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 
+from ulid import ULID
+
+from backend.blockchain.fabric_client import FabricBusinessError
+from backend.error_handlers import NotFoundError
 from backend.ml.regimenes import nombre_regimen
-from backend.models.prescription import Prescription, PrescriptionBase, PrescriptionList
-from backend.repositories.audit_repo import AuditRepository
-from backend.repositories.prescription_repo import PrescriptionRepository
-from backend.services.ledger_service import LedgerService
+from backend.models.prescription import (
+    ClinicalData,
+    Prescription,
+    PrescriptionBase,
+    PrescriptionList,
+    VerifyResult,
+)
+from backend.repositories.fabric_prescription_repo import FabricPrescriptionRepository
+from backend.security.canonical import build_canonical_payload, verify_chain
 from backend.services.validation_service import ValidationService
 
 logger = logging.getLogger(__name__)
+
+
+def _asset_to_prescription(asset: dict, tx_id: str | None = None) -> Prescription:
+    """Convierte el asset JSON del chaincode al modelo de dominio."""
+    data = dict(asset)
+    data.pop("docType", None)
+    if tx_id:
+        data["tx_id"] = tx_id
+    return Prescription(**data)
+
+
+def _paged_to_list(paged: dict) -> PrescriptionList:
+    return PrescriptionList(
+        prescriptions=[_asset_to_prescription(item) for item in paged["items"]],
+        bookmark=paged["bookmark"] or None,
+        fetched_count=paged["fetched_count"],
+    )
 
 
 class PrescriptionService:
@@ -20,77 +61,36 @@ class PrescriptionService:
 
     def __init__(
         self,
-        repo: PrescriptionRepository,
+        fabric_repo: FabricPrescriptionRepository,
         validation_service: ValidationService,
-        ledger_service: LedgerService,
-        audit_repo: AuditRepository,
         dosis_service=None,
     ) -> None:
-        """Inicializa el servicio de prescripciones."""
-        try:
-            self._repo = repo
-            self._validation_service = validation_service
-            self._ledger_service = ledger_service
-            self._audit_repo = audit_repo
-            self._dosis_service = dosis_service
-        except Exception as exc:
-            logger.error("Error al inicializar PrescriptionService: %s", exc, exc_info=True)
-            raise
-
-    def _outbox_enabled(self) -> bool:
-        """Indica si hay que encolar el commit a Fabric en el outbox."""
-        try:
-            from backend.config import get_settings
-
-            settings = get_settings()
-            return bool(settings.outbox_enabled and settings.fabric_gateway_url)
-        except Exception:
-            return False
-
-    def _build_code(self, seq: int) -> str:
-        """Genera el codigo de prescripcion a partir del numero de secuencia."""
-        try:
-            return "PRESC-%04d" % seq
-        except Exception as exc:
-            logger.error("Error al generar codigo de prescripcion: %s", exc, exc_info=True)
-            raise
+        self._repo = fabric_repo
+        self._validation_service = validation_service
+        self._dosis_service = dosis_service
 
     def _body_surface_area(self, peso_kg: float, talla_cm: float) -> float:
         """Calcula la superficie corporal con la formula de Mosteller."""
-        try:
-            return round(math.sqrt((talla_cm * peso_kg) / 3600.0), 2)
-        except Exception as exc:
-            logger.error("Error al calcular superficie corporal: %s", exc, exc_info=True)
-            raise
+        return round(math.sqrt((talla_cm * peso_kg) / 3600.0), 2)
 
     def _derivar_dosis_mg_m2(self, data: PrescriptionBase, superficie: float) -> float:
         """Deriva un valor representativo de dosis_mg_m2 para compatibilidad."""
-        try:
-            if data.dosis_mg_m2 is not None and data.dosis_mg_m2 > 0:
-                return float(data.dosis_mg_m2)
-            if data.dosis_por_farmaco and superficie > 0:
-                total = 0.0
-                for item in data.dosis_por_farmaco:
-                    total += float(item.dosis_mg)
-                if total > 0:
-                    return round(total / superficie, 2)
-            return 0.01
-        except Exception as exc:
-            logger.error("Error al derivar dosis_mg_m2: %s", exc, exc_info=True)
-            raise
+        if data.dosis_mg_m2 is not None and data.dosis_mg_m2 > 0:
+            return float(data.dosis_mg_m2)
+        if data.dosis_por_farmaco and superficie > 0:
+            total = sum(float(item.dosis_mg) for item in data.dosis_por_farmaco)
+            if total > 0:
+                return round(total / superficie, 2)
+        return 0.01
 
     def _asegurar_esquema(self, data: PrescriptionBase) -> str:
         """Completa el esquema legible a partir del regimen si falta."""
-        try:
-            if data.esquema and str(data.esquema).strip():
-                return data.esquema
-            return nombre_regimen(data.id_regimen)
-        except Exception as exc:
-            logger.error("Error al asegurar esquema: %s", exc, exc_info=True)
-            raise
+        if data.esquema and str(data.esquema).strip():
+            return data.esquema
+        return nombre_regimen(data.id_regimen)
 
     def create(self, data: PrescriptionBase) -> Prescription:
-        """Crea una prescripcion, la valida, registra en blockchain y genera caso de auditoria si aplica."""
+        """Crea una prescripcion: valida con el motor hibrido y la asienta en Fabric."""
         try:
             superficie = self._body_surface_area(data.peso_kg, data.talla_cm)
             esquema = self._asegurar_esquema(data)
@@ -116,85 +116,93 @@ class PrescriptionService:
 
             validacion = self._validation_service.validate(data_completa)
 
-            prescription = Prescription(
-                id=0,
-                prescription_code="PRESC-TEMP",
+            clinical = ClinicalData(
                 superficie_corporal_m2=superficie,
-                created_at=datetime.now(),
-                validacion=validacion,
                 **data_completa.model_dump(),
             )
-
-            saved = self._repo.add(prescription)
-            saved = saved.model_copy(
-                update={"prescription_code": self._build_code(saved.id)},
-            )
-            self._repo.update_code(saved.id, saved.prescription_code)
-
-            payload = {
-                "prescription_code": saved.prescription_code,
-                "id": saved.id,
-                "patient_id": data_completa.patient_id,
-                "diagnostico_cie10": data_completa.diagnostico_cie10,
-                "estadio": data_completa.estadio,
-                "id_regimen": data_completa.id_regimen,
-                "esquema": data_completa.esquema,
-                "dosis_mg_m2": data_completa.dosis_mg_m2,
-                "superficie_corporal_m2": superficie,
-                "estado_validacion": validacion.estado,
-                "probabilidad_concordante": validacion.probabilidad_concordante,
-                "origen_validacion": validacion.origen,
-                "version_modelo": validacion.version_modelo,
-            }
-
-            if self._outbox_enabled():
-                self._repo.enqueue_outbox(saved.id, json.dumps(payload))
-
-            block = self._ledger_service.append("prescription", payload)
-            saved = saved.model_copy(
-                update={"blockchain_tx_id": block.hash, "block_index": block.index},
+            created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            canonical = build_canonical_payload(
+                clinical.model_dump(),
+                validacion.model_dump(),
+                created_at,
             )
 
-            if validacion.estado in ("REVISION", "RECHAZADO"):
-                self._audit_repo.add_case(
-                    saved.id,
-                    "pendiente",
-                    snapshot={
-                        "prescription_code": saved.prescription_code,
-                        "patient_id": saved.patient_id,
-                        "diagnostico_cie10": saved.diagnostico_cie10,
-                        "estadio": saved.estadio,
-                        "esquema": saved.esquema,
-                        "id_regimen": saved.id_regimen,
-                        "dosis_mg_m2": saved.dosis_mg_m2,
-                        "superficie_corporal_m2": saved.superficie_corporal_m2,
-                        "localizacion_tumor": saved.localizacion_tumor,
-                        "tipo_histologico": saved.tipo_histologico,
-                        "linea_tratamiento": saved.linea_tratamiento,
-                        "costo_por_farmaco": json.dumps([c.model_dump() for c in validacion.costo_por_farmaco]),
-                        "costo_total": validacion.costo_total,
-                        "estado_validacion": validacion.estado,
-                        "motivos_validacion": json.dumps(validacion.motivos),
-                        "probabilidad_concordante": validacion.probabilidad_concordante,
-                        "nivel_confianza": validacion.nivel_confianza,
-                        "umbral_bajo": validacion.umbral_bajo,
-                        "umbral_alto": validacion.umbral_alto,
-                        "origen_validacion": validacion.origen,
-                        "version_modelo": validacion.version_modelo,
-                        "features_relevantes": json.dumps([f.model_dump() for f in validacion.features_relevantes]),
-                        "prescription_created_at": saved.created_at,
-                    },
-                )
+            prescription_id = str(ULID())
+            try:
+                result = self._repo.create(prescription_id, canonical)
+            except FabricBusinessError as exc:
+                # Doble submit del mismo ULID (reintento tras timeout): la
+                # transaccion anterior llego a commitear, se devuelve el asset.
+                if self._repo.is_already_exists(exc):
+                    asset = self._repo.get(prescription_id, actor="prescriptor")
+                    if asset is not None:
+                        return _asset_to_prescription(asset)
+                raise
 
-            return saved
+            return _asset_to_prescription(result["asset"], tx_id=result["tx_id"])
         except Exception as exc:
             logger.error("Error al crear prescripcion: %s", exc, exc_info=True)
             raise
 
-    def list_all(self, limit: int = 100, offset: int = 0) -> PrescriptionList:
-        """Lista prescripciones con paginacion."""
+    def list(
+        self,
+        page_size: int = 50,
+        bookmark: str = "",
+        estado: str | None = None,
+        actor: str = "prepaga",
+    ) -> PrescriptionList:
+        """Lista prescripciones desde Fabric (paginacion por bookmark)."""
         try:
-            return PrescriptionList(prescriptions=self._repo.list_all(limit=limit, offset=offset))
+            if estado:
+                paged = self._repo.list_by_estado(estado, page_size, bookmark, actor=actor)
+            else:
+                paged = self._repo.list(page_size, bookmark, actor=actor)
+            return _paged_to_list(paged)
         except Exception as exc:
             logger.error("Error al listar prescripciones: %s", exc, exc_info=True)
             raise
+
+    def by_patient(
+        self,
+        patient_id: int,
+        page_size: int = 50,
+        bookmark: str = "",
+        actor: str = "prepaga",
+    ) -> PrescriptionList:
+        """Prescripciones de un paciente (seudonimo patient_id)."""
+        try:
+            paged = self._repo.list_by_patient(patient_id, page_size, bookmark, actor=actor)
+            return _paged_to_list(paged)
+        except Exception as exc:
+            logger.error("Error al listar prescripciones del paciente %s: %s", patient_id, exc, exc_info=True)
+            raise
+
+    def get(self, prescription_id: str, actor: str = "prepaga") -> Prescription:
+        """Detalle de una prescripcion, leido de Fabric."""
+        asset = self._repo.get(prescription_id, actor=actor)
+        if asset is None:
+            raise NotFoundError(f"Prescripcion {prescription_id} no encontrada")
+        return _asset_to_prescription(asset)
+
+    def history(self, prescription_id: str, actor: str = "prepaga") -> list[dict]:
+        """Historial de transacciones Fabric de la prescripcion (tx_id reales)."""
+        history = self._repo.history(prescription_id, actor=actor)
+        if not history:
+            # Distinguir "sin historial" de "no existe".
+            if self._repo.get(prescription_id, actor=actor) is None:
+                raise NotFoundError(f"Prescripcion {prescription_id} no encontrada")
+        return history
+
+    def verify(self, prescription_id: str, actor: str = "prepaga") -> VerifyResult:
+        """Verifica la cadena de hashes del asset (payload_hash + eventos)."""
+        asset = self._repo.get(prescription_id, actor=actor)
+        if asset is None:
+            raise NotFoundError(f"Prescripcion {prescription_id} no encontrada")
+        resultado = verify_chain(asset)
+        return VerifyResult(
+            prescription_id=prescription_id,
+            valido=resultado["valido"],
+            errores=resultado["errores"],
+            payload_hash=asset.get("payload_hash"),
+            current_hash=asset.get("current_hash"),
+        )

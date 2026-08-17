@@ -51,3 +51,12 @@ export async function postJson(path, body) {
   });
   return handleResponse(res);
 }
+
+export async function putJson(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}

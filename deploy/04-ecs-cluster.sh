@@ -6,6 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/00-variables.sh"
 source "${SCRIPT_DIR}/.env.deploy"
 
+# Las prescripciones viven exclusivamente en Fabric: el backend exige estas
+# variables en production (fail-fast). FABRIC_GATEWAY_URL apunta al puente en
+# la EC2 (IP privada, puerto 8081); GATEWAY_AUTH_TOKEN debe existir como clave
+# dentro del secreto ${SECRET_ARN} y coincidir con fabric/network/.env de la EC2.
+: "${FABRIC_GATEWAY_URL:?Definir FABRIC_GATEWAY_URL en .env.deploy (ej: http://10.0.x.x:8081)}"
+
 echo "=== Creando Cloud Map namespace ==="
 NAMESPACE_OP=$(aws servicediscovery create-http-namespace \
   --name "${CLOUDMAP_NAMESPACE}" \
@@ -51,13 +57,15 @@ cat > /tmp/task-def.json <<TASKDEF
         }
       ],
       "environment": [
-        {"name": "ENVIRONMENT", "value": "production"}
+        {"name": "ENVIRONMENT", "value": "production"},
+        {"name": "FABRIC_GATEWAY_URL", "value": "${FABRIC_GATEWAY_URL}"}
       ],
       "secrets": [
         {"name": "AUTH_USERNAME",     "valueFrom": "${SECRET_ARN}:AUTH_USERNAME::"},
         {"name": "AUTH_PASSWORD",     "valueFrom": "${SECRET_ARN}:AUTH_PASSWORD::"},
         {"name": "AUTH_DISPLAY_NAME", "valueFrom": "${SECRET_ARN}:AUTH_DISPLAY_NAME::"},
-        {"name": "DATABASE_URL",     "valueFrom": "${DB_SECRET_ARN}:DATABASE_URL::"}
+        {"name": "DATABASE_URL",     "valueFrom": "${DB_SECRET_ARN}:DATABASE_URL::"},
+        {"name": "GATEWAY_AUTH_TOKEN", "valueFrom": "${SECRET_ARN}:GATEWAY_AUTH_TOKEN::"}
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
@@ -70,9 +78,9 @@ cat > /tmp/task-def.json <<TASKDEF
       "healthCheck": {
         "command": ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""],
         "interval": 30,
-        "timeout": 5,
+        "timeout": 10,
         "retries": 3,
-        "startPeriod": 60
+        "startPeriod": 90
       }
     }
   ]

@@ -7,7 +7,8 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
-      - "blockchain/**"
+      - "chaincode/**"
+      - "fabric-gateway-svc/**"
       - "fabric/**"
       - "ml_models/artefactos/**"
       - "sql/**"
@@ -70,7 +71,8 @@ jobs:
             frontend:
               - 'frontend/**'
             blockchain:
-              - 'blockchain/**'
+              - 'chaincode/**'
+              - 'fabric-gateway-svc/**'
               - 'fabric/**'
 
   deploy-backend:
@@ -159,10 +161,11 @@ jobs:
             --paths "/*"
 
   deploy-blockchain:
-    name: Deploy Blockchain (EC2 chaincode)
+    name: Deploy Blockchain (EC2 chaincode + gateway)
     needs: [changes, security-scan]
     if: needs.changes.outputs.blockchain == 'true'
-    continue-on-error: true
+    # Sin continue-on-error: la red Fabric es la fuente de verdad de las
+    # prescripciones; un deploy fallido debe marcar el pipeline en rojo.
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
@@ -191,7 +194,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["set -e","git config --global --add safe.directory /home/ubuntu/PFI-Proyecto-Final","cd /home/ubuntu/PFI-Proyecto-Final","git fetch origin desarrollo","git checkout desarrollo","git pull origin desarrollo","cd fabric","CURRENT_SEQ=$(./bin/peer lifecycle chaincode querycommitted --channelID mychannel --name basic --output json 2>/dev/null | python3 -c \"import sys,json; print(json.load(sys.stdin).get(\\\"sequence\\\",0))\" 2>/dev/null || echo \"0\")","NEW_SEQ=$((CURRENT_SEQ + 1))","NEW_VERSION=1.${NEW_SEQ}","echo \"Deploying sequence: ${NEW_SEQ}, version: ${NEW_VERSION}\"","export CC_SEQUENCE=${NEW_SEQ}","export CC_VERSION=${NEW_VERSION}","./network.sh deployCC"]' \
+            --parameters 'commands=["set -e","git config --global --add safe.directory /home/ubuntu/PFI-Proyecto-Final","cd /home/ubuntu/PFI-Proyecto-Final","git fetch origin desarrollo","git checkout desarrollo","git pull origin desarrollo","cd fabric","./network.sh deployCC","echo \"Rebuild del gateway...\"","docker compose --env-file network/.env -f network/compose/compose-net.yaml up -d --build fabric-gateway","sleep 10","curl -sf http://localhost:8081/health || (docker logs --tail 50 fabric-gateway; exit 1)"]' \
             --timeout-seconds 300 \
             --query "Command.CommandId" \
             --output text)

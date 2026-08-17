@@ -123,17 +123,21 @@ class PatientRepository:
                 if data.get("provider_id_enc"):
                     data["provider_id"] = crypto.decrypt_field(data["provider_id_enc"], patient_id, "provider_id")
                 if data.get("credential_id_enc"):
-                    data["credential_id"] = crypto.decrypt_field(
-                        data["credential_id_enc"], patient_id, "credential_id"
-                    )
+                    data["credential_id"] = crypto.decrypt_field(data["credential_id_enc"], patient_id, "credential_id")
                 if data.get("treatment_enc"):
                     data["treatment"] = crypto.decrypt_field(data["treatment_enc"], patient_id, "treatment")
             except Exception as e:
                 logger.error("Error al descifrar paciente %s: %s", patient_id, e)
 
         _enc_keys = [
-            "first_name_enc", "last_name_enc", "birth_date_enc", "gender_enc",
-            "provider_enc", "provider_id_enc", "credential_id_enc", "treatment_enc",
+            "first_name_enc",
+            "last_name_enc",
+            "birth_date_enc",
+            "gender_enc",
+            "provider_enc",
+            "provider_id_enc",
+            "credential_id_enc",
+            "treatment_enc",
         ]
         for key in _enc_keys:
             data.pop(key, None)
@@ -212,7 +216,6 @@ class PatientRepository:
                         patient.lab_filename,
                         patient.receta_filename,
                         patient.otros_filename,
-                        patient.blockchain_tx_id,
                         enc["first_name_enc"],
                         enc["last_name_enc"],
                         enc["birth_date_enc"],
@@ -313,14 +316,22 @@ class PatientRepository:
                 result.append(Patient(**data))
             if result:
                 self._log_phi_access(
-                    [p.id for p in result], "search", "all_phi", user_id, username,
+                    [p.id for p in result],
+                    "search",
+                    "all_phi",
+                    user_id,
+                    username,
                 )
             return result
         q = query.lower()
         return [p for p in self._store if q in p.first_name.lower() or q in p.last_name.lower()]
 
     def list_all(
-        self, limit: int = 100, offset: int = 0, user_id: int = 0, username: str = "system",
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        user_id: int = 0,
+        username: str = "system",
     ) -> list[Patient]:
         """Lista pacientes con paginacion, descifrando PHI y registrando acceso."""
         if self._db_available():
@@ -340,7 +351,11 @@ class PatientRepository:
                 result.append(Patient(**data))
             if result:
                 self._log_phi_access(
-                    [p.id for p in result], "list_all", "all_phi", user_id, username,
+                    [p.id for p in result],
+                    "list_all",
+                    "all_phi",
+                    user_id,
+                    username,
                 )
             return result
         return list(self._store[offset : offset + limit])

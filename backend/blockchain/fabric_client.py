@@ -1,10 +1,20 @@
 """
-Cliente HTTP para comunicarse con fabric-gateway-svc (sidecar Go en la EC2 Fabric).
+Cliente HTTP para fabric-gateway-svc (puente Go hacia la red Fabric).
 
-Implementa:
-- Reintentos con backoff exponencial.
-- Circuit breaker basico (abre tras N fallos consecutivos, se cierra tras un TTL).
-- Timeouts configurables.
+La red Fabric es la UNICA fuente de verdad de las prescripciones, por lo que
+este cliente es sincrono y distingue dos familias de errores:
+
+- FabricUnavailableError: la red/el puente no respondieron (timeout, conexion
+  rechazada, 5xx sin cuerpo JSON). Son retryables, cuentan para el circuit
+  breaker y terminan en HTTP 503 hacia el usuario.
+- FabricBusinessError: la red respondio pero rechazo la operacion (endorsement,
+  control de acceso por MSP, transicion de estado invalida, "ya existe"...).
+  NO se reintentan, NO abren el circuit breaker y se mapean a 4xx.
+
+Cada request lleva:
+- X-Gateway-Token: auth compartida con el puente (GATEWAY_AUTH_TOKEN).
+- actor: "prescriptor" | "auditor" | "prepaga" — el puente firma la transaccion
+  con la identidad de la organizacion correspondiente.
 """
 
 import json
@@ -19,16 +29,33 @@ from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT_SECONDS = 30
+_TIMEOUT_SECONDS = 45
 _MAX_RETRIES = 3
 _BACKOFF_BASE = 2.0
 _CIRCUIT_FAILURE_THRESHOLD = 5
 _CIRCUIT_RECOVERY_SECONDS = 60
 
 
+class FabricError(Exception):
+    """Error base de la integracion con Fabric."""
+
+
+class FabricUnavailableError(FabricError):
+    """La red Fabric o el puente no estan disponibles (retryable)."""
+
+
+class FabricBusinessError(FabricError):
+    """La red respondio pero rechazo la operacion (no retryable)."""
+
+    def __init__(self, message: str, error_type: str = "fabric", tx_id: str | None = None):
+        super().__init__(message)
+        self.error_type = error_type
+        self.tx_id = tx_id
+
+
 @dataclass
 class CircuitBreaker:
-    """Circuit breaker simple: abre tras N fallos, se recupera tras TTL."""
+    """Circuit breaker simple: abre tras N fallos de DISPONIBILIDAD, se recupera tras TTL."""
 
     failure_count: int = 0
     last_failure_time: float = 0.0
@@ -57,21 +84,13 @@ class CircuitBreaker:
         return False
 
 
-@dataclass
-class FabricResponse:
-    """Respuesta del sidecar fabric-gateway-svc."""
-
-    tx_id: str | None = None
-    payload: str | None = None
-    error: str | None = None
-    success: bool = True
-
-
 class FabricClient:
-    """Cliente para el sidecar fabric-gateway-svc."""
+    """Cliente del puente fabric-gateway-svc."""
 
-    def __init__(self, base_url: str | None = None) -> None:
-        self._base_url = base_url or get_settings().fabric_gateway_url
+    def __init__(self, base_url: str | None = None, auth_token: str | None = None) -> None:
+        settings = get_settings()
+        self._base_url = base_url or settings.fabric_gateway_url
+        self._auth_token = auth_token or settings.gateway_auth_token
         self._circuit = CircuitBreaker()
 
     @property
@@ -79,30 +98,45 @@ class FabricClient:
         """Indica si el cliente tiene URL configurada y el circuit breaker permite requests."""
         return bool(self._base_url) and self._circuit.allow_request()
 
-    def invoke(self, function: str, args: list[str]) -> FabricResponse:
-        """Invoca una transaccion en el chaincode (con commit)."""
-        return self._call("/invoke", {"function": function, "args": args})
+    def invoke(self, function: str, args: list[str], actor: str) -> dict[str, Any]:
+        """Invoca una transaccion en el chaincode (submit + commit).
 
-    def query(self, function: str, args: list[str]) -> FabricResponse:
-        """Ejecuta una query sin commit."""
-        return self._call("/query", {"function": function, "args": args})
+        Returns:
+            {"tx_id": str, "payload": str} — payload es el JSON que devolvio el contrato.
+        """
+        return self._call("/invoke", {"function": function, "args": args, "actor": actor})
 
-    def health(self) -> bool:
-        """Verifica si el sidecar esta disponible."""
+    def query(self, function: str, args: list[str], actor: str = "prepaga") -> str:
+        """Evalua una funcion de lectura sin commit. Devuelve el payload JSON."""
+        result = self._call("/query", {"function": function, "args": args, "actor": actor})
+        return result.get("payload") or ""
+
+    def health(self) -> dict[str, Any] | None:
+        """Estado del puente y de los peers de las tres orgs, o None si no responde.
+
+        Timeout corto a proposito: el health check del contenedor ECS consulta
+        `/`, que llama a este metodo. Si la red Fabric esta caida, el endpoint
+        debe responder igual (degradado) antes de que ECS marque la task como
+        unhealthy y la reinicie en loop.
+        """
+        if not self._base_url:
+            return None
         try:
             req = Request(f"{self._base_url}/health", method="GET")
-            with urlopen(req, timeout=5) as resp:
-                return resp.status == 200
+            with urlopen(req, timeout=2) as resp:
+                return json.loads(resp.read().decode("utf-8"))
         except Exception:
-            return False
+            return None
 
-    def _call(self, path: str, body: dict[str, Any]) -> FabricResponse:
-        """Ejecuta una llamada HTTP con reintentos y backoff."""
+    # ── interno ──────────────────────────────────────────────────────────────
+
+    def _call(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         if not self._base_url:
-            return FabricResponse(success=False, error="FABRIC_GATEWAY_URL no configurada")
-
+            raise FabricUnavailableError(
+                "FABRIC_GATEWAY_URL no configurada: el backend no puede operar sin la red blockchain"
+            )
         if not self._circuit.allow_request():
-            return FabricResponse(success=False, error="Circuit breaker abierto: Fabric no disponible temporalmente")
+            raise FabricUnavailableError("Circuit breaker abierto: la red Fabric no responde")
 
         last_error = ""
         for attempt in range(_MAX_RETRIES):
@@ -111,38 +145,68 @@ class FabricClient:
                 req = Request(
                     f"{self._base_url}{path}",
                     data=data,
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Gateway-Token": self._auth_token or "",
+                    },
                     method="POST",
                 )
                 with urlopen(req, timeout=_TIMEOUT_SECONDS) as resp:
                     result = json.loads(resp.read().decode("utf-8"))
-
-                if result.get("error"):
-                    self._circuit.record_failure()
-                    return FabricResponse(success=False, error=result["error"])
-
                 self._circuit.record_success()
-                return FabricResponse(
-                    tx_id=result.get("tx_id"),
-                    payload=result.get("payload"),
-                    success=True,
-                )
+                return result
 
-            except (URLError, HTTPError, OSError) as exc:
+            except HTTPError as exc:
+                # El puente responde errores con cuerpo JSON {error, error_type, tx_id}.
+                parsed = self._parse_error_body(exc)
+                if parsed is not None:
+                    error_type = parsed.get("error_type", "fabric")
+                    message = parsed.get("error", f"HTTP {exc.code} del puente Fabric")
+                    if error_type in ("auth",):
+                        raise FabricUnavailableError(
+                            f"El puente Fabric rechazo la autenticacion del backend: {message}"
+                        ) from exc
+                    if error_type in ("commit_status",):
+                        # Timeout esperando commit: el estado es incierto, se
+                        # trata como indisponibilidad (el reintento con el mismo
+                        # ID es seguro por idempotencia del chaincode).
+                        last_error = message
+                        self._circuit.record_failure()
+                    else:
+                        # Error de negocio (endorsement/chaincode): no retry.
+                        raise FabricBusinessError(message, error_type=error_type, tx_id=parsed.get("tx_id")) from exc
+                else:
+                    last_error = str(exc)
+                    self._circuit.record_failure()
+
+            except (URLError, OSError, json.JSONDecodeError) as exc:
                 last_error = str(exc)
                 self._circuit.record_failure()
-                if attempt < _MAX_RETRIES - 1:
-                    wait = _BACKOFF_BASE**attempt
-                    logger.warning(
-                        "Fabric request fallo (intento %d/%d), reintentando en %.1fs: %s",
-                        attempt + 1,
-                        _MAX_RETRIES,
-                        wait,
-                        last_error,
-                    )
-                    time.sleep(wait)
 
-        return FabricResponse(success=False, error=f"Agotados reintentos: {last_error}")
+            if attempt < _MAX_RETRIES - 1:
+                wait = _BACKOFF_BASE**attempt
+                logger.warning(
+                    "Fabric request fallo (intento %d/%d), reintentando en %.1fs: %s",
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    wait,
+                    last_error,
+                )
+                time.sleep(wait)
+
+        raise FabricUnavailableError(f"La red Fabric no respondio tras {_MAX_RETRIES} intentos: {last_error}")
+
+    @staticmethod
+    def _parse_error_body(exc: HTTPError) -> dict[str, Any] | None:
+        """Intenta parsear el cuerpo JSON de un HTTPError del puente."""
+        try:
+            body = exc.read().decode("utf-8")
+            parsed = json.loads(body)
+            if isinstance(parsed, dict) and parsed.get("error"):
+                return parsed
+        except Exception as parse_exc:
+            logger.debug("Cuerpo de error del puente no parseable: %s", parse_exc)
+        return None
 
 
 _client: FabricClient | None = None

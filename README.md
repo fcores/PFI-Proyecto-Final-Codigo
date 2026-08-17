@@ -22,18 +22,18 @@ Proyecto Final de Ingeniería Informática (UADE).
 │   ├── db.py                Conexion a PostgreSQL (pool, context manager, fallback en memoria)
 │   ├── auth_middleware.py   Middleware de autenticacion y RBAC
 │   ├── dependencies.py      Inyeccion de dependencias (singleton repos/services)
-│   ├── models/              Modelos Pydantic (patient, prescription, audit, medication, monodrug, etc.)
-│   ├── repositories/        Repositorios con soporte dual PostgreSQL / en memoria
-│   ├── routers/             Endpoints de la API con autenticacion y control de roles
-│   └── services/            Logica de negocio (validacion, ledger, auditoria, dosis)
-├── sql/                     Queries SQL externalizadas
+│   ├── models/              Modelos Pydantic (patient, prescription on-chain, audit, medication, etc.)
+│   ├── repositories/        Repos de datos maestros (PostgreSQL) + FabricPrescriptionRepository
+│   ├── routers/             Endpoints de la API con autenticacion y control de roles (4 roles)
+│   ├── blockchain/          Cliente HTTP del puente fabric-gateway-svc
+│   ├── security/            Cifrado PHI, Argon2id, JSON canonico + verificacion de hashes
+│   └── services/            Logica de negocio (validacion ML, prescripciones, auditoria, usuarios)
+├── sql/                     Queries SQL externalizadas (solo datos maestros y sesiones)
 │   ├── schema.sql           DDL de todas las tablas
 │   ├── patients.sql         Queries de pacientes
-│   ├── prescriptions.sql    Queries de prescripciones
-│   ├── audit.sql            Queries de auditoria (casos, dictamenes, correcciones)
 │   ├── medications.sql      Queries de medicamentos
 │   ├── monodrugs.sql        Queries de monodrogas
-│   ├── ledger.sql           Queries del ledger
+│   ├── auth_tokens.sql      Queries de sesiones persistentes
 │   └── users.sql            Queries de usuarios
 ├── frontend/                Aplicacion web React
 │   ├── src/
@@ -49,12 +49,10 @@ Proyecto Final de Ingeniería Informática (UADE).
 │   ├── test_paridad_features.py     Test train/serve de features
 │   └── artefactos/          modelo_gbm.joblib + metricas
 ├── backend/ml/              Nucleo compartido (regimenes, guias, codificacion, dosis, reglas)
-├── blockchain/              Smart contract PatientContract en Go
-│   ├── main.go              CreatePatient, QueryPatient, GetPatientHistory
-│   └── go.mod               Dependencias (fabric-contract-api-go)
-├── chaincode/               Chaincode de ejemplo desplegado por la red Fabric
-│   └── asset-transfer-basic/
-├── fabric/                  Infraestructura de la red Hyperledger Fabric
+├── chaincode/               Chaincode de prescripciones (fuente de verdad on-chain)
+│   └── prescription-contract/   CreatePrescription, AuditPrescription, queries + tests Go
+├── fabric-gateway-svc/      Puente HTTP -> Fabric Gateway SDK (una identidad por org)
+├── fabric/                  Infraestructura de la red Hyperledger Fabric (3 orgs + CouchDB)
 │   ├── network.sh
 │   ├── network/             crypto-config, configtx, compose
 │   └── scripts/             bootstrap, createChannel, deployChaincode, etc.
@@ -125,13 +123,14 @@ El backend soporta dos modos de persistencia:
 
 #### Roles y permisos (RBAC)
 
-El sistema soporta tres roles con permisos diferenciados:
+El sistema soporta cuatro roles con permisos diferenciados:
 
 | Rol | Acceso |
 |-----|--------|
-| `administrador` | Acceso completo a todos los modulos |
-| `prescriptor` | Pacientes, prescripciones |
-| `auditor` | Cola de auditoria, trazabilidad, dictamenes |
+| `super_admin` | ABM de usuarios y roles + acceso total a todos los modulos |
+| `administrador` (administrativo) | Datos maestros: pacientes, medicamentos, monodrogas |
+| `prescriptor` | Crea prescripciones (ejecuta el motor ML antes de asentarlas en Fabric); lectura de pacientes y catalogos |
+| `auditor` | Cola de auditoria, acciones aprobar/rechazar/revision, trazabilidad |
 
 ### Frontend
 
@@ -160,38 +159,68 @@ Todos los endpoints de negocio estan bajo el prefijo `/api`. Los endpoints prote
 | `GET`  | `/api/medications` | cualquiera | Listar medicamentos |
 | `POST` | `/api/monodrugs` | admin | Crear monodroga |
 | `GET`  | `/api/monodrugs` | cualquiera | Listar monodrogas |
-| `POST` | `/api/prescriptions` | admin, prescriptor | Crear prescripcion (valida con motor hibrido) |
-| `GET`  | `/api/prescriptions` | cualquiera | Listar prescripciones |
-| `GET`  | `/api/prescriptions/regimenes` | cualquiera | Catalogo de regimenes R00-R13 |
-| `GET`  | `/api/prescriptions/dosis-referencia` | cualquiera | Dosis de referencia por regimen |
-| `POST` | `/api/prescriptions/recomendacion` | admin, prescriptor | Sugerir regimen segun guias (sin ML) |
-| `GET`  | `/api/audit/queue` | auditor, admin | Cola de auditoria |
-| `GET`  | `/api/audit/cases/{id}` | auditor, admin | Detalle de caso |
-| `POST` | `/api/audit/cases/{id}/dictamen` | auditor, admin | Emitir dictamen |
-| `POST` | `/api/audit/cases/{id}/corrections` | auditor, admin | Registrar correccion |
-| `GET`  | `/api/audit/cases/{id}/history` | auditor, admin | Historial de correcciones |
-| `GET`  | `/api/ledger` | cualquiera | Bloques del ledger |
-| `GET`  | `/api/ledger/verify` | cualquiera | Verificar integridad |
+| `POST` | `/api/prescriptions` | prescriptor, super_admin | Crear prescripcion: motor hibrido + asiento sincrono en Fabric |
+| `GET`  | `/api/prescriptions` | prescriptor, auditor, super_admin | Listar desde Fabric (bookmark, filtro por estado) |
+| `GET`  | `/api/prescriptions/{id}` | prescriptor, auditor, super_admin | Detalle del asset on-chain |
+| `GET`  | `/api/prescriptions/{id}/history` | prescriptor, auditor, super_admin | Historial de transacciones Fabric (tx_id reales) |
+| `GET`  | `/api/prescriptions/{id}/verify` | prescriptor, auditor, super_admin | Verifica la cadena de hashes (ver docs/HASHING.md) |
+| `GET`  | `/api/prescriptions/regimenes` | prescriptor, auditor, super_admin | Catalogo de regimenes R00-R13 |
+| `GET`  | `/api/prescriptions/dosis-referencia` | prescriptor, super_admin | Dosis de referencia por regimen |
+| `POST` | `/api/prescriptions/recomendacion` | prescriptor, super_admin | Sugerir regimen segun guias (sin ML) |
+| `GET`  | `/api/audit/queue` | auditor, super_admin | Cola de auditoria (PENDIENTE_AUDITORIA / EN_REVISION) |
+| `GET`  | `/api/audit/{id}` | auditor, super_admin | Detalle para auditar (asset + historial) |
+| `POST` | `/api/audit/{id}/accion` | auditor, super_admin | Accion on-chain: revision, aprobar o rechazar |
+| `GET`  | `/api/users` | super_admin | Listar cuentas |
+| `POST` | `/api/users` | super_admin | Crear cuenta con rol |
+| `PUT`  | `/api/users/{id}` | super_admin | Editar nombre, rol y estado |
+| `POST` | `/api/users/{id}/password` | super_admin | Resetear contrasena |
+| `GET`  | `/api/health` | super_admin | Salud detallada (DB, ML, gateway, peers) |
 
 ## Blockchain
 
-### Smart contract del dominio (`blockchain/`)
+### Prescripciones 100% on-chain
 
-El chaincode en Go (`blockchain/main.go`) implementa el `PatientContract` y expone tres funciones:
+La prescripcion **no se guarda en la RDS**: vive exclusivamente en el world
+state de Fabric (chaincode `chaincode/prescription-contract/`, nombre logico
+`prescriptions`). El asset porta el payload clinico completo (seudonimizado
+via `patient_id`, sin PHI) mas el veredicto del motor reglas + ML, y el
+chaincode administra el ciclo de auditoria:
 
-- **CreatePatient** — Registra un paciente de forma inmutable en el ledger.
-- **QueryPatient** — Consulta los datos actuales de un paciente.
-- **GetPatientHistory** — Devuelve el historial completo de cambios de un paciente.
+```
+PENDIENTE_AUDITORIA ──> EN_REVISION ──> APROBADA | RECHAZADA
+        └──────────────────────────────────┘  (dictamen directo)
+```
+
+- `CreatePrescription` — solo **PrescriptorMSP**. Hashea el payload canonico
+  (`payload_hash`) y crea el asset en estado `PENDIENTE_AUDITORIA`.
+- `AuditPrescription` — solo **MedChainMSP**. Valida la transicion de estado
+  y encadena un nuevo hash por cada accion (`event_hash`, ver
+  [docs/HASHING.md](docs/HASHING.md)).
+- `GetPrescription`, `ListPrescriptions`, `QueryPrescriptionsByEstado`,
+  `QueryPrescriptionsByPatient`, `GetPrescriptionHistory` — lectura para las
+  tres organizaciones (rich queries con paginacion por bookmark, CouchDB).
+
+El backend llega a la red a traves de **fabric-gateway-svc** (Go +
+Fabric Gateway SDK), que mantiene una identidad por organizacion y firma cada
+transaccion segun el actor: prescriptor → PrescriptorMSP, auditor →
+MedChainMSP, lecturas → PrepagaMSP. La escritura es **sincrona** dentro del
+request: si la red no responde, el alta falla con 503 (no hay copia off-chain).
 
 ### Red Hyperledger Fabric (`fabric/`)
 
 La carpeta `fabric/` contiene una red **Hyperledger Fabric 2.5 LTS** reproducible desde cero:
 
-- **2 organizaciones** (`Org1`, `Org2`), cada una con 1 peer.
+- **3 organizaciones** que monitorean que no haya adulteraciones, cada una con 1 peer + CouchDB:
+  - `PrescriptorMSP` (`prescriptor.medchain.com`) — el centro prescriptor.
+  - `MedChainMSP` (`auditoria.medchain.com`) — la empresa auditora MedChain.
+  - `PrepagaMSP` (`prepaga.medchain.com`) — el financiador / prepaga.
+- **Politica de endorsement explicita** `AND('PrescriptorMSP.peer','MedChainMSP.peer','PrepagaMSP.peer')`:
+  ninguna transaccion entra al ledger sin la firma de las tres organizaciones.
 - **1 orderer** (consenso Raft / etcdraft), usando la *Channel Participation API* (sin system channel).
-- **Material criptográfico** generado con `cryptogen`.
-- **Chaincode** de ejemplo (`asset-transfer-basic`) escrito en **Go**.
+- **Material criptográfico** generado con `cryptogen` (`User1@<org>` es la identidad del gateway).
+- **Chaincode** `prescriptions` (`chaincode/prescription-contract/`) escrito en **Go**.
 - **Canal** de aplicación: `mychannel`.
+- Antes de levantar: `cp fabric/network/.env.example fabric/network/.env` y ajustar valores.
 
 #### Quickstart de la red
 
@@ -264,6 +293,7 @@ La aplicacion esta desplegada en produccion en:
 
 ### Guias de despliegue
 
+- **Cambios on-chain (que falta para deployarlos):** [docs/06-deploy-cambios-onchain.md](docs/06-deploy-cambios-onchain.md)
 - **Paso a paso por consola web:** [docs/05-deploy-aws-consola.md](docs/05-deploy-aws-consola.md)
 - **Scripts automatizados (CLI):** ver carpeta `deploy/`
 - **Blockchain en EC2:** [docs/04-aws-ec2-setup.md](docs/04-aws-ec2-setup.md)
@@ -299,7 +329,7 @@ El repositorio tiene un workflow automatico que despliega a AWS cada vez que se 
 **Que despliega:**
 - Si cambia `backend/`, `Dockerfile` o `requirements.txt` -> reconstruye la imagen Docker, la sube a ECR y fuerza un nuevo deploy en ECS Fargate.
 - Si cambia `frontend/` -> hace build del frontend, lo sube a S3 e invalida el cache de CloudFront.
-- Si cambia `blockchain/` o `fabric/` -> se conecta por SSH a la EC2, hace git pull y redesplega el chaincode con la nueva version.
+- Si cambia `chaincode/`, `fabric-gateway-svc/` o `fabric/` -> via AWS SSM en la EC2: git pull, redeploy del chaincode (secuencia automatica) y rebuild del gateway, con smoke test de `/health`.
 - Los tres jobs corren en paralelo si hay cambios en multiples componentes.
 
 **Configuracion necesaria (una sola vez):**
@@ -310,15 +340,15 @@ Ir a **GitHub > Settings > Secrets and variables > Actions** y crear estos secre
 |--------|-------|
 | `AWS_ACCESS_KEY_ID` | Access Key del usuario IAM `medchain-admin` |
 | `AWS_SECRET_ACCESS_KEY` | Secret Key del usuario IAM `medchain-admin` |
-| `EC2_SSH_KEY` | Contenido completo del archivo `prueba-blockchain.pem` |
-| `EC2_HOST` | `34.199.204.55` (Elastic IP de la EC2 blockchain) |
-| `EC2_USER` | `ubuntu` |
+
+El deploy de blockchain usa **AWS SSM Run Command** (no SSH): la EC2 solo necesita el agente SSM y el rol IAM correspondiente.
 
 El workflow se encuentra en `.github/workflows/deploy.yml`.
 
 ## Notas
 
-- Si `DATABASE_URL` esta configurada, los datos persisten en PostgreSQL. Sin ella, se usa almacenamiento en memoria (los datos se pierden al reiniciar).
-- El campo `blockchain_tx_id` en los modelos de paciente y dictamen esta preparado para vincular cada registro con su transaccion en blockchain (pendiente de integracion con Hyperledger Fabric).
+- Si `DATABASE_URL` esta configurada, los datos maestros persisten en PostgreSQL. Sin ella, se usa almacenamiento en memoria (los datos se pierden al reiniciar).
+- Las **prescripciones y su auditoria viven exclusivamente en Hyperledger Fabric**: la RDS solo guarda usuarios/sesiones, monodrogas, medicamentos y pacientes (PHI cifrado con AES-256-GCM + indices ciegos).
+- `FABRIC_GATEWAY_URL` y `GATEWAY_AUTH_TOKEN` son obligatorias en produccion: sin la red Fabric no se pueden crear ni auditar prescripciones (fail-fast).
 - La carpeta `ml_models/` contiene el pipeline de entrenamiento del modelo de validacion de prescripciones (cancer de colon) y los artefactos asociados.
-- Los dictamenes y correcciones de auditoria se registran en el ledger inmutable para trazabilidad completa.
+- La convencion de hashing verificable (payload canonico + cadena de eventos de auditoria) esta documentada en [docs/HASHING.md](docs/HASHING.md).

@@ -1,110 +1,55 @@
-"""Router de endpoints de auditoria."""
+"""Router de auditoria on-chain.
 
-from fastapi import APIRouter, Header, HTTPException
+La cola y las acciones operan sobre los assets de Fabric. Solo el auditor (y
+el super admin) acceden; la accion se firma con la identidad de MedChainMSP.
+"""
+
+from fastapi import APIRouter, Header, Query
 
 from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import get_audit_service
-from backend.models.audit import (
-    CAMPOS_CORREGIBLES,
-    AuditCaseDetail,
-    AuditCaseList,
-    Correction,
-    CorrectionList,
-    CorrectionRequest,
-    Dictamen,
-    DictamenRequest,
-)
+from backend.models.audit import AuditActionRequest, AuditDetail
+from backend.models.prescription import Prescription, PrescriptionList
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
-
-@router.get("/queue", response_model=AuditCaseList)
-async def list_audit_queue(authorization: str | None = Header(default=None)):
-    """Lista los casos pendientes de auditoria."""
-    try:
-        user = require_auth(authorization)
-        require_role(user, ["auditor", "administrador"])
-        svc = get_audit_service()
-        return svc.list_pending()
-    except Exception:
-        raise
+_ROLES_AUDITORIA = ["auditor", "super_admin"]
 
 
-@router.post("/cases/{case_id}/claim")
-async def claim_audit_case(case_id: int, authorization: str | None = Header(default=None)):
-    """Reserva un caso pendiente para el auditor actual (control de concurrencia)."""
-    try:
-        user = require_auth(authorization)
-        require_role(user, ["auditor", "administrador"])
-        svc = get_audit_service()
-        claimed = svc.claim_case(case_id, user.username)
-        if not claimed:
-            raise HTTPException(status_code=409, detail="El caso ya fue tomado por otro auditor.")
-        return {"claimed": True, "case_id": case_id, "auditor": user.username}
-    except Exception:
-        raise
+@router.get("/queue", response_model=PrescriptionList)
+async def audit_queue(
+    estado: str = Query("PENDIENTE_AUDITORIA", description="PENDIENTE_AUDITORIA o EN_REVISION"),
+    page_size: int = Query(50, ge=1, le=200),
+    bookmark: str = Query(""),
+    authorization: str | None = Header(default=None),
+):
+    """Cola de auditoria: prescripciones pendientes o en revision (FIFO)."""
+    user = require_auth(authorization)
+    require_role(user, _ROLES_AUDITORIA)
+    svc = get_audit_service()
+    return svc.queue(estado=estado, page_size=page_size, bookmark=bookmark)
 
 
-@router.get("/cases/{case_id}", response_model=AuditCaseDetail)
-async def get_audit_case(case_id: int, authorization: str | None = Header(default=None)):
-    """Obtiene el detalle completo de un caso de auditoria."""
-    try:
-        user = require_auth(authorization)
-        require_role(user, ["auditor", "administrador"])
-        svc = get_audit_service()
-        return svc.get_case_detail(case_id)
-    except Exception:
-        raise
+@router.get("/{prescription_id}", response_model=AuditDetail)
+async def audit_detail(
+    prescription_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """Detalle para el auditor: asset completo + historial de transacciones."""
+    user = require_auth(authorization)
+    require_role(user, _ROLES_AUDITORIA)
+    svc = get_audit_service()
+    return svc.detail(prescription_id)
 
 
-@router.post("/cases/{case_id}/dictamen", response_model=Dictamen)
-async def create_dictamen(case_id: int, data: DictamenRequest, authorization: str | None = Header(default=None)):
-    """Emite un dictamen sobre un caso de auditoria."""
-    try:
-        user = require_auth(authorization)
-        require_role(user, ["auditor", "administrador"])
-        svc = get_audit_service()
-        return svc.create_dictamen(case_id, data.resultado, data.justificacion, user.username)
-    except Exception:
-        raise
-
-
-@router.post("/cases/{case_id}/corrections", response_model=Correction)
-async def create_correction(case_id: int, data: CorrectionRequest, authorization: str | None = Header(default=None)):
-    """Registra una correccion de dato clinico."""
-    try:
-        user = require_auth(authorization)
-        require_role(user, ["auditor", "administrador"])
-        svc = get_audit_service()
-        if data.campo not in CAMPOS_CORREGIBLES:
-            raise HTTPException(
-                status_code=422,
-                detail="Campo no corregible: %s. Validos: %s" % (data.campo, ", ".join(CAMPOS_CORREGIBLES)),
-            )
-        detail = svc.get_case_detail(case_id)
-        # El valor anterior se lee del caso para que la correccion quede
-        # trazable; antes se guardaba siempre vacio.
-        actual = getattr(detail.case, data.campo, None)
-        valor_anterior = "" if actual is None else str(actual)
-        return svc.create_correction(
-            case_id,
-            data.campo,
-            valor_anterior,
-            data.valor_nuevo,
-            data.justificacion,
-            user.username,
-        )
-    except Exception:
-        raise
-
-
-@router.get("/cases/{case_id}/history", response_model=CorrectionList)
-async def list_corrections(case_id: int, authorization: str | None = Header(default=None)):
-    """Lista el historial de correcciones de un caso."""
-    try:
-        user = require_auth(authorization)
-        require_role(user, ["auditor", "administrador"])
-        svc = get_audit_service()
-        return svc.list_corrections(case_id)
-    except Exception:
-        raise
+@router.post("/{prescription_id}/accion", response_model=Prescription)
+async def audit_action(
+    prescription_id: str,
+    data: AuditActionRequest,
+    authorization: str | None = Header(default=None),
+):
+    """Registra una accion de auditoria (revision | aprobar | rechazar) on-chain."""
+    user = require_auth(authorization)
+    require_role(user, _ROLES_AUDITORIA)
+    svc = get_audit_service()
+    return svc.accion(prescription_id, data.accion, data.justificacion, user.username)

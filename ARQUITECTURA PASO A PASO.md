@@ -6,7 +6,7 @@
 2. [Estructura de carpetas](#2-estructura-de-carpetas)
 3. [Frontend (React + Vite)](#3-frontend-react--vite)
 4. [Backend (Python + FastAPI)](#4-backend-python--fastapi)
-5. [Ledger simulado (blockchain en memoria)](#5-ledger-simulado-blockchain-en-memoria)
+5. [Prescripciones on-chain (fuente de verdad en Fabric)](#5-prescripciones-on-chain-fuente-de-verdad-en-fabric)
 6. [Blockchain privada (Hyperledger Fabric en EC2)](#6-blockchain-privada-hyperledger-fabric-en-ec2)
 7. [Chaincode (Smart Contract en Go)](#7-chaincode-smart-contract-en-go)
 8. [Despliegue en AWS](#8-despliegue-en-aws)
@@ -20,7 +20,7 @@
 
 ## 1. Vision general del proyecto
 
-MedChain AI es una aplicacion web para la **auditoria de prescripciones oncologicas de alta complejidad**. Cada prescripcion pasa por un motor de validacion (stub preliminar, con vision a incorporar reglas + ML) y se registra en un **ledger inmutable** que garantiza trazabilidad completa.
+MedChain AI es una aplicacion web para la **auditoria de prescripciones oncologicas de alta complejidad**. Cada prescripcion pasa por un motor de validacion hibrido (reglas deterministicas + modelo LightGBM) como soporte de decision y se asienta **directamente en Hyperledger Fabric**, donde una red de tres organizaciones (prescriptor, auditora MedChain y prepaga) endosa cada transaccion y monitorea que no haya adulteraciones. Solo el auditor cierra el ciclo con su dictamen (aprobar / rechazar / revision), que tambien queda on-chain con un hash encadenado.
 
 El sistema tiene tres componentes principales desplegados en AWS de forma independiente:
 
@@ -147,15 +147,16 @@ PFI-Proyecto-Final/
 |       |   |-- AuthContext.jsx     Contexto de autenticacion (user con role)
 |       |-- components/        Componentes reutilizables (Layout, Sidebar por roles, etc.)
 |       |-- hooks/             Hooks personalizados
-|       |-- pages/             Paginas de la aplicacion (incluye auditoria, acuerdos, empadronamientos)
+|       |-- pages/             Paginas de la aplicacion (auditoria, trazabilidad, usuarios, salud)
 |
-|-- blockchain/               Smart Contract en Go
-|   |-- main.go               PatientContract (CreatePatient, QueryPatient, GetPatientHistory)
-|   |-- go.mod                Dependencias (fabric-contract-api-go)
+|-- chaincode/                Smart Contract en Go (fuente de verdad de las prescripciones)
+|   |-- prescription-contract/  contract.go, contract_test.go, indices CouchDB (META-INF)
 |
-|-- fabric/                   Infraestructura de la red Hyperledger Fabric
+|-- fabric-gateway-svc/       Puente HTTP -> Fabric Gateway SDK (una identidad por org)
+|
+|-- fabric/                   Infraestructura de la red Hyperledger Fabric (3 orgs + CouchDB)
 |   |-- network.sh            Punto de entrada (install, up, createChannel, deployCC, down)
-|   |-- network/              crypto-config, configtx, compose, .env
+|   |-- network/              crypto-config, configtx, compose, .env (.env.example versionado)
 |   |-- scripts/              bootstrap, createChannel, deployChaincode, etc.
 |
 |-- deploy/                   Scripts de despliegue automatizado en AWS (CLI)
@@ -375,40 +376,32 @@ La API queda en `http://127.0.0.1:9999`. Swagger en `http://127.0.0.1:9999/docs`
 
 ---
 
-## 5. Ledger simulado (blockchain en memoria)
+## 5. Prescripciones on-chain (fuente de verdad en Fabric)
 
 ### Que es
 
-El `LedgerService` implementa una **cadena de bloques simulada** dentro del backend. Cada operacion critica (prescripcion, alta de paciente, etc.) genera un nuevo bloque enlazado al anterior mediante hashes SHA-256.
+Las prescripciones **no se guardan en la RDS**: por contener datos clinicos sensibles, su unica fuente de verdad es el world state de Hyperledger Fabric. El ledger interno SHA-256 que existia en el backend fue retirado por completo; la trazabilidad ahora usa transacciones Fabric reales.
 
-### Como funciona
+### Como funciona el alta (sincrona, dentro del request)
+
+1. El **prescriptor** completa el checklist clinico; el backend deriva la superficie corporal (Mosteller) y las dosis por defecto.
+2. El **motor hibrido reglas + ML** emite su veredicto (APROBADO / RECHAZADO / REVISION) como soporte de decision.
+3. El backend genera un **ULID** como ID, arma el **payload canonico** `{clinical, created_at, ml}` y calcula su SHA-256 (`payload_hash`).
+4. Invoca `CreatePrescription` via el puente **fabric-gateway-svc**, firmando con la identidad de **PrescriptorMSP**. Las tres organizaciones endosan (politica AND) y la transaccion se commitea.
+5. El asset nace en estado **PENDIENTE_AUDITORIA**. Si la red no responde, el alta falla con 503: no hay copia off-chain ni cola de reintentos.
+
+### Ciclo de auditoria on-chain
 
 ```
-Bloque 0 (Genesis)          Bloque 1                    Bloque 2
-+------------------+        +------------------+        +------------------+
-| index: 0         |        | index: 1         |        | index: 2         |
-| tx_type: genesis |        | tx_type: presc.  |        | tx_type: presc.  |
-| payload: {}      |        | payload: {...}   |        | payload: {...}   |
-| prev_hash: 000...|        | prev_hash: a3f...|        | prev_hash: 7b2...|
-| hash: a3f...     |------->| hash: 7b2...     |------->| hash: e91...     |
-+------------------+        +------------------+        +------------------+
+PENDIENTE_AUDITORIA ──revision──> EN_REVISION ──aprobar/rechazar──> APROBADA | RECHAZADA
+        └───────────────aprobar/rechazar (dictamen directo)──────────────┘
 ```
 
-1. Al iniciar el backend, se crea un **bloque genesis** (indice 0, payload vacio).
-2. Cada vez que se crea una prescripcion, el `PrescriptionService` llama a `ledger_service.append()`.
-3. El ledger calcula el hash SHA-256 del contenido (indice + timestamp + tipo + payload + hash anterior).
-4. El nuevo bloque se agrega a la cadena y su hash se guarda en la prescripcion como `blockchain_tx_id`.
+Cada accion del auditor (firmada como **MedChainMSP**) valida la transicion en el chaincode y encadena un nuevo hash: `event_hash = SHA256(prev_hash | accion | estado | auditor | SHA256(justificacion) | timestamp)`. La convencion completa y verificable esta en [docs/HASHING.md](docs/HASHING.md).
 
 ### Verificacion de integridad
 
-El endpoint `GET /api/ledger/verify` recorre toda la cadena recalculando cada hash y verificando que coincida con el almacenado y que el `prev_hash` enlace correctamente con el bloque anterior. Si alguno falla, indica en que bloque se rompio.
-
-### Por que un ledger simulado
-
-La blockchain real (Hyperledger Fabric) corre en una EC2 separada y aun no esta integrada con el backend. El ledger simulado permite:
-- Demostrar el concepto de trazabilidad inmutable.
-- Que la pagina de Trazabilidad funcione mostrando bloques reales con hashes.
-- Facilitar la futura integracion: cuando se conecte Fabric, el `blockchain_tx_id` apuntara a la transaccion real en el ledger distribuido.
+`GET /api/prescriptions/{id}/verify` re-canonicaliza el contenido del asset, recomputa `payload_hash` y recorre la cadena de eventos verificando cada eslabon. Cualquier adulteracion del contenido clinico o de un dictamen rompe la cadena y se detecta.
 
 ---
 
@@ -428,29 +421,35 @@ Para este proyecto usamos **Hyperledger Fabric 2.5 LTS** porque es una blockchai
 
 ### Arquitectura de la red
 
-La red corre en una **instancia EC2 t3.large** dedicada con Docker Compose:
+La red corre en una **instancia EC2 t3.large** dedicada con Docker Compose. Tres organizaciones con semantica de negocio monitorean el ciclo de vida de cada prescripcion:
 
 ```
 EC2 (t3.large, Ubuntu 24.04, Elastic IP: 34.199.204.55)
 |
 |-- Docker Compose
-|   |-- peer0.org1         Nodo par de la Organizacion 1
-|   |-- peer0.org2         Nodo par de la Organizacion 2
-|   |-- orderer            Servicio de ordenamiento (Raft/etcdraft)
-|   |-- cli                Herramientas de administracion
+|   |-- peer0.prescriptor.medchain.com   PrescriptorMSP (centro prescriptor)  + couchdb.prescriptor
+|   |-- peer0.auditoria.medchain.com     MedChainMSP (empresa auditora)       + couchdb.auditoria
+|   |-- peer0.prepaga.medchain.com       PrepagaMSP (financiador/prepaga)     + couchdb.prepaga
+|   |-- orderer.medchain.com             Servicio de ordenamiento (Raft/etcdraft)
+|   |-- fabric-gateway                   Puente HTTP -> Fabric Gateway SDK (puerto 8081)
+|   |-- cli                              Herramientas de administracion
 |
 |-- Canal: mychannel
-|-- Chaincode: asset-transfer-basic (ejemplo) + PatientContract (dominio)
+|-- Chaincode: prescriptions (chaincode/prescription-contract)
+|-- Endorsement: AND('PrescriptorMSP.peer','MedChainMSP.peer','PrepagaMSP.peer')
 ```
 
 | Componente | Que es | Version |
 |-----------|--------|---------|
 | **Hyperledger Fabric** | Framework de blockchain permisionada | 2.5.15 LTS |
-| **Fabric CA** | Autoridad certificadora | 1.5.13 |
 | **Orderer** | Ordena transacciones en bloques (consenso Raft) | etcdraft |
-| **Peers** | 2 nodos (Org1, Org2) con copia del ledger | Fabric 2.5 |
-| **Chaincode** | Smart contract en Go | Go 1.22+ |
+| **Peers** | 3 nodos (Prescriptor, MedChain, Prepaga) con copia del ledger | Fabric 2.5 |
+| **CouchDB** | State DB por peer (habilita rich queries con paginacion) | 3.3 |
+| **fabric-gateway-svc** | Puente HTTP del backend, una identidad X509 por organizacion | Go + fabric-gateway 1.11 |
+| **Chaincode** | Smart contract en Go | Go 1.21+ |
 | **Channel Participation API** | Gestion de canales sin system channel | Nativa |
+
+**Politica de endorsement AND**: ninguna escritura entra al ledger sin la firma de las tres organizaciones — esa es la garantia de no adulteracion. La contracara (limitacion aceptada para la tesis) es que si un peer esta caido, las escrituras se bloquean; el estado de cada peer es visible en la pantalla "Salud del sistema".
 
 ### Como levantar la red
 
@@ -458,10 +457,11 @@ EC2 (t3.large, Ubuntu 24.04, Elastic IP: 34.199.204.55)
 ssh -i mi-key.pem ubuntu@34.199.204.55
 
 cd ~/PFI-Proyecto-Final/fabric
+cp network/.env.example network/.env   # 1 sola vez: ajustar GATEWAY_AUTH_TOKEN
 ./network.sh install        # Binarios + imagenes Docker (1 sola vez)
-./network.sh up             # Genera cripto + levanta contenedores
-./network.sh createChannel  # Crea mychannel y une los peers
-./network.sh deployCC       # Despliega el chaincode
+./network.sh up             # Genera cripto (3 orgs) + levanta contenedores
+./network.sh createChannel  # Crea mychannel y une los 3 peers
+./network.sh deployCC       # Despliega `prescriptions` con la politica AND
 
 ./network.sh down           # Apaga y limpia todo
 ```
@@ -476,55 +476,61 @@ Documentacion detallada: [docs/04-aws-ec2-setup.md](docs/04-aws-ec2-setup.md)
 
 El chaincode es un programa que vive dentro de la blockchain y define que datos se pueden guardar, que operaciones se pueden hacer y que reglas de validacion existen.
 
-### Estructura (blockchain/main.go)
+### Estructura (chaincode/prescription-contract/contract.go)
 
-El archivo define tres funciones en el `PatientContract`:
+El `PrescriptionContract` administra el ciclo de vida completo de las prescripciones. Funciones:
 
-#### CreatePatient
+#### CreatePrescription — solo PrescriptorMSP
 
 ```go
-func (pc *PatientContract) CreatePatient(ctx, patientID, dataJSON) (string, error)
+func (pc *PrescriptionContract) CreatePrescription(ctx, prescriptionID, canonicalJSON) (string, error)
 ```
 
-1. Recibe un `patientID` y un JSON con datos del paciente.
-2. Verifica que no exista un paciente con ese ID (evita duplicados).
-3. Agrega metadatos (tipo de documento, timestamp UTC).
-4. Guarda el paciente en el ledger distribuido.
-5. Devuelve el paciente creado como JSON.
+1. Verifica que la firma sea de `PrescriptorMSP` (control de acceso por MSP).
+2. Verifica que la clave `PRESC_<ULID>` no exista (idempotencia: un reintento con el mismo ID es seguro).
+3. Hashea el **string exacto** del payload canonico recibido -> `payload_hash`.
+4. Crea el asset en estado `PENDIENTE_AUDITORIA` con `current_hash = payload_hash`.
 
-#### QueryPatient
+#### AuditPrescription — solo MedChainMSP
 
 ```go
-func (pc *PatientContract) QueryPatient(ctx, patientID) (string, error)
+func (pc *PrescriptionContract) AuditPrescription(ctx, prescriptionID, accion, justificacion, auditor) (string, error)
 ```
 
-Busca un paciente por ID en el ledger y devuelve sus datos.
+1. Verifica la firma de `MedChainMSP` y mapea la accion (`revision`/`aprobar`/`rechazar`) al estado resultante.
+2. **Valida la transicion de estado on-chain** (la maquina de estados vive en el contrato, no en el backend).
+3. Encadena `event_hash` sobre `current_hash` usando el timestamp de la transaccion (`GetTxTimestamp()`, deterministico para los 3 endorsers — nunca `time.Now()`).
+4. Appendea el evento a `audit_events` y actualiza `estado` y `current_hash`.
 
-#### GetPatientHistory
+#### Lecturas — las tres organizaciones
+
+- `GetPrescription(id)` — detalle del asset.
+- `ListPrescriptions(pageSize, bookmark)` — listado general, mas recientes primero.
+- `QueryPrescriptionsByEstado(estado, pageSize, bookmark)` — la cola de auditoria (FIFO).
+- `QueryPrescriptionsByPatient(patientID, pageSize, bookmark)` — historial por paciente (seudonimo).
+- `GetPrescriptionHistory(id)` — todas las versiones del asset con sus `tx_id` reales.
+
+Las rich queries usan CouchDB con indices declarados en `META-INF/statedb/couchdb/indexes/` y paginacion por bookmark.
+
+### El asset en blockchain (sin PHI)
 
 ```go
-func (pc *PatientContract) GetPatientHistory(ctx, patientID) (string, error)
-```
-
-Devuelve **todas las versiones** del registro de un paciente (historial completo de cambios), incluyendo `txId`, `timestamp`, `isDelete` y `value` de cada version.
-
-### Datos del paciente en blockchain
-
-```go
-type Patient struct {
-    DocType              string  // Siempre "patient"
-    PatientID            string  // ID unico
-    SapID                string  // ID externo del paciente
-    FirstName            string
-    LastName             string
-    BirthDate            string
-    Gender               string
-    TipoEmpadronamiento string
-    FechaInicio          string
-    DataHash             string  // Hash de los datos para verificacion
-    CreatedAt            string  // Timestamp de creacion en blockchain
+type PrescriptionAsset struct {
+    DocType          string          // "prescription"
+    PrescriptionID   string          // ULID generado por el backend
+    PrescriptionCode string          // "PRESC-<ULID>"
+    Estado           string          // PENDIENTE_AUDITORIA | EN_REVISION | APROBADA | RECHAZADA
+    Clinical         json.RawMessage // payload clinico completo (patient_id seudonimo, sin nombre/PHI)
+    ML               json.RawMessage // veredicto del motor reglas + ML (soporte de decision)
+    CreatedAt        string
+    CreatedByMSP     string          // PrescriptorMSP
+    PayloadHash      string          // SHA-256 del payload canonico
+    CurrentHash      string          // ultimo eslabon de la cadena de auditoria
+    AuditEvents      []AuditEvent    // dictamenes encadenados por hash
 }
 ```
+
+`Clinical` y `ML` se almacenan como JSON crudo, byte a byte igual al payload canonico: cualquiera de las tres organizaciones puede recomputar `payload_hash` y detectar adulteraciones (ver [docs/HASHING.md](docs/HASHING.md)). Los tests del contrato (`contract_test.go`) verifican la maquina de estados, el control por MSP y los vectores de hash compartidos con Python.
 
 ---
 
@@ -683,100 +689,78 @@ El job de blockchain maneja el acceso SSH de forma segura:
 ## 10. Flujo completo: que pasa cuando se crea una prescripcion
 
 ```
-1. Usuario llena el formulario de prescripcion en el frontend
+1. El prescriptor llena el formulario de prescripcion en el frontend
    (paciente, diagnostico CIE-10, estadio, TNM, esquema, dosis, peso, talla)
                   |
                   v
-2. Frontend envia POST /api/prescriptions al backend
+2. Frontend envia POST /api/prescriptions al backend (rol prescriptor)
                   |
                   v
-3. PrescriptionService recibe los datos
+3. PrescriptionService calcula superficie corporal (Mosteller) y dosis por defecto
                   |
                   v
-4. ValidationService evalua la prescripcion:
-   - Verifica campos obligatorios (CIE-10, esquema, linea)
-   - Valida consistencia estadio/metastasis (ej: IV sin M1 = RECHAZADO)
-   - Valida dosis > 0
-   - Si todo OK -> REVISION (deriva a revision humana)
-   - Si hay error -> RECHAZADO con motivos
+4. ValidationService (motor hibrido reglas + LightGBM) emite el veredicto:
+   - Reglas duras (TNM/estadio, dosis) -> RECHAZADO con motivos atribuibles
+   - Modelo ML calibrado con doble umbral -> APROBADO o REVISION
+   - RNF-15: el modelo solo NUNCA rechaza sin regla atribuible
                   |
                   v
-5. PrescriptionService calcula superficie corporal (formula de Mosteller)
-   BSA = sqrt(talla_cm * peso_kg / 3600)
+5. El backend genera un ULID, arma el payload canonico {clinical, created_at, ml}
+   y calcula su SHA-256 (payload_hash)
                   |
                   v
-6. LedgerService registra la operacion como un nuevo bloque:
-   - Calcula hash SHA-256 (indice + timestamp + tipo + payload + hash anterior)
-   - Encadena con el bloque previo
-   - Devuelve el bloque con su hash
+6. FabricPrescriptionRepository invoca CreatePrescription via fabric-gateway-svc,
+   firmando como PrescriptorMSP. Los peers de las 3 organizaciones endosan
+   (politica AND), el orderer commitea y el asset queda en el world state
+   en estado PENDIENTE_AUDITORIA
                   |
                   v
-7. Se crea la Prescription con:
-   - prescription_code: PRESC-0001
-   - validacion: { estado: "REVISION", motivos: [...] }
-   - blockchain_tx_id: hash del bloque del ledger
-   - block_index: indice del bloque en la cadena
-                  |
-                  v
-8. Se guarda en el PrescriptionRepository (PostgreSQL o memoria)
-                  |
-                  v
-9. Si validacion.estado == "REVISION", se crea automaticamente
-   un caso de auditoria (AuditCase) que aparece en la cola del auditor
-                  |
-                  v
-10. Frontend muestra el resultado con el estado de validacion
-    y el blockchain_tx_id para referencia de trazabilidad
+7. Frontend muestra el asset registrado: estado on-chain, veredicto ML,
+   TxID real de Fabric y payload_hash
+   (si la red no responde: error 503, no queda nada a medias)
+```
 
 ### Flujo de auditoria (post-prescripcion)
 
 ```
-1. Auditor accede a /auditoria/cola y ve los casos pendientes
+1. El auditor accede a /auditoria/cola: la cola son los assets en estado
+   PENDIENTE_AUDITORIA / EN_REVISION leidos de Fabric (FIFO)
                   |
                   v
-2. Selecciona un caso y revisa los datos de la prescripcion
-   (diagnostico, estadio, esquema, dosis, resultado de validacion)
+2. Abre una prescripcion: ve el bloque clinico completo + el veredicto ML
+   como soporte de decision + el historial de transacciones
                   |
                   v
-3. Puede realizar correcciones de datos clinicos (campo por campo)
-   Cada correccion se registra en el ledger con audit trail completo
+3. Registra una accion (firmada como MedChainMSP):
+   - revision  -> la prescripcion queda EN_REVISION (estado informativo)
+   - aprobar   -> APROBADA (terminal)
+   - rechazar  -> RECHAZADA (terminal)
+   El chaincode valida la transicion y encadena un nuevo hash (event_hash)
                   |
                   v
-4. Emite un dictamen: APROBADO, RECHAZADO o PENDIENTE_DOCS
-   El dictamen se registra en el ledger como bloque inmutable
-                  |
-                  v
-5. El caso cambia a estado "dictaminado" y queda cerrado
-```
+4. Las tres organizaciones ven el mismo estado inmutable; cualquier
+   adulteracion rompe la cadena de hashes y es detectable via /verify
 ```
 
 ### Por que este flujo importa
 
-- **Paso 4** (validacion): atrapa errores evidentes antes de registrar la prescripcion.
-- **Paso 6** (ledger): crea un registro inmutable (la cadena de hashes no se puede alterar sin romper la verificacion).
-- **Paso 7** (blockchain_tx_id): vincula cada prescripcion con su bloque, permitiendo auditoria completa desde la pagina de Trazabilidad.
-- **Paso 9** (auditoria): las prescripciones en REVISION se derivan automaticamente al auditor para dictamen, garantizando que ningun caso quede sin revisar.
+- **Paso 4** (validacion): el ML es soporte de decision con explicabilidad; nunca cierra el ciclo solo.
+- **Paso 6** (endorsement AND): ninguna prescripcion entra al ledger sin la firma del prescriptor, la auditora y la prepaga.
+- **Paso 3 de auditoria** (dictamen on-chain): el dictamen es inmutable, con auditor, justificacion y hash encadenado.
+- **Sin copia off-chain**: no existe una segunda fuente de verdad que pueda divergir o adulterarse.
 
 ---
 
-## 11. Proximo paso: conectar el backend con la blockchain real
+## 11. Integracion backend <-> blockchain (implementada)
 
-Actualmente el ledger simulado (SHA-256 en memoria) y la red Fabric (EC2) funcionan de forma independiente. El proximo paso es integrarlos.
+El backend llega a la red via **fabric-gateway-svc** (`fabric-gateway-svc/main.go`), un puente HTTP construido sobre el **Fabric Gateway SDK** oficial:
 
-### Que implica la integracion
+1. Mantiene **una conexion gRPC + identidad X509 por organizacion** (`User1@<org>` generado por cryptogen).
+2. El backend indica el `actor` en cada request (`prescriptor` | `auditor` | `prepaga`) y el puente firma con el MSP correspondiente — asi el control de acceso por MSP del chaincode se ejerce de verdad.
+3. La autenticacion de entrada es un token compartido (`X-Gateway-Token`, comparacion en tiempo constante); el puerto 8081 solo debe ser accesible desde el SG del backend.
+4. Los errores tipados del SDK (endorse/submit/commit) se mapean a HTTP y el backend distingue errores de negocio (409, sin retry) de indisponibilidad (503, con retry + circuit breaker).
 
-1. **Crear `backend/services/blockchain_service.py`** que se comunique con la red Fabric via REST o gRPC.
-2. **Modificar `prescription_service.py`** para que ademas de registrar en el ledger local, invoque `CreatePatient` en el chaincode de Fabric.
-3. **Guardar el `txId` real** de la blockchain distribuida (no solo el hash local).
-4. **Exponer un endpoint en la EC2** que acepte peticiones REST del backend ECS.
-
-### Opciones de conexion
-
-| Opcion | Complejidad | Descripcion |
-|--------|------------|-------------|
-| **Proxy REST en la EC2** | Baja | Un servicio Express/FastAPI en la EC2 que recibe peticiones y ejecuta comandos `peer chaincode invoke` |
-| **Fabric Gateway SDK** | Media | SDK oficial de Fabric (Node.js/Java) corriendo como sidecar o servicio |
-| **API Gateway + Lambda** | Media-Alta | Lambda invoca comandos del peer y expone una API REST |
+Variables en el backend: `FABRIC_GATEWAY_URL` y `GATEWAY_AUTH_TOKEN` (obligatorias en production, fail-fast).
 
 ---
 

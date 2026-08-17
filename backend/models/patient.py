@@ -23,7 +23,6 @@ class Patient(PatientBase):
     lab_filename: str | None = None
     receta_filename: str | None = None
     otros_filename: str | None = None
-    blockchain_tx_id: str | None = Field(None, title="ID de transacción en blockchain")
 
 
 class PatientList(BaseModel):

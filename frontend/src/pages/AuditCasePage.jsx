@@ -4,134 +4,72 @@ import TopBar from "../components/TopBar";
 import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import StatusChip from "../components/StatusChip";
-import DataTable from "../components/DataTable";
-import {
-  fetchAuditCase,
-  createDictamen,
-  createCorrection,
-  fetchCorrectionHistory,
-} from "../api/audit";
+import { fetchAuditDetail, postAuditAction } from "../api/audit";
 import ConfidenceBar from "../components/ConfidenceBar";
-import { ESTADO_VARIANT } from "../constants/estadoVariant";
+import { ESTADO_VARIANT, ESTADO_LABEL } from "../constants/estadoVariant";
 import { formatDate } from "../utils/formatDate";
+import { shortHash } from "../utils/shortHash";
 
-const CORRECTION_COLUMNS = [
-  "Campo",
-  "Valor anterior",
-  "Valor nuevo",
-  "Justificación",
-  "Fecha",
+const ACCIONES = [
+  { value: "aprobar", label: "APROBAR", variant: "success" },
+  { value: "rechazar", label: "RECHAZAR", variant: "error" },
+  { value: "revision", label: "REVISIÓN", variant: "warning" },
 ];
 
-const CAMPO_OPTIONS = [
-  "diagnostico_cie10",
-  "estadio",
-  "esquema",
-  "id_regimen",
-  "dosis_mg_m2",
-  "localizacion_tumor",
-  "tipo_histologico",
-  "linea_tratamiento",
-];
+const ESTADOS_TERMINALES = ["APROBADA", "RECHAZADA"];
 
 export default function AuditCasePage() {
-  const { caseId } = useParams();
-  const [caseData, setCaseData] = useState(null);
-  const [corrections, setCorrections] = useState([]);
+  const { prescriptionId } = useParams();
+  const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [dictamenForm, setDictamenForm] = useState({
-    resultado: "",
-    justificacion: "",
-  });
-  const [dictamenStatus, setDictamenStatus] = useState(null);
+  const [accionForm, setAccionForm] = useState({ accion: "", justificacion: "" });
+  const [accionStatus, setAccionStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [correctionForm, setCorrectionForm] = useState({
-    campo: "",
-    valor_nuevo: "",
-    justificacion: "",
-  });
-  const [showCorrectionForm, setShowCorrectionForm] = useState(false);
-  const [correctionStatus, setCorrectionStatus] = useState(null);
-
-  const loadCase = useCallback(async () => {
+  const loadDetail = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchAuditCase(caseId);
-      setCaseData(data);
+      setDetail(await fetchAuditDetail(prescriptionId));
     } catch (err) {
-      setError(err.message || "Error al cargar el caso.");
+      setError(err.message || "Error al leer la prescripción desde la red.");
     } finally {
       setLoading(false);
     }
-  }, [caseId]);
-
-  const loadHistory = useCallback(async () => {
-    try {
-      const history = await fetchCorrectionHistory(caseId);
-      setCorrections(history);
-    } catch {
-      setCorrections([]);
-    }
-  }, [caseId]);
+  }, [prescriptionId]);
 
   useEffect(() => {
-    loadCase();
-    loadHistory();
-  }, [loadCase, loadHistory]);
+    loadDetail();
+  }, [loadDetail]);
 
-  async function handleDictamenSubmit(event) {
+  async function handleAccionSubmit(event) {
     event.preventDefault();
-    setDictamenStatus(null);
+    setAccionStatus(null);
+    setSubmitting(true);
     try {
-      await createDictamen(caseId, dictamenForm.resultado, dictamenForm.justificacion);
-      setDictamenStatus({ type: "success", message: "Dictamen registrado correctamente." });
-      await loadCase();
+      await postAuditAction(prescriptionId, accionForm.accion, accionForm.justificacion);
+      setAccionStatus({
+        type: "success",
+        message: "Acción registrada en la blockchain (endosada por las 3 organizaciones).",
+      });
+      setAccionForm({ accion: "", justificacion: "" });
+      await loadDetail();
     } catch (err) {
-      setDictamenStatus({ type: "error", message: err.message || "Error al registrar dictamen." });
+      setAccionStatus({ type: "error", message: err.message || "Error al registrar la acción." });
+    } finally {
+      setSubmitting(false);
     }
-  }
-
-  async function handleCorrectionSubmit(event) {
-    event.preventDefault();
-    setCorrectionStatus(null);
-    try {
-      await createCorrection(
-        caseId,
-        correctionForm.campo,
-        correctionForm.valor_nuevo,
-        correctionForm.justificacion
-      );
-      setCorrectionStatus({ type: "success", message: "Corrección registrada." });
-      setCorrectionForm({ campo: "", valor_nuevo: "", justificacion: "" });
-      setShowCorrectionForm(false);
-      await loadHistory();
-    } catch (err) {
-      setCorrectionStatus({ type: "error", message: err.message || "Error al registrar corrección." });
-    }
-  }
-
-  function renderCorrectionRow(item, idx) {
-    return (
-      <tr key={idx}>
-        <td>{item.campo}</td>
-        <td>{item.valor_anterior}</td>
-        <td>{item.valor_nuevo}</td>
-        <td>{item.justificacion}</td>
-        <td>{formatDate(item.created_at)}</td>
-      </tr>
-    );
   }
 
   if (loading) {
     return (
       <>
-        <TopBar title="Detalle del caso" subtitle="Cargando..." badge="Auditoría" />
+        <TopBar title="Auditoría de prescripción" subtitle="Cargando..." badge="Auditoría" />
         <main className="page page--wide">
           <p className="muted" style={{ textAlign: "center", padding: "3rem" }}>
-            Cargando caso de auditoría...
+            Leyendo la prescripción desde la red Fabric...
           </p>
         </main>
       </>
@@ -141,7 +79,7 @@ export default function AuditCasePage() {
   if (error) {
     return (
       <>
-        <TopBar title="Detalle del caso" subtitle="Error" badge="Auditoría" />
+        <TopBar title="Auditoría de prescripción" subtitle="Error" badge="Auditoría" />
         <main className="page page--wide">
           <section className="card" style={{ textAlign: "center", padding: "3rem" }}>
             <p className="status error">{error}</p>
@@ -151,59 +89,18 @@ export default function AuditCasePage() {
     );
   }
 
-  if (!caseData) return null;
+  if (!detail) return null;
 
-  const caseInfo = caseData.case || caseData.prescription || caseData;
-  let motivosParsed = [];
-  try {
-    motivosParsed = Array.isArray(caseInfo.motivos_validacion)
-      ? caseInfo.motivos_validacion
-      : JSON.parse(caseInfo.motivos_validacion || "[]");
-  } catch {
-    motivosParsed = caseInfo.motivos_validacion ? [String(caseInfo.motivos_validacion)] : [];
-  }
-  let featuresParsed = [];
-  try {
-    featuresParsed = Array.isArray(caseInfo.features_relevantes)
-      ? caseInfo.features_relevantes
-      : JSON.parse(caseInfo.features_relevantes || "[]");
-  } catch {
-    featuresParsed = [];
-  }
-  const prescription = {
-    ...caseInfo,
-    dosis_mg_m2: caseInfo.dosis_mg_m2,
-    superficie_corporal_m2: caseInfo.superficie_corporal_m2,
-  };
-  let costoParsed = [];
-  try {
-    costoParsed = Array.isArray(caseInfo.costo_por_farmaco)
-      ? caseInfo.costo_por_farmaco
-      : JSON.parse(caseInfo.costo_por_farmaco || "[]");
-  } catch {
-    costoParsed = [];
-  }
-  const validacion = caseInfo.validacion || {
-    estado: caseInfo.estado_validacion,
-    motivos: motivosParsed,
-    probabilidad_concordante: caseInfo.probabilidad_concordante,
-    nivel_confianza: caseInfo.nivel_confianza,
-    umbral_bajo: caseInfo.umbral_bajo,
-    umbral_alto: caseInfo.umbral_alto,
-    origen: caseInfo.origen_validacion,
-    version_modelo: caseInfo.version_modelo,
-    features_relevantes: featuresParsed,
-    costo_por_farmaco: costoParsed,
-    costo_total: caseInfo.costo_total,
-  };
-  const dictamen = caseData.dictamen;
-  const hasDictamen = dictamen && dictamen.resultado;
+  const presc = detail.prescription;
+  const clinical = presc.clinical || {};
+  const ml = presc.ml || {};
+  const esTerminal = ESTADOS_TERMINALES.includes(presc.estado);
 
   return (
     <>
       <TopBar
-        title={`Caso ${caseId}`}
-        subtitle={`Prescripción ${prescription.prescription_code || ""} — Paciente #${prescription.patient_id || ""}`}
+        title={`Prescripción ${presc.prescription_code}`}
+        subtitle={`Paciente #${clinical.patient_id ?? ""} — estado on-chain: ${ESTADO_LABEL[presc.estado] || presc.estado}`}
         badge="Auditoría"
       />
 
@@ -212,65 +109,88 @@ export default function AuditCasePage() {
           <section className="card card-form">
             <CardHeader
               split
-              eyebrow="Datos de la prescripción"
-              title={`Prescripción ${prescription.prescription_code || ""}`}
-              description="Información clínica y resultado de validación automática."
-              badge={prescription.estadio ? `Estadio ${prescription.estadio}` : undefined}
+              eyebrow="Asset on-chain"
+              title={`Prescripción ${presc.prescription_code}`}
+              description="Información clínica leída del world state de Fabric (inmutable, endosada por las 3 organizaciones)."
+              badge={clinical.estadio ? `Estadio ${clinical.estadio}` : undefined}
             />
 
             <div className="form-grid">
+              <FormField label="Estado del ciclo" htmlFor="case_estado_chain" span={4}>
+                <div style={{ paddingTop: "8px" }}>
+                  <StatusChip
+                    variant={ESTADO_VARIANT[presc.estado] || "neutral"}
+                    label={ESTADO_LABEL[presc.estado] || presc.estado}
+                  />
+                </div>
+              </FormField>
               <FormField label="Paciente ID" htmlFor="case_patient" span={4}>
-                <input id="case_patient" type="text" value={prescription.patient_id || ""} readOnly />
+                <input id="case_patient" type="text" value={clinical.patient_id ?? ""} readOnly />
               </FormField>
               <FormField label="Diagnóstico (CIE-10)" htmlFor="case_diag" span={4}>
-                <input id="case_diag" type="text" value={prescription.diagnostico_cie10 || ""} readOnly />
+                <input id="case_diag" type="text" value={clinical.diagnostico_cie10 || ""} readOnly />
               </FormField>
-              <FormField label="Estadio" htmlFor="case_estadio" span={4}>
-                <input id="case_estadio" type="text" value={prescription.estadio || ""} readOnly />
+              <FormField label="Estadio" htmlFor="case_estadio" span={3}>
+                <input id="case_estadio" type="text" value={clinical.estadio || ""} readOnly />
+              </FormField>
+              <FormField label="TNM" htmlFor="case_tnm" span={3}>
+                <input id="case_tnm" type="text" value={`${clinical.t || "-"} ${clinical.n || "-"} ${clinical.m || "-"}`} readOnly />
               </FormField>
               <FormField label="Esquema" htmlFor="case_esquema" span={6}>
-                <input id="case_esquema" type="text" value={prescription.esquema || ""} readOnly />
+                <input id="case_esquema" type="text" value={clinical.esquema || ""} readOnly />
               </FormField>
               <FormField label="Dosis (mg/m²)" htmlFor="case_dosis" span={3}>
-                <input id="case_dosis" type="text" value={prescription.dosis_mg_m2 || ""} readOnly />
+                <input id="case_dosis" type="text" value={clinical.dosis_mg_m2 ?? ""} readOnly />
               </FormField>
               <FormField label="Superficie corporal (m²)" htmlFor="case_bsa" span={3}>
-                <input id="case_bsa" type="text" value={prescription.superficie_corporal_m2 || ""} readOnly />
+                <input id="case_bsa" type="text" value={clinical.superficie_corporal_m2 ?? ""} readOnly />
+              </FormField>
+              <FormField label="Médico prescriptor" htmlFor="case_medico" span={3}>
+                <input id="case_medico" type="text" value={clinical.medico_prescriptor || ""} readOnly />
+              </FormField>
+              <FormField label="Matrícula" htmlFor="case_matricula" span={3}>
+                <input id="case_matricula" type="text" value={clinical.matricula || ""} readOnly />
+              </FormField>
+              <FormField label="Hash del contenido" htmlFor="case_payload_hash" span={6}>
+                <input id="case_payload_hash" type="text" value={presc.payload_hash || ""} readOnly title={presc.payload_hash} />
+              </FormField>
+              <FormField label="Hash actual (cadena)" htmlFor="case_current_hash" span={6}>
+                <input id="case_current_hash" type="text" value={presc.current_hash || ""} readOnly title={presc.current_hash} />
               </FormField>
             </div>
 
             <CardHeader
-              eyebrow="Validación automática"
-              title="Resultado"
-              description="Estado, probabilidad y aportes del motor híbrido reglas + ML."
+              eyebrow="Soporte de decisión"
+              title="Veredicto del motor reglas + ML"
+              description="El modelo no cierra el ciclo: la decisión final es siempre del auditor."
             />
             <div className="form-grid">
-              <FormField label="Estado" htmlFor="case_val_estado" span={4}>
+              <FormField label="Veredicto" htmlFor="case_val_estado" span={4}>
                 <div style={{ paddingTop: "8px" }}>
                   <StatusChip
-                    variant={ESTADO_VARIANT[validacion.estado] || "neutral"}
-                    label={validacion.estado || "—"}
+                    variant={ESTADO_VARIANT[ml.estado] || "neutral"}
+                    label={ml.estado || "—"}
                   />
                 </div>
               </FormField>
               <FormField label="Origen" htmlFor="case_val_origen" span={4}>
-                <input id="case_val_origen" type="text" value={validacion.origen || "—"} readOnly />
+                <input id="case_val_origen" type="text" value={ml.origen || "—"} readOnly />
               </FormField>
               <FormField label="Versión modelo" htmlFor="case_val_version" span={4}>
-                <input id="case_val_version" type="text" value={validacion.version_modelo || "—"} readOnly />
+                <input id="case_val_version" type="text" value={ml.version_modelo || "—"} readOnly />
               </FormField>
               <FormField label="Confianza del modelo" htmlFor="case_val_confianza" span={12}>
                 <ConfidenceBar
-                  value={validacion.probabilidad_concordante}
-                  low={validacion.umbral_bajo}
-                  high={validacion.umbral_alto}
-                  label={`Nivel: ${validacion.nivel_confianza || "—"}`}
+                  value={ml.probabilidad_concordante}
+                  low={ml.umbral_bajo}
+                  high={ml.umbral_alto}
+                  label={`Nivel: ${ml.nivel_confianza || "—"}`}
                 />
               </FormField>
               <FormField label="Motivos" htmlFor="case_val_motivos" span={12}>
-                {validacion.motivos && validacion.motivos.length > 0 ? (
+                {ml.motivos && ml.motivos.length > 0 ? (
                   <ul className="muted" style={{ paddingLeft: "18px", margin: 0 }}>
-                    {validacion.motivos.map((motivo, idx) => (
+                    {ml.motivos.map((motivo, idx) => (
                       <li key={idx}>{motivo}</li>
                     ))}
                   </ul>
@@ -278,10 +198,10 @@ export default function AuditCasePage() {
                   <p className="muted">Sin motivos registrados.</p>
                 )}
               </FormField>
-              {validacion.features_relevantes?.length > 0 && (
+              {ml.features_relevantes?.length > 0 && (
                 <FormField label="Aportes principales" htmlFor="case_val_aportes" span={12}>
                   <ul className="muted" style={{ paddingLeft: "18px", margin: 0 }}>
-                    {validacion.features_relevantes.map((item) => (
+                    {ml.features_relevantes.map((item) => (
                       <li key={item.feature}>
                         {item.feature}: {item.aporte}
                       </li>
@@ -289,13 +209,13 @@ export default function AuditCasePage() {
                   </ul>
                 </FormField>
               )}
-              {validacion.costo_total != null && (
+              {ml.costo_total != null && (
                 <FormField label="Costo estimado" htmlFor="case_val_costo" span={12}>
                   <div>
                     <p style={{ fontWeight: 600, margin: "0 0 0.4em" }}>
-                      Total: ${validacion.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      Total: ${ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </p>
-                    {validacion.costo_por_farmaco?.length > 0 && (
+                    {ml.costo_por_farmaco?.length > 0 && (
                       <table className="dosis-table" style={{ marginTop: "0.25em" }}>
                         <thead>
                           <tr>
@@ -305,7 +225,7 @@ export default function AuditCasePage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {validacion.costo_por_farmaco.map((item) => (
+                          {ml.costo_por_farmaco.map((item) => (
                             <tr key={item.monodroga}>
                               <td>{item.monodroga}</td>
                               <td>{item.dosis_mg}</td>
@@ -322,113 +242,67 @@ export default function AuditCasePage() {
           </section>
 
           <section className="card card-form">
-            {hasDictamen ? (
-              <>
-                <CardHeader
-                  split
-                  eyebrow="Dictamen del auditor"
-                  title="Dictamen registrado"
-                  description="Este caso ya fue dictaminado."
-                />
-                <div className="form-grid">
-                  <FormField label="Resultado" htmlFor="dict_resultado" span={4}>
-                    <div style={{ paddingTop: "8px" }}>
-                      <StatusChip
-                        variant={ESTADO_VARIANT[dictamen.resultado] || "neutral"}
-                        label={dictamen.resultado}
-                      />
-                    </div>
-                  </FormField>
-                  <FormField label="Justificación" htmlFor="dict_justificacion" span={8}>
-                    <textarea
-                      id="dict_justificacion"
-                      value={dictamen.justificacion || ""}
-                      readOnly
-                      style={{ minHeight: "80px" }}
-                    />
-                  </FormField>
-                  {dictamen.created_at && (
-                    <FormField label="Fecha" htmlFor="dict_fecha" span={4}>
-                      <input id="dict_fecha" type="text" value={formatDate(dictamen.created_at)} readOnly />
-                    </FormField>
-                  )}
-                </div>
-              </>
+            {esTerminal ? (
+              <CardHeader
+                split
+                eyebrow="Dictamen"
+                title={`Prescripción ${ESTADO_LABEL[presc.estado]?.toLowerCase() || presc.estado}`}
+                description="El ciclo de auditoría está cerrado; el dictamen quedó asentado de forma inmutable en la blockchain."
+              />
             ) : (
               <>
                 <CardHeader
-                  eyebrow="Dictamen del auditor"
-                  title="Emitir dictamen"
-                  description="Seleccioná el resultado y escribí la justificación."
+                  eyebrow="Acción de auditoría"
+                  title="Registrar acción"
+                  description="Aprobar o rechazar cierran el ciclo. Revisión marca la prescripción en revisión. Cada acción genera un nuevo hash encadenado on-chain."
                 />
-                <form onSubmit={handleDictamenSubmit}>
+                <form onSubmit={handleAccionSubmit}>
                   <div className="form-grid">
-                    <FormField label="Resultado" htmlFor="dictamen_resultado" span={12}>
+                    <FormField label="Acción" htmlFor="accion_radio" span={12}>
                       <div className="dictamen-radio-group">
-                        <label className="dictamen-radio-option">
-                          <input
-                            type="radio"
-                            name="dictamen_resultado"
-                            value="APROBADO"
-                            checked={dictamenForm.resultado === "APROBADO"}
-                            onChange={(e) =>
-                              setDictamenForm((f) => ({ ...f, resultado: e.target.value }))
-                            }
-                          />
-                          <StatusChip variant="success" label="APROBADO" />
-                        </label>
-                        <label className="dictamen-radio-option">
-                          <input
-                            type="radio"
-                            name="dictamen_resultado"
-                            value="RECHAZADO"
-                            checked={dictamenForm.resultado === "RECHAZADO"}
-                            onChange={(e) =>
-                              setDictamenForm((f) => ({ ...f, resultado: e.target.value }))
-                            }
-                          />
-                          <StatusChip variant="error" label="RECHAZADO" />
-                        </label>
-                        <label className="dictamen-radio-option">
-                          <input
-                            type="radio"
-                            name="dictamen_resultado"
-                            value="PENDIENTE_DOCS"
-                            checked={dictamenForm.resultado === "PENDIENTE_DOCS"}
-                            onChange={(e) =>
-                              setDictamenForm((f) => ({ ...f, resultado: e.target.value }))
-                            }
-                          />
-                          <StatusChip variant="warning" label="PENDIENTE_DOCS" />
-                        </label>
+                        {ACCIONES.filter(
+                          (a) => !(a.value === "revision" && presc.estado === "EN_REVISION")
+                        ).map((accion) => (
+                          <label key={accion.value} className="dictamen-radio-option">
+                            <input
+                              type="radio"
+                              name="accion_radio"
+                              value={accion.value}
+                              checked={accionForm.accion === accion.value}
+                              onChange={(e) =>
+                                setAccionForm((f) => ({ ...f, accion: e.target.value }))
+                              }
+                            />
+                            <StatusChip variant={accion.variant} label={accion.label} />
+                          </label>
+                        ))}
                       </div>
                     </FormField>
-                    <FormField label="Justificación" htmlFor="dictamen_justificacion" span={12}>
+                    <FormField label="Justificación" htmlFor="accion_justificacion" span={12}>
                       <textarea
-                        id="dictamen_justificacion"
-                        name="dictamen_justificacion"
-                        placeholder="Detallá los motivos del dictamen..."
-                        value={dictamenForm.justificacion}
+                        id="accion_justificacion"
+                        name="accion_justificacion"
+                        placeholder="Detallá los motivos de la acción (mínimo 5 caracteres)..."
+                        value={accionForm.justificacion}
                         onChange={(e) =>
-                          setDictamenForm((f) => ({ ...f, justificacion: e.target.value }))
+                          setAccionForm((f) => ({ ...f, justificacion: e.target.value }))
                         }
                         required
+                        minLength={5}
                       />
                     </FormField>
                   </div>
                   <div className="form-actions">
-                    {dictamenStatus && (
-                      <span className={`status ${dictamenStatus.type}`}>
-                        {dictamenStatus.message}
-                      </span>
+                    {accionStatus && (
+                      <span className={`status ${accionStatus.type}`}>{accionStatus.message}</span>
                     )}
                     <div className="buttons">
                       <button
                         type="submit"
                         className="btn-primary"
-                        disabled={!dictamenForm.resultado || !dictamenForm.justificacion}
+                        disabled={submitting || !accionForm.accion || accionForm.justificacion.length < 5}
                       >
-                        Registrar dictamen
+                        {submitting ? "Registrando en blockchain..." : "Registrar acción"}
                       </button>
                     </div>
                   </div>
@@ -438,98 +312,47 @@ export default function AuditCasePage() {
 
             <div style={{ marginTop: "28px", borderTop: "1px solid rgba(213,219,229,0.9)", paddingTop: "24px" }}>
               <CardHeader
-                eyebrow="Historial"
-                title="Correcciones"
-                description="Correcciones realizadas sobre esta prescripción."
+                eyebrow="Cadena de auditoría"
+                title="Eventos registrados"
+                description="Cada acción encadena un hash nuevo sobre el anterior; las tres organizaciones ven el mismo historial."
               />
-
-              {!showCorrectionForm ? (
-                <div style={{ marginBottom: "16px" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowCorrectionForm(true)}
-                  >
-                    + Agregar corrección
-                  </button>
-                </div>
+              {presc.audit_events?.length > 0 ? (
+                <table className="dosis-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Acción</th>
+                      <th>Estado resultante</th>
+                      <th>Auditor</th>
+                      <th>Justificación</th>
+                      <th>Fecha</th>
+                      <th>Tx</th>
+                      <th>Hash</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {presc.audit_events.map((event) => (
+                      <tr key={event.seq}>
+                        <td>{event.seq}</td>
+                        <td>{event.accion}</td>
+                        <td>
+                          <StatusChip
+                            variant={ESTADO_VARIANT[event.estado_resultante] || "neutral"}
+                            label={ESTADO_LABEL[event.estado_resultante] || event.estado_resultante}
+                          />
+                        </td>
+                        <td>{event.auditor}</td>
+                        <td>{event.justificacion}</td>
+                        <td>{formatDate(event.timestamp)}</td>
+                        <td title={event.tx_id}><code>{shortHash(event.tx_id)}</code></td>
+                        <td title={event.event_hash}><code>{shortHash(event.event_hash)}</code></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
-                <form className="correction-form" onSubmit={handleCorrectionSubmit}>
-                  <div className="form-grid">
-                    <FormField label="Campo" htmlFor="corr_campo" span={4}>
-                      <select
-                        id="corr_campo"
-                        name="corr_campo"
-                        value={correctionForm.campo}
-                        onChange={(e) =>
-                          setCorrectionForm((f) => ({ ...f, campo: e.target.value }))
-                        }
-                        required
-                      >
-                        <option value="" disabled>Seleccionar campo</option>
-                        {CAMPO_OPTIONS.map((campo) => (
-                          <option key={campo} value={campo}>{campo}</option>
-                        ))}
-                      </select>
-                    </FormField>
-                    <FormField label="Valor nuevo" htmlFor="corr_valor" span={4}>
-                      <input
-                        id="corr_valor"
-                        name="corr_valor"
-                        type="text"
-                        placeholder="Nuevo valor"
-                        value={correctionForm.valor_nuevo}
-                        onChange={(e) =>
-                          setCorrectionForm((f) => ({ ...f, valor_nuevo: e.target.value }))
-                        }
-                        required
-                      />
-                    </FormField>
-                    <FormField label="Justificación" htmlFor="corr_justificacion" span={4}>
-                      <input
-                        id="corr_justificacion"
-                        name="corr_justificacion"
-                        type="text"
-                        placeholder="Motivo de la corrección"
-                        value={correctionForm.justificacion}
-                        onChange={(e) =>
-                          setCorrectionForm((f) => ({ ...f, justificacion: e.target.value }))
-                        }
-                        required
-                      />
-                    </FormField>
-                  </div>
-                  <div className="form-actions">
-                    {correctionStatus && (
-                      <span className={`status ${correctionStatus.type}`}>
-                        {correctionStatus.message}
-                      </span>
-                    )}
-                    <div className="buttons">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => {
-                          setShowCorrectionForm(false);
-                          setCorrectionStatus(null);
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                      <button type="submit" className="btn-primary">
-                        Guardar corrección
-                      </button>
-                    </div>
-                  </div>
-                </form>
+                <p className="muted">Sin acciones de auditoría todavía.</p>
               )}
-
-              <DataTable
-                columns={CORRECTION_COLUMNS}
-                rows={corrections}
-                renderRow={renderCorrectionRow}
-                emptyText="No hay correcciones registradas para este caso."
-              />
             </div>
           </section>
         </section>

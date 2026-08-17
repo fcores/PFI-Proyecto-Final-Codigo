@@ -1,27 +1,22 @@
 import { get, postJson } from "./client";
 
-export async function fetchAuditQueue() {
-  const data = await get("/audit/queue");
-  return data.cases ?? [];
+// La cola de auditoria son los assets de Fabric por estado
+// (PENDIENTE_AUDITORIA | EN_REVISION), paginados por bookmark.
+export async function fetchAuditQueue({ estado = "PENDIENTE_AUDITORIA", bookmark = "", pageSize = 50 } = {}) {
+  const params = new URLSearchParams({ estado, page_size: String(pageSize) });
+  if (bookmark) params.set("bookmark", bookmark);
+  const data = await get(`/audit/queue?${params.toString()}`);
+  return {
+    prescriptions: data.prescriptions ?? [],
+    bookmark: data.bookmark ?? null,
+  };
 }
 
-export async function fetchAuditCase(caseId) {
-  return get(`/audit/cases/${caseId}`);
+export async function fetchAuditDetail(prescriptionId) {
+  return get(`/audit/${prescriptionId}`);
 }
 
-export async function createDictamen(caseId, resultado, justificacion) {
-  return postJson(`/audit/cases/${caseId}/dictamen`, { resultado, justificacion });
-}
-
-export async function createCorrection(caseId, campo, valorNuevo, justificacion) {
-  return postJson(`/audit/cases/${caseId}/corrections`, {
-    campo,
-    valor_nuevo: valorNuevo,
-    justificacion,
-  });
-}
-
-export async function fetchCorrectionHistory(caseId) {
-  const data = await get(`/audit/cases/${caseId}/history`);
-  return data.corrections ?? [];
+// accion: "revision" | "aprobar" | "rechazar"
+export async function postAuditAction(prescriptionId, accion, justificacion) {
+  return postJson(`/audit/${prescriptionId}/accion`, { accion, justificacion });
 }

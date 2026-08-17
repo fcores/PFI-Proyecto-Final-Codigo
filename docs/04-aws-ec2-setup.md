@@ -101,10 +101,10 @@ cd ~/PFI-Proyecto-Final/fabric
 ./network.sh install        # binarios + imágenes Docker (1 sola vez)
 ./network.sh up             # cripto + contenedores
 ./network.sh createChannel  # canal mychannel + peers
-./network.sh deployCC       # chaincode asset-transfer-basic + prueba
+./network.sh deployCC       # chaincode prescriptions (endorsement AND de las 3 orgs) + prueba
 ```
 
-Si todo salió bien, el último comando imprime el resultado de `GetAllAssets`
+Si todo salió bien, el último comando imprime el resultado de `ListPrescriptions`
 con los 4 assets iniciales.
 
 ---

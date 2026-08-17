@@ -1,19 +1,21 @@
-from .audit import (
-    AuditCase,
-    AuditCaseDetail,
-    AuditCaseList,
-    Correction,
-    CorrectionList,
-    CorrectionRequest,
-    Dictamen,
-    DictamenRequest,
+from .audit import AuditActionRequest, AuditDetail
+from .auth import (
+    LoginRequest,
+    LoginResponse,
+    PasswordResetRequest,
+    UserAccount,
+    UserCreateRequest,
+    UserInfo,
+    UserList,
+    UserUpdateRequest,
 )
-from .auth import LoginRequest, LoginResponse, UserInfo
 from .bulk_import import BulkImportError, BulkImportResult
 from .medication import Medication, MedicationBase, MedicationList
 from .monodrug import Monodrug, MonodrugBase, MonodrugList
 from .patient import Patient, PatientBase, PatientList
 from .prescription import (
+    AuditEvent,
+    ClinicalData,
     CostoFarmaco,
     DosisFarmaco,
     FeatureAporte,
@@ -23,6 +25,7 @@ from .prescription import (
     RecomendacionRequest,
     RecomendacionResponse,
     ValidationResult,
+    VerifyResult,
 )
 
 __all__ = [
@@ -38,6 +41,9 @@ __all__ = [
     "PrescriptionBase",
     "Prescription",
     "PrescriptionList",
+    "ClinicalData",
+    "AuditEvent",
+    "VerifyResult",
     "ValidationResult",
     "DosisFarmaco",
     "FeatureAporte",
@@ -47,14 +53,13 @@ __all__ = [
     "LoginRequest",
     "LoginResponse",
     "UserInfo",
+    "UserAccount",
+    "UserList",
+    "UserCreateRequest",
+    "UserUpdateRequest",
+    "PasswordResetRequest",
     "BulkImportError",
     "BulkImportResult",
-    "AuditCase",
-    "AuditCaseList",
-    "AuditCaseDetail",
-    "Dictamen",
-    "DictamenRequest",
-    "Correction",
-    "CorrectionRequest",
-    "CorrectionList",
+    "AuditActionRequest",
+    "AuditDetail",
 ]

@@ -10,38 +10,16 @@ from backend.ml.model_loader import cargar_modelo, modelo_disponible
 from backend.routers import (
     audit_router,
     auth_router,
-    ledger_router,
+    health_router,
     medication_router,
     monodrug_router,
     patient_router,
     prescription_router,
+    user_router,
 )
 from backend.security.phi_redactor import install_phi_filter
 
 logger = logging.getLogger(__name__)
-
-
-def _start_outbox_worker(settings) -> None:
-    """Arranca el worker del outbox en un thread daemon, si esta habilitado.
-
-    Apagado por defecto (OUTBOX_ENABLED). El SELECT ... FOR UPDATE SKIP LOCKED
-    del worker lo hace seguro con varias tasks corriendo en paralelo.
-    """
-    if not (settings.outbox_enabled and settings.fabric_gateway_url):
-        return
-    try:
-        import threading
-
-        from backend.blockchain.outbox_worker import run_outbox_loop
-
-        threading.Thread(
-            target=run_outbox_loop,
-            args=(settings.outbox_interval_seconds,),
-            daemon=True,
-        ).start()
-        logger.info("Outbox worker iniciado")
-    except Exception as exc:
-        logger.error("No se pudo iniciar el outbox worker: %s", exc, exc_info=True)
 
 
 def create_app() -> FastAPI:
@@ -49,7 +27,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     install_phi_filter()
 
-    app = FastAPI(title="MedChain AI", version="0.7.0")
+    app = FastAPI(title="MedChain AI", version="0.8.0")
     install_error_handlers(app)
 
     app.add_middleware(
@@ -67,37 +45,51 @@ def create_app() -> FastAPI:
     if not is_db_available():
         logger.warning(
             "MODO IN-MEMORY ACTIVO (solo desarrollo): sin cifrado PHI, sin UNIQUE constraints, "
-            "sin phi_access_log, sin outbox. Configurar DATABASE_URL para produccion.",
+            "sin phi_access_log ni gestion de usuarios. Configurar DATABASE_URL para produccion.",
         )
         if settings.is_production:
             raise RuntimeError("DATABASE_URL es obligatoria en produccion")
 
-    _start_outbox_worker(settings)
+    if not settings.fabric_gateway_url:
+        logger.warning(
+            "FABRIC_GATEWAY_URL no configurada: las operaciones de prescripciones "
+            "fallaran con 503. Las prescripciones viven exclusivamente en Fabric.",
+        )
 
     api = APIRouter(prefix="/api")
     api.include_router(patient_router)
     api.include_router(medication_router)
     api.include_router(monodrug_router)
     api.include_router(prescription_router)
-    api.include_router(ledger_router)
     api.include_router(auth_router)
     api.include_router(audit_router)
+    api.include_router(user_router)
+    api.include_router(health_router)
     app.include_router(api)
 
     @app.get("/")
     async def root():
-        """Health check que reporta el estado del modelo ML y la base de datos."""
+        """Health check: estado del modelo ML, la base de datos y el puente Fabric."""
         from backend.db import is_db_available
 
         try:
             artefacto = cargar_modelo()
             version = artefacto.get("version_modelo") if artefacto else None
+
+            fabric_status = "not_configured"
+            if settings.fabric_gateway_url:
+                from backend.dependencies import get_fabric_client
+
+                health = get_fabric_client().health()
+                fabric_status = health.get("status", "down") if health else "down"
+
             return {
                 "status": "ok",
                 "service": "MedChain AI",
                 "database": "connected" if is_db_available() else "in-memory",
                 "modelo_disponible": modelo_disponible(),
                 "modelo_version": version,
+                "fabric_gateway": fabric_status,
             }
         except Exception as exc:
             logger.error("Error en health check root: %s", exc, exc_info=True)
@@ -106,6 +98,7 @@ def create_app() -> FastAPI:
                 "service": "MedChain AI",
                 "modelo_disponible": False,
                 "modelo_version": None,
+                "fabric_gateway": "unknown",
             }
 
     return app

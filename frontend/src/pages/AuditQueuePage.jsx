@@ -1,112 +1,107 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
-import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import StatusChip from "../components/StatusChip";
 import { fetchAuditQueue } from "../api/audit";
-import { ESTADO_VARIANT } from "../constants/estadoVariant";
+import { ESTADO_VARIANT, ESTADO_LABEL } from "../constants/estadoVariant";
 import { formatDate } from "../utils/formatDate";
 
 const TABLE_COLUMNS = [
-  "ID Caso",
-  "Código Prescripción",
+  "Código",
   "Paciente ID",
   "Diagnóstico",
   "Estadio",
   "Esquema",
-  "Estado Validación",
+  "Veredicto ML",
+  "Confianza",
   "Fecha",
+];
+
+const TABS = [
+  { estado: "PENDIENTE_AUDITORIA", label: "Pendientes" },
+  { estado: "EN_REVISION", label: "En revisión" },
 ];
 
 export default function AuditQueuePage() {
   const navigate = useNavigate();
-  const [cases, setCases] = useState([]);
-  const [filters, setFilters] = useState({ query: "", estado: "" });
+  const [estado, setEstado] = useState("PENDIENTE_AUDITORIA");
+  const [items, setItems] = useState([]);
+  const [bookmark, setBookmark] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
-    try {
-      setCases(await fetchAuditQueue());
-    } catch {
-      setCases([]);
-    }
-  }, []);
+  const load = useCallback(
+    async (targetEstado, currentBookmark = "", append = false) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchAuditQueue({ estado: targetEstado, bookmark: currentBookmark });
+        setItems((prev) => (append ? [...prev, ...data.prescriptions] : data.prescriptions));
+        setBookmark(data.bookmark);
+      } catch (err) {
+        setError(err.message || "No se pudo leer la cola desde la red blockchain.");
+        if (!append) setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(estado);
+  }, [estado, load]);
 
   const filtered = useMemo(() => {
-    const normalizedQuery = filters.query.trim().toLowerCase();
-    const normalizedEstado = filters.estado.trim();
-
-    return cases.filter((item) => {
-      const searchableText = [
-        item.prescription_code,
-        String(item.patient_id || ""),
-        item.diagnostico_cie10,
-        item.esquema,
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return items;
+    return items.filter((presc) => {
+      const clinical = presc.clinical || {};
+      const searchable = [
+        presc.prescription_code,
+        String(clinical.patient_id || ""),
+        clinical.diagnostico_cie10,
+        clinical.esquema,
+        clinical.id_regimen,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-
-      const matchesQuery = normalizedQuery
-        ? searchableText.includes(normalizedQuery)
-        : true;
-      const matchesEstado = normalizedEstado
-        ? item.estado_validacion === normalizedEstado
-        : true;
-
-      return matchesQuery && matchesEstado;
+      return searchable.includes(normalized);
     });
-  }, [filters, cases]);
+  }, [items, query]);
 
-  const stats = useMemo(() => {
-    const total = cases.length;
-    const pending = cases.filter(
-      (c) => c.estado_validacion === "pendiente" || c.estado_validacion === "REVISION"
-    ).length;
-    const reviewed = cases.filter(
-      (c) => c.estado_validacion === "APROBADO" || c.estado_validacion === "RECHAZADO"
-    ).length;
-    return { total, pending, reviewed };
-  }, [cases]);
-
-  function updateFilter(field, value) {
-    setFilters((current) => ({ ...current, [field]: value }));
+  function formatConfianza(presc) {
+    const p = presc.ml?.probabilidad_concordante;
+    if (p == null) return "—";
+    return `${(Number(p) * 100).toFixed(0)}%`;
   }
 
-  function clearFilters() {
-    setFilters({ query: "", estado: "" });
-  }
-
-  function handleRowClick(caseId) {
-    navigate(`/auditoria/caso/${caseId}`);
-  }
-
-  function renderRow(item) {
+  function renderRow(presc) {
+    const clinical = presc.clinical || {};
     return (
       <tr
-        key={item.id}
-        onClick={() => handleRowClick(item.id)}
+        key={presc.prescription_id}
+        onClick={() => navigate(`/auditoria/caso/${presc.prescription_id}`)}
         style={{ cursor: "pointer" }}
       >
-        <td>{item.id}</td>
-        <td>{item.prescription_code}</td>
-        <td>{item.patient_id}</td>
-        <td>{item.diagnostico_cie10}</td>
-        <td>{item.estadio}</td>
-        <td>{item.esquema}</td>
+        <td>{presc.prescription_code}</td>
+        <td>{clinical.patient_id}</td>
+        <td>{clinical.diagnostico_cie10}</td>
+        <td>{clinical.estadio}</td>
+        <td>{clinical.esquema}</td>
         <td>
           <StatusChip
-            variant={ESTADO_VARIANT[item.estado_validacion] || "neutral"}
-            label={item.estado_validacion}
+            variant={ESTADO_VARIANT[presc.ml?.estado] || "neutral"}
+            label={presc.ml?.estado || "—"}
           />
         </td>
-        <td>{formatDate(item.created_at)}</td>
+        <td>{formatConfianza(presc)}</td>
+        <td>{formatDate(presc.created_at)}</td>
       </tr>
     );
   }
@@ -115,7 +110,7 @@ export default function AuditQueuePage() {
     <>
       <TopBar
         title="Cola de Auditoría"
-        subtitle="Revisá las prescripciones pendientes de dictamen por el equipo auditor."
+        subtitle="Toda prescripción nace pendiente de auditoría en la blockchain; el veredicto del modelo es soporte de decisión."
         badge="Auditoría"
       />
 
@@ -125,66 +120,71 @@ export default function AuditQueuePage() {
             <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Auditoría</span>
-                <h2>Casos pendientes de revisión</h2>
+                <h2>{ESTADO_LABEL[estado]}</h2>
                 <p className="muted">
-                  Filtrá por paciente SAP, código de prescripción o estado de validación.
+                  Prescripciones en estado {ESTADO_LABEL[estado].toLowerCase()} leídas de la red Fabric (FIFO).
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "12px" }}>
-                <PanelStat count={stats.total} singular="total" />
-                <PanelStat count={stats.pending} singular="pendiente" plural="pendientes" />
-                <PanelStat count={stats.reviewed} singular="revisado" plural="revisados" />
-              </div>
+              <PanelStat count={filtered.length} singular="caso" plural="casos" />
             </header>
 
             <div className="history-toolbar">
-              <CardHeader
-                eyebrow="Filtros"
-                title="Buscar casos"
-                description="Buscá por paciente SAP, código de prescripción o filtrá por estado."
-              />
-
               <div className="form-grid history-filters">
-                <FormField label="Buscar" htmlFor="audit_queue_query" span={8}>
-                  <input
-                    id="audit_queue_query"
-                    name="audit_queue_query"
-                    type="text"
-                    placeholder="Paciente SAP o código de prescripción"
-                    value={filters.query}
-                    onChange={(event) => updateFilter("query", event.target.value)}
-                  />
-                </FormField>
-
-                <FormField label="Estado" htmlFor="audit_queue_estado" span={4}>
+                <FormField label="Cola" htmlFor="audit_queue_tab" span={4}>
                   <select
-                    id="audit_queue_estado"
-                    name="audit_queue_estado"
-                    value={filters.estado}
-                    onChange={(event) => updateFilter("estado", event.target.value)}
+                    id="audit_queue_tab"
+                    value={estado}
+                    onChange={(event) => setEstado(event.target.value)}
                   >
-                    <option value="">Todos</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="REVISION">Revisión</option>
-                    <option value="APROBADO">Aprobado</option>
-                    <option value="RECHAZADO">Rechazado</option>
+                    {TABS.map((tab) => (
+                      <option key={tab.estado} value={tab.estado}>{tab.label}</option>
+                    ))}
                   </select>
                 </FormField>
-              </div>
-
-              <div className="history-toolbar-actions">
-                <button type="button" className="btn-secondary" onClick={clearFilters}>
-                  Limpiar filtros
-                </button>
+                <FormField label="Buscar" htmlFor="audit_queue_query" span={6}>
+                  <input
+                    id="audit_queue_query"
+                    type="text"
+                    placeholder="Código, paciente, diagnóstico o régimen"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                </FormField>
+                <FormField label=" " htmlFor="audit_queue_reload" span={2}>
+                  <button
+                    id="audit_queue_reload"
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => load(estado)}
+                    disabled={loading}
+                  >
+                    Actualizar
+                  </button>
+                </FormField>
               </div>
             </div>
+
+            {error && <p className="status error">{error}</p>}
 
             <DataTable
               columns={TABLE_COLUMNS}
               rows={filtered}
               renderRow={renderRow}
-              emptyText="No hay casos de auditoría que coincidan con los filtros."
+              emptyText={loading ? "Cargando desde la red Fabric..." : "No hay prescripciones en esta cola."}
             />
+
+            {bookmark && (
+              <div style={{ textAlign: "center", padding: "12px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => load(estado, bookmark, true)}
+                  disabled={loading}
+                >
+                  {loading ? "Cargando..." : "Cargar más"}
+                </button>
+              </div>
+            )}
           </section>
         </section>
       </main>

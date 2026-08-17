@@ -3,7 +3,7 @@
 # createChannel.sh — Crea el canal de aplicación y une orderer + peers.
 #
 #   1. osnadmin channel join   -> el orderer arranca el canal con su bloque génesis
-#   2. peer channel join       -> cada peer (Org1, Org2) se une al canal
+#   2. peer channel join       -> cada peer (Prescriptor, MedChain, Prepaga)
 #
 # Requiere que la red esté levantada (./network.sh up) y que exista el bloque
 # de génesis (generado por generateArtifacts.sh).
@@ -47,7 +47,7 @@ joinChannel() {
   setGlobals "${org}"
   local rc=1 attempt=1
   while [ ${attempt} -le ${MAX_RETRY} ]; do
-    infoln "Org${org}: peer channel join (intento ${attempt}/${MAX_RETRY})..."
+    infoln "${CORE_PEER_LOCALMSPID}: peer channel join (intento ${attempt}/${MAX_RETRY})..."
     set +e
     peer channel join -b "${BLOCKFILE}" >/dev/null 2>&1
     rc=$?
@@ -56,16 +56,17 @@ joinChannel() {
     sleep ${DELAY}
     attempt=$((attempt + 1))
   done
-  verifyResult ${rc} "Org${org}: el peer no pudo unirse al canal"
-  successln "Org${org}: peer unido al canal '${CHANNEL_NAME}'."
+  verifyResult ${rc} "${CORE_PEER_LOCALMSPID}: el peer no pudo unirse al canal"
+  successln "${CORE_PEER_LOCALMSPID}: peer unido al canal '${CHANNEL_NAME}'."
 }
 
 joinChannel 1
 joinChannel 2
+joinChannel 3
 
 # ── 3. (opcional) Verificación ───────────────────────────────────────────────
 setGlobals 1
-infoln "Canales del peer0.org1:"
+infoln "Canales del peer0.prescriptor:"
 peer channel list
 
-successln "Canal '${CHANNEL_NAME}' creado y con ambos peers unidos."
+successln "Canal '${CHANNEL_NAME}' creado con los tres peers unidos."

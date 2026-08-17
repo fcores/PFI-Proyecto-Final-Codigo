@@ -204,8 +204,8 @@ def validar_entorno():
 def construir_servicios():
     """Instancia repos y servicios a mano.
 
-    No se importa backend.dependencies a proposito: ese modulo construye
-    LedgerService a nivel de modulo y su constructor escribe el bloque genesis.
+    No se importa backend.dependencies a proposito: ese modulo construye a
+    nivel de modulo servicios que este script no necesita (Fabric, auth).
     """
     from backend.repositories.medication_repo import MedicationRepository
     from backend.repositories.monodrug_repo import MonodrugRepository

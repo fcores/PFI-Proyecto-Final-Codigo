@@ -32,9 +32,9 @@ from backend.db import get_db, is_db_available  # noqa: E402
 TABLAS_PRESERVADAS = frozenset({"users", "alembic_version"})
 
 # Secuencias standalone (no OWNED BY ninguna columna), por lo que RESTART IDENTITY
-# no las alcanza y hay que reiniciarlas explicitamente. prescription_id_seq genera
-# el prescription_code en backend/repositories/prescription_repo.py.
-SECUENCIAS_STANDALONE = ("prescription_id_seq",)
+# no las alcanza y hay que reiniciarlas explicitamente. Hoy no queda ninguna:
+# el ID de prescripcion es un ULID generado por el backend y vive en Fabric.
+SECUENCIAS_STANDALONE = ()
 
 EXIT_OK = 0
 EXIT_ERROR = 1

@@ -44,8 +44,10 @@ Une el orderer (vía `osnadmin`) y ambos peers al canal.
 ./network.sh deployCC
 ```
 
-Empaqueta, instala, aprueba y commitea el chaincode `asset-transfer-basic`,
-luego corre `InitLedger` y una query `GetAllAssets` de verificación.
+Empaqueta, instala en los 3 peers, aprueba por las 3 organizaciones y commitea
+el chaincode `prescriptions` con la política de endorsement
+`AND('PrescriptorMSP.peer','MedChainMSP.peer','PrepagaMSP.peer')`, luego corre
+`InitLedger` y una query `ListPrescriptions` de verificación.
 
 ## 5. Interactuar manualmente
 
@@ -109,5 +111,5 @@ Apaga los contenedores, borra volúmenes y elimina `organizations/`,
 | `docker: command not found` | Docker no instalado / no en PATH | Instalar Docker Desktop, abrir WSL2 |
 | `cannot connect to the Docker daemon` | Docker no está corriendo | Iniciar Docker Desktop |
 | El peer no se une al canal | red recién levantada, aún inicializando | el script reintenta; si persiste, `./network.sh down && up` |
-| `chaincode install` falla compilando Go | faltan dependencias | correr `go mod vendor` en `chaincode/asset-transfer-basic` |
+| `chaincode install` falla compilando Go | faltan dependencias | correr `go mod vendor` en `chaincode/prescription-contract` |
 | Permisos de certificados en Windows | repo en `/mnt/c/...` | clonar dentro del FS de WSL (`~/...`) |

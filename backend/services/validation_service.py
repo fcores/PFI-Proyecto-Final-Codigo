@@ -207,9 +207,7 @@ class ValidationService:
                 # RNF-15: the model alone cannot reject without an attributable rule;
                 # degrade to REVISION so a human auditor makes the final decision.
                 estado = ESTADO_REVISION
-                motivos = [
-                    "Probabilidad de concordancia baja (%.2f). Se deriva a revisión humana." % probabilidad
-                ]
+                motivos = ["Probabilidad de concordancia baja (%.2f). Se deriva a revisión humana." % probabilidad]
             else:
                 estado = ESTADO_REVISION
                 motivos = ["Probabilidad intermedia (%.2f). Se deriva a revisión humana." % probabilidad]

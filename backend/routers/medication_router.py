@@ -25,7 +25,7 @@ async def create_medication(
 ):
     """Crea un medicamento nuevo con codigo autogenerado. Requiere rol administrador."""
     user = require_auth(authorization)
-    require_role(user, ["administrador"])
+    require_role(user, ["administrador", "super_admin"])
     svc = get_medication_service()
     return svc.create(
         descripcion=descripcion,
@@ -44,8 +44,9 @@ async def create_medication(
 
 @router.get("", response_model=MedicationList)
 async def list_medications(authorization: str | None = Header(default=None)):
-    """Lista todos los medicamentos. Requiere autenticacion."""
-    require_auth(authorization)
+    """Lista todos los medicamentos (lectura para prescribir o administrar)."""
+    user = require_auth(authorization)
+    require_role(user, ["prescriptor", "administrador", "super_admin"])
     svc = get_medication_service()
     return svc.list_all()
 
@@ -57,7 +58,7 @@ async def bulk_import_medications(
 ):
     """Importa medicamentos masivamente desde Excel. Requiere rol administrador."""
     user = require_auth(authorization)
-    require_role(user, ["administrador"])
+    require_role(user, ["administrador", "super_admin"])
     svc = get_medication_service()
     file_bytes = await file.read()
     return svc.bulk_import(file_bytes, file.filename or "medicamentos.xlsx")

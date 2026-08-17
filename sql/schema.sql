@@ -1,3 +1,8 @@
+-- Esquema de la RDS. Solo datos maestros y operacionales NO sensibles a
+-- adulteracion: usuarios/sesiones, monodrogas, medicamentos y pacientes
+-- (PHI cifrado + indices ciegos). Las PRESCRIPCIONES y su auditoria viven
+-- exclusivamente en Hyperledger Fabric (chaincode `prescriptions`).
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(100) UNIQUE NOT NULL,
@@ -5,10 +10,23 @@ CREATE TABLE IF NOT EXISTS users (
     salt VARCHAR(64) NOT NULL,
     display_name VARCHAR(200) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'prescriptor'
-        CONSTRAINT chk_users_role CHECK (role IN ('administrador', 'prescriptor', 'auditor')),
+        CONSTRAINT chk_users_role CHECK (role IN ('administrador', 'prescriptor', 'auditor', 'super_admin')),
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Sesiones persistentes (token opaco hasheado con SHA-256). Permite multiples
+-- replicas del backend sin sesiones pegajosas.
+CREATE TABLE IF NOT EXISTS auth_tokens (
+    token_hash CHAR(64) PRIMARY KEY,
+    username VARCHAR(100) NOT NULL,
+    display_name VARCHAR(200) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_auth_tokens_expires_at ON auth_tokens(expires_at);
 
 CREATE TABLE IF NOT EXISTS monodrugs (
     id SERIAL PRIMARY KEY,
@@ -51,7 +69,6 @@ CREATE TABLE IF NOT EXISTS patients (
     lab_filename VARCHAR(500),
     receta_filename VARCHAR(500),
     otros_filename VARCHAR(500),
-    blockchain_tx_id VARCHAR(256),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     -- PHI cifrado (AES-256-GCM, formato v1:<key_version>:<nonce_b64>:<ct_b64>)
     first_name_enc TEXT,
@@ -71,114 +88,6 @@ CREATE TABLE IF NOT EXISTS patients (
 
 CREATE INDEX IF NOT EXISTS ix_patients_last_name_bidx ON patients(last_name_bidx);
 CREATE INDEX IF NOT EXISTS ix_patients_first_name_bidx ON patients(first_name_bidx);
-
-CREATE SEQUENCE IF NOT EXISTS prescription_id_seq START WITH 1 INCREMENT BY 1;
-
-CREATE TABLE IF NOT EXISTS prescriptions (
-    id SERIAL PRIMARY KEY,
-    prescription_code VARCHAR(50) NOT NULL UNIQUE,
-    patient_id BIGINT NOT NULL CONSTRAINT fk_prescriptions_patient_id REFERENCES patients(id) ON DELETE RESTRICT,
-    edad INTEGER NOT NULL,
-    sexo VARCHAR(50) NOT NULL,
-    peso_kg NUMERIC(10,2) NOT NULL,
-    talla_cm NUMERIC(10,2) NOT NULL,
-    superficie_corporal_m2 NUMERIC(10,4) NOT NULL,
-    diagnostico_cie10 VARCHAR(100) NOT NULL,
-    localizacion_tumor VARCHAR(200) NOT NULL,
-    tipo_histologico VARCHAR(200) NOT NULL,
-    t VARCHAR(50) NOT NULL,
-    n VARCHAR(50) NOT NULL,
-    m VARCHAR(50) NOT NULL,
-    estadio VARCHAR(50) NOT NULL,
-    msi VARCHAR(20) NOT NULL DEFAULT 'no_evaluado'
-        CONSTRAINT chk_prescriptions_msi CHECK (msi IN ('MSI-H', 'MSS', 'no_evaluado')),
-    ras VARCHAR(20) NOT NULL DEFAULT 'no_evaluado'
-        CONSTRAINT chk_prescriptions_ras CHECK (ras IN ('wild_type', 'mutado', 'no_evaluado')),
-    braf_v600e VARCHAR(20) NOT NULL DEFAULT 'no_evaluado'
-        CONSTRAINT chk_prescriptions_braf CHECK (braf_v600e IN ('presente', 'wild_type', 'no_evaluado')),
-    linea_tratamiento VARCHAR(100) NOT NULL,
-    id_regimen VARCHAR(10) NOT NULL,
-    esquema VARCHAR(500) NOT NULL,
-    dosis_por_farmaco JSONB DEFAULT '[]',
-    dosis_mg_m2 NUMERIC(10,2) NOT NULL,
-    medico_prescriptor VARCHAR(200) NOT NULL,
-    matricula VARCHAR(100) NOT NULL,
-    estado_validacion VARCHAR(50) NOT NULL
-        CONSTRAINT chk_prescriptions_estado_validacion
-        CHECK (estado_validacion IN ('APROBADO', 'RECHAZADO', 'REVISION', 'APROBADO_AUDITORIA', 'RECHAZADO_AUDITORIA')),
-    motivos_validacion JSONB DEFAULT '[]',
-    probabilidad_concordante NUMERIC(10,6),
-    nivel_confianza VARCHAR(50),
-    umbral_bajo NUMERIC(10,6),
-    umbral_alto NUMERIC(10,6),
-    origen_validacion VARCHAR(50),
-    version_modelo VARCHAR(50),
-    features_relevantes JSONB DEFAULT '[]',
-    costo_por_farmaco JSONB DEFAULT '[]',
-    costo_total NUMERIC(14,2),
-    -- Referencia al ledger interno (sincrono, siempre disponible)
-    blockchain_tx_id VARCHAR(256),
-    block_index INTEGER,
-    -- Referencia a Hyperledger Fabric (asincrono via outbox, opcional)
-    estado_commit VARCHAR(20) NOT NULL DEFAULT 'pendiente'
-        CONSTRAINT chk_prescriptions_estado_commit CHECK (estado_commit IN ('pendiente', 'confirmado', 'fallido')),
-    tx_id VARCHAR(256),
-    block_number INTEGER,
-    payload_hash VARCHAR(64),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS ix_prescriptions_patient_id ON prescriptions(patient_id);
-CREATE INDEX IF NOT EXISTS ix_prescriptions_estado_commit ON prescriptions(estado_commit);
-
-CREATE TABLE IF NOT EXISTS ledger_blocks (
-    index INTEGER PRIMARY KEY,
-    timestamp TIMESTAMPTZ NOT NULL,
-    tx_type VARCHAR(100) NOT NULL,
-    payload JSONB NOT NULL DEFAULT '{}',
-    prev_hash VARCHAR(256) NOT NULL,
-    hash VARCHAR(256) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS audit_cases (
-    id SERIAL PRIMARY KEY,
-    prescription_id INTEGER NOT NULL REFERENCES prescriptions(id) ON DELETE RESTRICT,
-    status VARCHAR(50) NOT NULL DEFAULT 'pendiente'
-        CONSTRAINT chk_audit_cases_status CHECK (status IN ('pendiente', 'en_revision', 'dictaminado')),
-    assigned_auditor VARCHAR(100) REFERENCES users(username) ON DELETE SET NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS ix_audit_cases_prescription_id ON audit_cases(prescription_id);
-CREATE INDEX IF NOT EXISTS ix_audit_cases_status ON audit_cases(status);
-
-CREATE TABLE IF NOT EXISTS dictamenes (
-    id SERIAL PRIMARY KEY,
-    audit_case_id INTEGER NOT NULL REFERENCES audit_cases(id) ON DELETE CASCADE,
-    resultado VARCHAR(50) NOT NULL
-        CONSTRAINT chk_dictamenes_resultado CHECK (resultado IN ('aprobado', 'rechazado')),
-    justificacion TEXT NOT NULL,
-    auditor_username VARCHAR(100) NOT NULL REFERENCES users(username) ON DELETE RESTRICT,
-    blockchain_tx_id VARCHAR(256),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS ix_dictamenes_audit_case_id ON dictamenes(audit_case_id);
-
-CREATE TABLE IF NOT EXISTS corrections (
-    id SERIAL PRIMARY KEY,
-    audit_case_id INTEGER NOT NULL REFERENCES audit_cases(id) ON DELETE CASCADE,
-    campo VARCHAR(200) NOT NULL,
-    valor_anterior TEXT NOT NULL,
-    valor_nuevo TEXT NOT NULL,
-    justificacion TEXT NOT NULL,
-    auditor_username VARCHAR(100) NOT NULL REFERENCES users(username) ON DELETE RESTRICT,
-    blockchain_tx_id VARCHAR(256),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS ix_corrections_audit_case_id ON corrections(audit_case_id);
 
 -- Auditoria de acceso a datos PHI
 CREATE TABLE IF NOT EXISTS phi_access_log (
@@ -203,20 +112,3 @@ CREATE TABLE IF NOT EXISTS patient_name_tokens (
 
 CREATE INDEX IF NOT EXISTS ix_patient_name_tokens_bidx ON patient_name_tokens(token_bidx);
 CREATE INDEX IF NOT EXISTS ix_patient_name_tokens_patient_id ON patient_name_tokens(patient_id);
-
--- Cola durable de commits a Fabric (patron outbox, con idempotencia)
-CREATE TABLE IF NOT EXISTS prescription_outbox (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    prescription_id BIGINT NOT NULL REFERENCES prescriptions(id) ON DELETE RESTRICT,
-    idempotency_key VARCHAR(100) NOT NULL UNIQUE,
-    payload TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending'
-        CONSTRAINT chk_outbox_status CHECK (status IN ('pending', 'processing', 'committed', 'failed', 'dead_letter')),
-    attempts INTEGER NOT NULL DEFAULT 0,
-    last_error TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS ix_outbox_status ON prescription_outbox(status);
-CREATE INDEX IF NOT EXISTS ix_outbox_prescription_id ON prescription_outbox(prescription_id);

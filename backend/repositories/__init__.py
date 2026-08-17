@@ -1,15 +1,13 @@
-from .audit_repo import AuditRepository
-from .ledger_repo import LedgerRepository
+from .fabric_prescription_repo import FabricPrescriptionRepository
 from .medication_repo import MedicationRepository
 from .monodrug_repo import MonodrugRepository
 from .patient_repo import PatientRepository
-from .prescription_repo import PrescriptionRepository
+from .user_repo import UserRepository
 
 __all__ = [
     "PatientRepository",
     "MedicationRepository",
     "MonodrugRepository",
-    "PrescriptionRepository",
-    "LedgerRepository",
-    "AuditRepository",
+    "FabricPrescriptionRepository",
+    "UserRepository",
 ]

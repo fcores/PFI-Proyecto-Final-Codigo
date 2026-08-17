@@ -41,6 +41,40 @@ class ConflictError(DomainError):
 def install_error_handlers(app: FastAPI) -> None:
     """Instala handlers globales de excepciones en la app FastAPI."""
 
+    from backend.blockchain.fabric_client import FabricBusinessError, FabricUnavailableError
+
+    @app.exception_handler(FabricUnavailableError)
+    async def fabric_unavailable_handler(request: Request, exc: FabricUnavailableError):
+        correlation_id = request.headers.get("x-correlation-id", str(uuid.uuid4()))
+        logger.error("Fabric no disponible [%s]: %s", correlation_id, str(exc))
+        return JSONResponse(
+            status_code=503,
+            content={
+                "type": "fabric_unavailable",
+                "title": "La red blockchain no esta disponible. Intenta nuevamente en unos minutos.",
+                "detail": str(exc),
+                "status": 503,
+                "instance": str(request.url.path),
+                "correlation_id": correlation_id,
+            },
+        )
+
+    @app.exception_handler(FabricBusinessError)
+    async def fabric_business_handler(request: Request, exc: FabricBusinessError):
+        correlation_id = request.headers.get("x-correlation-id", str(uuid.uuid4()))
+        return JSONResponse(
+            status_code=409,
+            content={
+                "type": f"fabric_{exc.error_type}",
+                "title": "La red blockchain rechazo la operacion.",
+                "detail": str(exc),
+                "status": 409,
+                "instance": str(request.url.path),
+                "correlation_id": correlation_id,
+                "tx_id": exc.tx_id,
+            },
+        )
+
     @app.exception_handler(DomainError)
     async def domain_error_handler(request: Request, exc: DomainError):
         correlation_id = request.headers.get("x-correlation-id", str(uuid.uuid4()))

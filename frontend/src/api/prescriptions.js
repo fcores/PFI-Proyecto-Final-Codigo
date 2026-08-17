@@ -1,8 +1,29 @@
 import { get, postJson } from "./client";
 
-export async function fetchPrescriptions() {
-  const data = await get("/prescriptions");
-  return data.prescriptions ?? [];
+// Las prescripciones viven en Fabric: los listados se paginan por bookmark
+// ("Cargar más"), no por offset.
+export async function fetchPrescriptions({ estado = "", bookmark = "", pageSize = 50 } = {}) {
+  const params = new URLSearchParams({ page_size: String(pageSize) });
+  if (estado) params.set("estado", estado);
+  if (bookmark) params.set("bookmark", bookmark);
+  const data = await get(`/prescriptions?${params.toString()}`);
+  return {
+    prescriptions: data.prescriptions ?? [],
+    bookmark: data.bookmark ?? null,
+  };
+}
+
+export async function fetchPrescription(prescriptionId) {
+  return get(`/prescriptions/${prescriptionId}`);
+}
+
+export async function fetchPrescriptionHistory(prescriptionId) {
+  const data = await get(`/prescriptions/${prescriptionId}/history`);
+  return data.history ?? [];
+}
+
+export async function verifyPrescription(prescriptionId) {
+  return get(`/prescriptions/${prescriptionId}/verify`);
 }
 
 export async function createPrescription(body) {

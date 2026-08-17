@@ -66,6 +66,50 @@ jobs:
         run: |
           pytest tests/ --cov=backend/security --cov-report=term-missing --cov-fail-under=30
 
+  chaincode-tests:
+    name: Chaincode Tests (go test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: chaincode/prescription-contract/go.mod
+
+      - name: Resolver dependencias
+        working-directory: chaincode/prescription-contract
+        run: go mod tidy
+
+      - name: Vet
+        working-directory: chaincode/prescription-contract
+        run: go vet ./...
+
+      - name: Tests (transiciones, MSP, vectores de hash compartidos)
+        working-directory: chaincode/prescription-contract
+        run: go test ./...
+
+  gateway-build:
+    name: Gateway Build (fabric-gateway-svc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: fabric-gateway-svc/go.mod
+
+      - name: Resolver dependencias
+        working-directory: fabric-gateway-svc
+        run: go mod tidy
+
+      - name: Vet + build
+        working-directory: fabric-gateway-svc
+        run: |
+          go vet ./...
+          go build ./...
+
   frontend-lint:
     name: Frontend Lint (ESLint)
     runs-on: ubuntu-latest

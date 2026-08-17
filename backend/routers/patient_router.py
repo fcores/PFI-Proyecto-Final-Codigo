@@ -31,7 +31,7 @@ async def create_patient(
 ):
     """Crea un paciente nuevo. Requiere rol administrador."""
     user = require_auth(authorization)
-    require_role(user, ["administrador"])
+    require_role(user, ["administrador", "super_admin"])
     svc = get_patient_service()
     return svc.create(
         credential_id=credential_id,
@@ -60,7 +60,8 @@ async def list_patients(
     authorization: str | None = Header(default=None),
 ):
     """Lista pacientes con paginacion. Con ?q= busca por nombre/apellido."""
-    require_auth(authorization)
+    user = require_auth(authorization)
+    require_role(user, ["prescriptor", "administrador", "super_admin"])
     svc = get_patient_service()
     if q:
         patients = svc.search(q)
@@ -74,7 +75,8 @@ async def get_patient(
     authorization: str | None = Header(default=None),
 ):
     """Obtiene un paciente por ID."""
-    require_auth(authorization)
+    user = require_auth(authorization)
+    require_role(user, ["prescriptor", "administrador", "super_admin"])
     svc = get_patient_service()
     patient = svc.find_by_id(patient_id)
     if not patient:
@@ -89,7 +91,7 @@ async def bulk_import_patients(
 ):
     """Importa pacientes masivamente desde Excel. Requiere rol administrador."""
     user = require_auth(authorization)
-    require_role(user, ["administrador"])
+    require_role(user, ["administrador", "super_admin"])
     svc = get_patient_service()
     file_bytes = await file.read()
     return svc.bulk_import(file_bytes, file.filename or "pacientes.xlsx")
