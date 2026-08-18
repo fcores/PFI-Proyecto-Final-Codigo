@@ -1,5 +1,12 @@
 # 01 — Prerequisitos
 
+> **Alcance:** esto es lo que hace falta para levantar la **red Fabric en tu
+> máquina**. No aplica al resto del proyecto: el backend, el frontend y los
+> tests no necesitan Docker ni Fabric (los tests usan un doble del chaincode), y
+> el despliegue y la operación en AWS van por el pipeline y por SSM.
+> Ver la tabla *"Qué necesitás según lo que vengas a hacer"* en el
+> [README](../README.md).
+
 ## Software necesario
 
 | Herramienta      | Versión recomendada | Para qué                                  |

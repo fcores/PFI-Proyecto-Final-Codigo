@@ -82,7 +82,28 @@ Proyecto Final de Ingeniería Informática (UADE).
 
 ## Instalación y ejecución (app: frontend + backend)
 
-### Requisitos previos
+### Qué necesitás según lo que vengas a hacer
+
+No hace falta instalar todo. La red Fabric corre en la EC2, así que Docker solo
+es necesario si vas a levantar una red **en tu máquina**.
+
+| Vengo a… | Necesito | No necesito |
+|---|---|---|
+| **Desarrollar el backend** | Python 3.11+ | Docker, Fabric, Go. Postgres es opcional |
+| **Desarrollar el frontend** | Node.js 18+ y npm | Nada más |
+| **Correr los tests** | Python 3.11+ | Docker, Fabric ni Postgres — los tests usan un doble del chaincode |
+| **Tocar el chaincode** | Go 1.21+ (tests) y, para probarlo de verdad, Docker | — |
+| **Levantar la red Fabric local** | Docker + Docker Compose (en Windows, **WSL2**) | — |
+| **Desplegar** | Nada: lo hace el pipeline | — |
+| **Operar la red en AWS** | AWS CLI (va por SSM, sin SSH) | Docker local |
+
+> Los tests corren contra
+> [`tests/fakes/fake_fabric_gateway.py`](tests/fakes/fake_fabric_gateway.py), que
+> replica la máquina de estados, el control de acceso por actor, el hashing
+> encadenado y la paginación por bookmark del chaincode real. Por eso `pytest`
+> pasa sin blockchain ni base de datos levantadas.
+
+### Requisitos previos (app)
 
 - Python 3.11+
 - Node.js 18+
@@ -224,9 +245,16 @@ La carpeta `fabric/` contiene una red **Hyperledger Fabric 2.5 LTS** reproducibl
 
 #### Quickstart de la red
 
+> **Esto es opcional.** La red de producción ya corre en la EC2; levantar una
+> propia solo hace falta si vas a iterar sobre el chaincode sin pushear cada
+> cambio. Para desarrollar el backend o el frontend, correr los tests, desplegar
+> u operar la red en AWS, **no necesitás nada de esto**.
+>
 > **Requisito:** Docker + Docker Compose corriendo.
 > - En **AWS EC2** (recomendado, sin fricción): ver [docs/04-aws-ec2-setup.md](docs/04-aws-ec2-setup.md).
 > - En **Windows** local: **WSL2 + Docker Desktop**, ver [docs/01-prerequisitos.md](docs/01-prerequisitos.md).
+>   Fabric son ocho contenedores Linux y sus scripts son shell de Unix; en
+>   Windows, Docker Desktop necesita WSL2 como backend para correrlos.
 
 ```bash
 cd fabric
