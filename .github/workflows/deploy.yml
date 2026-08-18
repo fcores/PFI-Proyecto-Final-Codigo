@@ -133,12 +133,22 @@ jobs:
         run: |
           set -euo pipefail
           EXPECTED="${{ steps.ecs-deploy.outputs.deployment_id }}"
-          read -r CURRENT STATE REASON <<< "$(aws ecs describe-services \
-            --cluster "${{ env.ECS_CLUSTER }}" \
-            --services "${{ env.ECS_SERVICE }}" \
-            --region "${{ env.AWS_REGION }}" \
-            --query "services[0].deployments[?status=='PRIMARY'].[id,rolloutState,rolloutStateReason] | [0]" \
-            --output text)"
+
+          # 'services-stable' vuelve en cuanto runningCount == desiredCount, pero
+          # ECS marca rolloutState=COMPLETED unos segundos despues. Sin este poll
+          # el paso leia IN_PROGRESS y fallaba un deploy perfectamente sano.
+          for _ in $(seq 1 40); do
+            read -r CURRENT STATE REASON <<< "$(aws ecs describe-services \
+              --cluster "${{ env.ECS_CLUSTER }}" \
+              --services "${{ env.ECS_SERVICE }}" \
+              --region "${{ env.AWS_REGION }}" \
+              --query "services[0].deployments[?status=='PRIMARY'].[id,rolloutState,rolloutStateReason] | [0]" \
+              --output text)"
+            # Un rollback cambia el PRIMARY: no tiene sentido seguir esperando.
+            [ "${CURRENT}" != "${EXPECTED}" ] && break
+            [ "${STATE}" != "IN_PROGRESS" ] && break
+            sleep 15
+          done
 
           echo "Deployment esperado: ${EXPECTED}"
           echo "Deployment actual:   ${CURRENT} (${STATE})"
