@@ -161,12 +161,16 @@ completo" y aun así nada funcionaba.
 | 10 | Backend arriba y `/` en `ok`, pero `GET /api/patients` responde 500: `the JSON object must be str, bytes or bytearray, not list` | La 005 pasa `patients.medications` de TEXT a JSONB. Como **nunca se había aplicado**, el cambio de tipo recién surtió efecto ahora: psycopg2 devuelve una lista ya deserializada y el repo le seguía aplicando `json.loads` | `patient_repo._load_medications()` acepta lista, dict o str, así que funciona contra una base migrada y contra una que todavía no lo está |
 | 11 | Toda alta responde 409: `no combination of peers can be derived which satisfy the endorsement policy` | `configtx.yaml` no declaraba **`AnchorPeers`** en ninguna org. Sin anchor peers el gossip no cruza organizaciones: el Gateway SDK solo descubre los peers de su propia org y nunca puede reunir las tres firmas que exige la política AND | Se declaran los 3 anchor peers en `configtx.yaml`. Quedan en el bloque de génesis, así que **hay que rehacer el canal** |
 
-> **El bloqueante 11 es el más instructivo del lote.** La red levantaba, el canal
-> se creaba, el chaincode se commiteaba y las *lecturas* andaban: fallaba
-> únicamente al **escribir**. El smoke test del pipeline (`curl /health`) y el
-> `ListPrescriptions` de `deployCC` pasaban los dos. Si el pipeline hubiera
-> ejercitado una escritura real —aunque fuese contra un asset de descarte— se
-> habría detectado meses antes.
+| 12 | `GET /api/prescriptions/{id}/verify` devuelve `valido: false` con `payload_hash no coincide` para **toda** prescripción real | El chaincode no re-serializa el payload, pero el world state **sí pasa por CouchDB**, que normaliza los números: se hashea `"talla_cm":174.0` y al releer vuelve `"talla_cm":174`. La cadena de `event_hash` verificaba bien; fallaba solo la reconstrucción del payload | `canonical_json()` normaliza los floats integrales a entero antes de serializar, que es la forma que sobrevive el round-trip. Los vectores compartidos con Go usan enteros, así que no cambian |
+
+> **Los bloqueantes 11 y 12 son los más instructivos del lote**, y por el mismo
+> motivo: el pipeline nunca ejercitó una **escritura**. La red levantaba, el
+> canal se creaba, el chaincode se commiteaba y las lecturas andaban; el smoke
+> test (`curl /health`) y el `ListPrescriptions` de `deployCC` pasaban los dos.
+> El 11 rompía toda alta y el 12 invalidaba la garantía de no adulteración —que
+> es la tesis del trabajo— y ninguno era visible sin dar de alta una
+> prescripción y verificarla. Vale la pena agregar al pipeline un alta contra un
+> asset de descarte seguida de su `/verify`.
 
 > Los tipos de registro de un service de Cloud Map **no se pueden cambiar**
 > (`A` → `SRV` da `InvalidInput`): hay que crear un service nuevo y repuntar
