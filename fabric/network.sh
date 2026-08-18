@@ -96,11 +96,24 @@ networkDown() {
   cc=$(docker ps -aq --filter "name=dev-peer" 2>/dev/null || true)
   [ -n "${cc}" ] && docker rm -f ${cc} >/dev/null 2>&1 || true
 
+  # Contrapartida de grantGatewayAccessToIdentities(): las identidades User1
+  # quedaron a nombre del uid del gateway, así que el usuario que corre este
+  # script ya no puede borrarlas y el rm -rf falla con "Permission denied",
+  # dejando material criptográfico viejo que rompe el siguiente `up`.
+  if [ -d "${NETWORK_DIR}/organizations" ] && [ ! -w "${NETWORK_DIR}/organizations" ] \
+     || ! rm -rf "${NETWORK_DIR}/organizations" 2>/dev/null; then
+    sudo chown -R "$(id -u):$(id -g)" "${NETWORK_DIR}/organizations" 2>/dev/null || true
+  fi
+
   infoln "Limpiando artefactos generados..."
   rm -rf "${NETWORK_DIR}/organizations" \
          "${NETWORK_DIR}/channel-artifacts" \
          "${NETWORK_DIR}/system-genesis-block"
   rm -f "${NETWORK_DIR}"/*.tar.gz
+
+  if [ -d "${NETWORK_DIR}/organizations" ]; then
+    fatalln "No se pudo borrar ${NETWORK_DIR}/organizations. Reintentá con: sudo rm -rf ${NETWORK_DIR}/organizations"
+  fi
   successln "Red apagada y limpia."
 }
 

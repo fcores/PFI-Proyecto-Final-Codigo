@@ -159,6 +159,14 @@ completo" y aun así nada funcionaba.
 
 | 9 | El job `deploy-blockchain` muere en el primer comando: `fatal: $HOME not set` | `AWS-RunShellScript` corre como root sin `HOME`, y `git config --global` lo necesita para ubicar `~/.gitconfig` | El job exporta `HOME`, agrega Go al `PATH` y corre git + `deployCC` como `ubuntu` (`-H`), que además es el dueño del repo |
 | 10 | Backend arriba y `/` en `ok`, pero `GET /api/patients` responde 500: `the JSON object must be str, bytes or bytearray, not list` | La 005 pasa `patients.medications` de TEXT a JSONB. Como **nunca se había aplicado**, el cambio de tipo recién surtió efecto ahora: psycopg2 devuelve una lista ya deserializada y el repo le seguía aplicando `json.loads` | `patient_repo._load_medications()` acepta lista, dict o str, así que funciona contra una base migrada y contra una que todavía no lo está |
+| 11 | Toda alta responde 409: `no combination of peers can be derived which satisfy the endorsement policy` | `configtx.yaml` no declaraba **`AnchorPeers`** en ninguna org. Sin anchor peers el gossip no cruza organizaciones: el Gateway SDK solo descubre los peers de su propia org y nunca puede reunir las tres firmas que exige la política AND | Se declaran los 3 anchor peers en `configtx.yaml`. Quedan en el bloque de génesis, así que **hay que rehacer el canal** |
+
+> **El bloqueante 11 es el más instructivo del lote.** La red levantaba, el canal
+> se creaba, el chaincode se commiteaba y las *lecturas* andaban: fallaba
+> únicamente al **escribir**. El smoke test del pipeline (`curl /health`) y el
+> `ListPrescriptions` de `deployCC` pasaban los dos. Si el pipeline hubiera
+> ejercitado una escritura real —aunque fuese contra un asset de descarte— se
+> habría detectado meses antes.
 
 > Los tipos de registro de un service de Cloud Map **no se pueden cambiar**
 > (`A` → `SRV` da `InvalidInput`): hay que crear un service nuevo y repuntar
