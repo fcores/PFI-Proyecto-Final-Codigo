@@ -53,6 +53,13 @@ Organizations:
       Endorsement:
         Type: Signature
         Rule: "OR('PrescriptorMSP.peer')"
+    # Sin anchor peers el gossip no cruza organizaciones: el Gateway SDK no
+    # descubre peers de las otras orgs y toda escritura falla con
+    # "no peer combination can satisfy the endorsement policy" (la politica
+    # del chaincode es AND de las tres).
+    AnchorPeers:
+      - Host: peer0.prescriptor.medchain.com
+        Port: 7051
 
   - &MedChain
     Name: MedChainMSP
@@ -71,6 +78,13 @@ Organizations:
       Endorsement:
         Type: Signature
         Rule: "OR('MedChainMSP.peer')"
+    # Sin anchor peers el gossip no cruza organizaciones: el Gateway SDK no
+    # descubre peers de las otras orgs y toda escritura falla con
+    # "no peer combination can satisfy the endorsement policy" (la politica
+    # del chaincode es AND de las tres).
+    AnchorPeers:
+      - Host: peer0.auditoria.medchain.com
+        Port: 9051
 
   - &Prepaga
     Name: PrepagaMSP
@@ -89,6 +103,13 @@ Organizations:
       Endorsement:
         Type: Signature
         Rule: "OR('PrepagaMSP.peer')"
+    # Sin anchor peers el gossip no cruza organizaciones: el Gateway SDK no
+    # descubre peers de las otras orgs y toda escritura falla con
+    # "no peer combination can satisfy the endorsement policy" (la politica
+    # del chaincode es AND de las tres).
+    AnchorPeers:
+      - Host: peer0.prepaga.medchain.com
+        Port: 11051
 
 ################################################################################
 #   Capacidades (capabilities) — habilitan features según versión de Fabric
