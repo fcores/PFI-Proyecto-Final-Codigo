@@ -158,6 +158,7 @@ completo" y aun así nada funcionaba.
 | 8 | `TestSinTimeNowEnElContrato` falla siempre | Hacía `strings.Contains(src, "time.Now(")` y matcheaba el **comentario** de `contract.go` que documenta la prohibición | Ahora inspecciona el AST buscando la llamada real |
 
 | 9 | El job `deploy-blockchain` muere en el primer comando: `fatal: $HOME not set` | `AWS-RunShellScript` corre como root sin `HOME`, y `git config --global` lo necesita para ubicar `~/.gitconfig` | El job exporta `HOME`, agrega Go al `PATH` y corre git + `deployCC` como `ubuntu` (`-H`), que además es el dueño del repo |
+| 10 | Backend arriba y `/` en `ok`, pero `GET /api/patients` responde 500: `the JSON object must be str, bytes or bytearray, not list` | La 005 pasa `patients.medications` de TEXT a JSONB. Como **nunca se había aplicado**, el cambio de tipo recién surtió efecto ahora: psycopg2 devuelve una lista ya deserializada y el repo le seguía aplicando `json.loads` | `patient_repo._load_medications()` acepta lista, dict o str, así que funciona contra una base migrada y contra una que todavía no lo está |
 
 > Los tipos de registro de un service de Cloud Map **no se pueden cambiar**
 > (`A` → `SRV` da `InvalidInput`): hay que crear un service nuevo y repuntar
