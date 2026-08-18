@@ -296,6 +296,58 @@ Más detalle en [docs/03-uso.md](docs/03-uso.md).
 
 Para la guía paso a paso de configuración de la blockchain, ver [`ARQUITECTURA PASO A PASO.md`](ARQUITECTURA%20PASO%20A%20PASO.md).
 
+## Pruebas
+
+### Tests automatizados
+
+```bash
+pytest tests/ -q
+```
+
+Corren sin Docker, sin Fabric y sin base de datos: usan un doble del chaincode
+([`tests/fakes/fake_fabric_gateway.py`](tests/fakes/fake_fabric_gateway.py)) que
+replica la maquina de estados, el control de acceso por actor, el hashing
+encadenado y la paginacion por bookmark.
+
+Los tests del chaincode van aparte (necesitan Go):
+
+```bash
+cd chaincode/prescription-contract && go test ./...
+```
+
+Incluyen dos guard-rails que valen la pena conocer: uno falla si alguien
+introduce `time.Now()` en el contrato (rompe el determinismo que exige el
+endorsement) y otro si una rich query queda sin su indice CouchDB.
+
+### Verificacion end-to-end contra un entorno desplegado
+
+```bash
+python scripts/verificacion_e2e.py                          # contra produccion
+python scripts/verificacion_e2e.py http://127.0.0.1:9999    # contra local
+```
+
+Recorre el circuito completo y despues **intenta romperlo**, que es la parte que
+demuestra algo:
+
+| Bloque | Que comprueba |
+|--------|---------------|
+| Plataforma | API Gateway enruta, el backend ve la red, las 3 orgs en linea |
+| Alta | Nace `PENDIENTE_AUDITORIA` con TxID real de Fabric y `payload_hash` |
+| Auditoria | `revision` → `aprobar`, 3 transacciones en el ledger |
+| Estado terminal | La red **rechaza** modificar una prescripcion ya `APROBADA` |
+| Cadena de hashes | El sistema la declara valida **y** se recomputa por fuera |
+| Adulteracion | Cambiar un dato clinico o reescribir una justificacion **rompe** el hash |
+| Control de acceso | Un prescriptor no puede auditar; solo `super_admin` gestiona usuarios |
+
+La recomputacion externa importa: no se cree lo que dice `/verify`, se recalcula
+el hash desde el contenido con el mismo codigo que documenta
+[docs/HASHING.md](docs/HASHING.md). Es lo que podria hacer la prepaga por su
+cuenta.
+
+> Cada corrida deja una prescripcion real y aprobada en el ledger (medico
+> `Dr. Verificacion E2E`). No se puede borrar: el chaincode no expone `delete` y
+> los estados finales son terminales.
+
 ## Despliegue en AWS
 
 La aplicacion esta desplegada y **operativa** en:
