@@ -26,6 +26,7 @@ env:
   ECR_REPOSITORY: medchain-backend
   ECS_CLUSTER: medchain-cluster
   ECS_SERVICE: medchain-backend-svc
+  ECS_TASK_FAMILY: medchain-backend
   S3_BUCKET: medchain-frontend-007072540405-007072540405-us-east-1-an
   CLOUDFRONT_DISTRIBUTION_ID: E3UXMQZNKANQDB
   AWS_ACCOUNT_ID: "007072540405"
@@ -101,12 +102,16 @@ jobs:
           docker push "$IMAGE_URI"
 
       - name: Force new ECS deployment
+        id: ecs-deploy
         run: |
-          aws ecs update-service \
+          DEPLOY_ID=$(aws ecs update-service \
             --cluster "${{ env.ECS_CLUSTER }}" \
             --service "${{ env.ECS_SERVICE }}" \
             --force-new-deployment \
-            --region "${{ env.AWS_REGION }}"
+            --region "${{ env.AWS_REGION }}" \
+            --query "service.deployments[?status=='PRIMARY'].id | [0]" --output text)
+          echo "Deployment nuevo: ${DEPLOY_ID}"
+          echo "deployment_id=${DEPLOY_ID}" >> "$GITHUB_OUTPUT"
 
       # El contenedor corre 'alembic upgrade head' al arrancar. Si una migracion
       # falla, la task no llega a estado healthy y este paso marca el job en rojo
@@ -117,6 +122,51 @@ jobs:
             --cluster "${{ env.ECS_CLUSTER }}" \
             --services "${{ env.ECS_SERVICE }}" \
             --region "${{ env.AWS_REGION }}"
+
+      # 'services-stable' NO alcanza como criterio de exito: el servicio tiene
+      # deploymentCircuitBreaker.rollback=true, asi que si las tasks nuevas no
+      # arrancan ECS revierte a la revision anterior y el servicio igual llega a
+      # steady state. El wait retorna 0 y el deploy fallado queda en verde.
+      # (Paso el 2026-08-17: el backend nuevo crasheaba por falta de
+      # FABRIC_GATEWAY_URL, ECS rollbackeo y el pipeline no lo reporto.)
+      - name: Verificar que el deployment no haya sido revertido
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ steps.ecs-deploy.outputs.deployment_id }}"
+          read -r CURRENT STATE REASON <<< "$(aws ecs describe-services \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --services "${{ env.ECS_SERVICE }}" \
+            --region "${{ env.AWS_REGION }}" \
+            --query "services[0].deployments[?status=='PRIMARY'].[id,rolloutState,rolloutStateReason] | [0]" \
+            --output text)"
+
+          echo "Deployment esperado: ${EXPECTED}"
+          echo "Deployment actual:   ${CURRENT} (${STATE})"
+
+          if [ "${CURRENT}" != "${EXPECTED}" ]; then
+            echo "::error::ECS revirtio el deployment (circuit breaker). El codigo nuevo NO esta corriendo."
+            echo "Motivo reportado: ${REASON}"
+            echo "--- Ultimos eventos del servicio ---"
+            aws ecs describe-services --cluster "${{ env.ECS_CLUSTER }}" \
+              --services "${{ env.ECS_SERVICE }}" --region "${{ env.AWS_REGION }}" \
+              --query 'services[0].events[0:10].message' --output text
+            echo "--- Logs de la ultima task detenida ---"
+            STREAM=$(aws logs describe-log-streams \
+              --log-group-name "/ecs/${{ env.ECS_TASK_FAMILY }}" \
+              --region "${{ env.AWS_REGION }}" \
+              --order-by LastEventTime --descending --limit 1 \
+              --query 'logStreams[0].logStreamName' --output text)
+            aws logs get-log-events --log-group-name "/ecs/${{ env.ECS_TASK_FAMILY }}" \
+              --log-stream-name "${STREAM}" --region "${{ env.AWS_REGION }}" \
+              --start-from-head --limit 50 --query 'events[].message' --output text || true
+            exit 1
+          fi
+
+          if [ "${STATE}" != "COMPLETED" ]; then
+            echo "::error::rolloutState=${STATE}: ${REASON}"
+            exit 1
+          fi
+          echo "Deployment ${CURRENT} completado sin rollback."
 
   deploy-frontend:
     name: Deploy Frontend (S3 + CloudFront)

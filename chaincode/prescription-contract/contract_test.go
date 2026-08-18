@@ -1,7 +1,13 @@
 package main
 
 import (
+	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -130,12 +136,93 @@ func TestClampPageSize(t *testing.T) {
 // local de tiempo produce write-sets distintos por endorser y la transaccion
 // falla por ENDORSEMENT_POLICY_FAILURE. Los timestamps deben salir de
 // GetTxTimestamp() o del payload firmado.
+// Se parsea el AST en vez de buscar la cadena "time.Now(" en el fuente: el
+// propio contract.go documenta la regla en un comentario, y un strings.Contains
+// matchea ese comentario y falla siempre (falso positivo).
 func TestSinTimeNowEnElContrato(t *testing.T) {
+	fset := token.NewFileSet()
+	archivo, err := parser.ParseFile(fset, "contract.go", nil, 0)
+	if err != nil {
+		t.Fatalf("no se pudo parsear contract.go: %v", err)
+	}
+
+	ast.Inspect(archivo, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "Now" {
+			return true
+		}
+		if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "time" {
+			t.Errorf("%s: contract.go llama time.Now(): fuente de no-determinismo "+
+				"prohibida en chaincode (usar GetTxTimestamp)",
+				fset.Position(call.Pos()))
+		}
+		return true
+	})
+}
+
+const indexDir = "META-INF/statedb/couchdb/indexes"
+
+var (
+	reSort  = regexp.MustCompile(`"sort":\[(.*?)\]`)
+	reCampo = regexp.MustCompile(`"([^"]+)":"(?:asc|desc)"`)
+)
+
+// Guard-rail de rich queries: CouchDB/Mango rechaza en RUNTIME cualquier query
+// con "sort" que no tenga un indice que cubra exactamente esos campos, en ese
+// orden ("No index exists for this sort, try indexing by the sort fields").
+// El chaincode compila y los tests unitarios pasan igual, asi que sin este test
+// la falta de un indice recien aparece en la cola de auditoria ya desplegada.
+func TestRichQueriesTienenIndiceCouchDB(t *testing.T) {
 	src, err := os.ReadFile("contract.go")
 	if err != nil {
 		t.Fatalf("no se pudo leer contract.go: %v", err)
 	}
-	if strings.Contains(string(src), "time.Now(") {
-		t.Error("contract.go usa time.Now(): fuente de no-determinismo prohibida en chaincode")
+
+	archivos, err := filepath.Glob(filepath.Join(indexDir, "*.json"))
+	if err != nil {
+		t.Fatalf("no se pudo listar %s: %v", indexDir, err)
+	}
+
+	indices := make(map[string]string) // "campo1|campo2" -> archivo
+	for _, ruta := range archivos {
+		raw, err := os.ReadFile(ruta)
+		if err != nil {
+			t.Fatalf("no se pudo leer %s: %v", ruta, err)
+		}
+		var idx struct {
+			Index struct {
+				Fields []string `json:"fields"`
+			} `json:"index"`
+		}
+		if err := json.Unmarshal(raw, &idx); err != nil {
+			t.Fatalf("%s no es JSON valido: %v", ruta, err)
+		}
+		if len(idx.Index.Fields) == 0 {
+			t.Errorf("%s no declara index.fields", ruta)
+			continue
+		}
+		indices[strings.Join(idx.Index.Fields, "|")] = ruta
+	}
+
+	sorts := reSort.FindAllStringSubmatch(string(src), -1)
+	if len(sorts) == 0 {
+		t.Fatal("no se encontro ningun \"sort\" en contract.go: revisar este test")
+	}
+
+	for _, s := range sorts {
+		var campos []string
+		for _, c := range reCampo.FindAllStringSubmatch(s[1], -1) {
+			campos = append(campos, c[1])
+		}
+		clave := strings.Join(campos, "|")
+		if _, ok := indices[clave]; !ok {
+			t.Errorf("el sort por %v no tiene indice en %s; agregar un .json con "+
+				"index.fields = %v o la query falla en runtime contra CouchDB",
+				campos, indexDir, campos)
+		}
 	}
 }

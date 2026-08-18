@@ -97,7 +97,9 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          # fabric-gateway v1.11.0 exige Go >= 1.25. Mantener alineado con
+          # fabric-gateway-svc/go.mod y con su Dockerfile.
+          go-version: "1.25"
           cache-dependency-path: fabric-gateway-svc/go.mod
 
       - name: Resolver dependencias

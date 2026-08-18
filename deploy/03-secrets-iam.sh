@@ -42,6 +42,21 @@ EXEC_ROLE_ARN=$(aws iam create-role \
 aws iam attach-role-policy --role-name "${EXEC_ROLE_NAME}" \
   --policy-arn "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 
+# El execution role es el que resuelve el bloque "secrets" de la task definition
+# AL ARRANCAR la task. 04-ecs-cluster.sh toma DATABASE_URL de ${DB_SECRET_ARN},
+# que es un secreto DISTINTO de ${SECRET_ARN}: si no esta en esta policy, la task
+# no arranca ("ResourceInitializationError: unable to pull secrets").
+# DB_SECRET_ARN lo escribe 07-rds.sh, que corre despues que este script; por eso
+# se agrega solo si ya existe y hay que RE-EJECUTAR 03 despues de 07.
+SECRET_RESOURCES="\"${SECRET_ARN}\""
+if [ -n "${DB_SECRET_ARN:-}" ]; then
+  SECRET_RESOURCES="${SECRET_RESOURCES}, \"${DB_SECRET_ARN}\""
+else
+  echo "AVISO: DB_SECRET_ARN no esta en .env.deploy todavia."
+  echo "       Volve a correr 03-secrets-iam.sh DESPUES de 07-rds.sh,"
+  echo "       o la task ECS no va a poder resolver DATABASE_URL."
+fi
+
 cat > /tmp/secrets-policy.json <<SECRETS
 {
   "Version": "2012-10-17",
@@ -50,7 +65,7 @@ cat > /tmp/secrets-policy.json <<SECRETS
     "Action": [
       "secretsmanager:GetSecretValue"
     ],
-    "Resource": "${SECRET_ARN}"
+    "Resource": [${SECRET_RESOURCES}]
   }]
 }
 SECRETS
@@ -62,7 +77,7 @@ aws iam put-role-policy \
 
 echo "EXEC_ROLE_ARN=${EXEC_ROLE_ARN}"
 
-echo "=== Creando task role (permisos de la app, vacio por ahora) ==="
+echo "=== Creando task role (permisos de la app en runtime) ==="
 TASK_ROLE_NAME="${PROJECT}-ecs-task-role"
 TASK_ROLE_ARN=$(aws iam create-role \
   --role-name "${TASK_ROLE_NAME}" \
@@ -71,6 +86,31 @@ TASK_ROLE_ARN=$(aws iam create-role \
   aws iam get-role --role-name "${TASK_ROLE_NAME}" --query 'Role.Arn' --output text)
 echo "TASK_ROLE_ARN=${TASK_ROLE_ARN}"
 
+# A diferencia de los demas secretos, ENCRYPTION_SECRET_ARN NO se inyecta como
+# "secrets" de la task definition: se pasa como env var y la app lo lee sola en
+# runtime (backend/security/key_manager.py). Por eso el permiso va al TASK role,
+# no al execution role.
+if [ -n "${ENCRYPTION_SECRET_ARN:-}" ]; then
+  cat > /tmp/encryption-policy.json <<ENCPOL
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["secretsmanager:GetSecretValue"],
+    "Resource": "${ENCRYPTION_SECRET_ARN}"
+  }]
+}
+ENCPOL
+  aws iam put-role-policy \
+    --role-name "${TASK_ROLE_NAME}" \
+    --policy-name "AllowEncryptionKeyRead" \
+    --policy-document file:///tmp/encryption-policy.json
+  echo "Task role con acceso a ${ENCRYPTION_SECRET_ARN}"
+else
+  echo "AVISO: ENCRYPTION_SECRET_ARN no definido: el cifrado de PHI va a fallar"
+  echo "       en la primera operacion con pacientes (falla lazy, no al arrancar)."
+fi
+
 cat >> "${SCRIPT_DIR}/.env.deploy" <<EOF
 SECRET_ARN=${SECRET_ARN}
 EXEC_ROLE_ARN=${EXEC_ROLE_ARN}
@@ -78,4 +118,4 @@ TASK_ROLE_ARN=${TASK_ROLE_ARN}
 EOF
 echo "ARNs guardados en deploy/.env.deploy"
 
-rm -f /tmp/trust-policy.json /tmp/secrets-policy.json
+rm -f /tmp/trust-policy.json /tmp/secrets-policy.json /tmp/encryption-policy.json

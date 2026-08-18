@@ -151,15 +151,34 @@ BEGIN
 
     -- =====================================================================
     -- P2: Migrar columnas TEXT con JSON a JSONB
+    --
+    -- Las columnas tienen DEFAULT '[]'::text. Postgres NO castea el default
+    -- automaticamente al cambiar el tipo y aborta con:
+    --   default for column "..." cannot be cast automatically to type jsonb
+    -- Por eso hay que soltar el default, cambiar el tipo y reponerlo ya en JSONB.
     -- =====================================================================
+    ALTER TABLE prescriptions
+        ALTER COLUMN dosis_por_farmaco DROP DEFAULT,
+        ALTER COLUMN motivos_validacion DROP DEFAULT,
+        ALTER COLUMN features_relevantes DROP DEFAULT,
+        ALTER COLUMN costo_por_farmaco DROP DEFAULT;
+
     ALTER TABLE prescriptions
         ALTER COLUMN dosis_por_farmaco TYPE JSONB USING dosis_por_farmaco::jsonb,
         ALTER COLUMN motivos_validacion TYPE JSONB USING motivos_validacion::jsonb,
         ALTER COLUMN features_relevantes TYPE JSONB USING features_relevantes::jsonb,
         ALTER COLUMN costo_por_farmaco TYPE JSONB USING costo_por_farmaco::jsonb;
 
+    ALTER TABLE prescriptions
+        ALTER COLUMN dosis_por_farmaco SET DEFAULT '[]'::jsonb,
+        ALTER COLUMN motivos_validacion SET DEFAULT '[]'::jsonb,
+        ALTER COLUMN features_relevantes SET DEFAULT '[]'::jsonb,
+        ALTER COLUMN costo_por_farmaco SET DEFAULT '[]'::jsonb;
+
+    ALTER TABLE patients ALTER COLUMN medications DROP DEFAULT;
     ALTER TABLE patients
         ALTER COLUMN medications TYPE JSONB USING medications::jsonb;
+    ALTER TABLE patients ALTER COLUMN medications SET DEFAULT '[]'::jsonb;
 
     -- =====================================================================
     -- P2: ledger_blocks.timestamp a TIMESTAMPTZ

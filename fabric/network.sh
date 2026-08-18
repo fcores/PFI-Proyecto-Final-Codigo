@@ -42,6 +42,36 @@ checkPrereqs() {
   docker info >/dev/null 2>&1 || fatalln "El daemon de Docker no está corriendo."
 }
 
+# El contenedor del gateway corre como usuario no-root (uid 10001, ver
+# fabric-gateway-svc/Dockerfile) pero cryptogen genera las claves privadas con
+# permisos 600 del usuario del host. Sin esto el gateway arranca y falla con
+# "error leyendo clave privada: ... permission denied" en las tres orgs.
+# Se le ceden solo las identidades User1 que el gateway usa; el resto del
+# material criptográfico no se toca.
+grantGatewayAccessToIdentities() {
+  local orgs_dir="${NETWORK_DIR}/organizations"
+  local gateway_uid=10001
+  [ -d "${orgs_dir}" ] || return 0
+
+  # Traversal de directorios para el uid del gateway
+  find "${orgs_dir}" -type d -exec chmod o+rx {} + 2>/dev/null || true
+
+  local org d
+  for org in prescriptor auditoria prepaga; do
+    d="${orgs_dir}/peerOrganizations/${org}.medchain.com/users/User1@${org}.medchain.com/msp"
+    if [ -d "${d}" ]; then
+      chown -R "${gateway_uid}:${gateway_uid}" "${d}" 2>/dev/null \
+        || sudo chown -R "${gateway_uid}:${gateway_uid}" "${d}" 2>/dev/null \
+        || { warnln "No se pudo ceder ${d} al uid ${gateway_uid}; el gateway puede fallar."; continue; }
+      chmod 600 "${d}"/keystore/* 2>/dev/null || true
+    fi
+  done
+
+  # Certificados de CA/TLS que el gateway lee para conectarse a los peers
+  find "${orgs_dir}" \( -name 'ca.crt' -o -name 'tlsca.*-cert.pem' \) \
+    -exec chmod o+r {} + 2>/dev/null || true
+}
+
 networkUp() {
   checkPrereqs
   # Generar artefactos si aún no existen
@@ -50,6 +80,7 @@ networkUp() {
   else
     infoln "Artefactos ya presentes — se omite generación."
   fi
+  grantGatewayAccessToIdentities
   infoln "Levantando contenedores..."
   dockerCompose up -d
   successln "Red levantada. Contenedores:"

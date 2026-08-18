@@ -1,6 +1,6 @@
 module fabric-gateway-svc
 
-go 1.23
+go 1.25
 
 require (
 	github.com/hyperledger/fabric-gateway v1.11.0

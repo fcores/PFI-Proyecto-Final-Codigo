@@ -25,9 +25,42 @@ while true; do
 done
 
 echo "=== Obteniendo Cloud Map service ARN ==="
-CLOUDMAP_SVC_ARN=$(aws servicediscovery list-services --region "${AWS_REGION}" \
-  --query "Services[?Name=='${CLOUDMAP_SERVICE}'].Arn" --output text)
+# CRITICO: tiene que ser EXACTAMENTE el service donde ECS auto-registra las
+# tasks (el que 04-ecs-cluster.sh pasa en --service-registries). Si apunta a
+# otro, API Gateway resuelve IPs muertas y devuelve 503 en TODAS las rutas.
+#
+# list-services SIN filtro de namespace devuelve servicios homonimos de otros
+# namespaces; con --output text salen separados por tab y el ARN queda corrupto.
+# Por eso: filtrar por NAMESPACE_ID y tomar | [0].
+if [ -n "${CLOUDMAP_SVC_ARN:-}" ]; then
+  echo "Reutilizando CLOUDMAP_SVC_ARN de .env.deploy"
+else
+  NS_ID="${NAMESPACE_ID:-$(aws servicediscovery list-namespaces --region "${AWS_REGION}" \
+    --query "Namespaces[?Name=='${CLOUDMAP_NAMESPACE}'].Id | [0]" --output text)}"
+  CLOUDMAP_SVC_ARN=$(aws servicediscovery list-services --region "${AWS_REGION}" \
+    --filters "Name=NAMESPACE_ID,Values=${NS_ID},Condition=EQ" \
+    --query "Services[?Name=='${CLOUDMAP_SERVICE}'].Arn | [0]" --output text)
+fi
+
+if [ -z "${CLOUDMAP_SVC_ARN}" ] || [ "${CLOUDMAP_SVC_ARN}" = "None" ]; then
+  echo "ERROR: no se encontro el Cloud Map service '${CLOUDMAP_SERVICE}'." >&2
+  echo "       Corre 04-ecs-cluster.sh primero." >&2
+  exit 1
+fi
 echo "Cloud Map Service: ${CLOUDMAP_SVC_ARN}"
+
+# Chequeo de coherencia: el service elegido debe ser el mismo que usa el ECS
+# service. Si divergen, el API Gateway queda roto de entrada.
+ECS_REGISTRY_ARN=$(aws ecs describe-services --cluster "${ECS_CLUSTER}" \
+  --services "${ECS_SERVICE}" --region "${AWS_REGION}" \
+  --query 'services[0].serviceRegistries[0].registryArn' --output text 2>/dev/null || echo "")
+if [ -n "${ECS_REGISTRY_ARN}" ] && [ "${ECS_REGISTRY_ARN}" != "None" ] \
+   && [ "${ECS_REGISTRY_ARN}" != "${CLOUDMAP_SVC_ARN}" ]; then
+  echo "ERROR: el Cloud Map service no coincide con el que usa ECS." >&2
+  echo "  ECS registra en: ${ECS_REGISTRY_ARN}" >&2
+  echo "  API GW usaria:   ${CLOUDMAP_SVC_ARN}" >&2
+  exit 1
+fi
 
 echo "=== Creando HTTP API ==="
 API_ID=$(aws apigatewayv2 create-api \

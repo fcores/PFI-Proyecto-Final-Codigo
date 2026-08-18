@@ -10,7 +10,17 @@ source "${SCRIPT_DIR}/.env.deploy"
 # variables en production (fail-fast). FABRIC_GATEWAY_URL apunta al puente en
 # la EC2 (IP privada, puerto 8081); GATEWAY_AUTH_TOKEN debe existir como clave
 # dentro del secreto ${SECRET_ARN} y coincidir con fabric/network/.env de la EC2.
-: "${FABRIC_GATEWAY_URL:?Definir FABRIC_GATEWAY_URL en .env.deploy (ej: http://10.0.x.x:8081)}"
+: "${FABRIC_GATEWAY_URL:?Definir FABRIC_GATEWAY_URL en .env.deploy (ej: http://172.31.x.x:8081)}"
+
+# DB_SECRET_ARN lo agrega 07-rds.sh a .env.deploy; sin el, DATABASE_URL no se
+# resuelve y la task no arranca. Se valida aca para fallar con un mensaje util
+# en vez de con "unbound variable" a mitad del heredoc.
+: "${DB_SECRET_ARN:?Definir DB_SECRET_ARN en .env.deploy (lo escribe 07-rds.sh)}"
+
+# ENCRYPTION_SECRET_ARN es la clave maestra de cifrado de PHI. key_manager.py
+# la exige en production, pero falla lazy (en la primera operacion con pacientes),
+# no al arrancar: si falta, la task levanta "sana" y revienta despues.
+: "${ENCRYPTION_SECRET_ARN:?Definir ENCRYPTION_SECRET_ARN en .env.deploy (secreto medchain/encryption-key)}"
 
 echo "=== Creando Cloud Map namespace ==="
 NAMESPACE_OP=$(aws servicediscovery create-http-namespace \
@@ -24,7 +34,7 @@ if [ "${NAMESPACE_OP}" != "exists" ]; then
 fi
 
 NAMESPACE_ID=$(aws servicediscovery list-namespaces --region "${AWS_REGION}" \
-  --query "Namespaces[?Name=='${CLOUDMAP_NAMESPACE}'].Id" --output text)
+  --query "Namespaces[?Name=='${CLOUDMAP_NAMESPACE}'].Id | [0]" --output text)
 echo "NAMESPACE_ID=${NAMESPACE_ID}"
 
 echo "=== Creando cluster ECS ==="
@@ -58,7 +68,8 @@ cat > /tmp/task-def.json <<TASKDEF
       ],
       "environment": [
         {"name": "ENVIRONMENT", "value": "production"},
-        {"name": "FABRIC_GATEWAY_URL", "value": "${FABRIC_GATEWAY_URL}"}
+        {"name": "FABRIC_GATEWAY_URL", "value": "${FABRIC_GATEWAY_URL}"},
+        {"name": "ENCRYPTION_SECRET_ARN", "value": "${ENCRYPTION_SECRET_ARN}"}
       ],
       "secrets": [
         {"name": "AUTH_USERNAME",     "valueFrom": "${SECRET_ARN}:AUTH_USERNAME::"},
@@ -93,6 +104,22 @@ TASK_DEF_ARN=$(aws ecs register-task-definition \
   --query 'taskDefinition.taskDefinitionArn' --output text)
 echo "TASK_DEF_ARN=${TASK_DEF_ARN}"
 
+echo "=== Creando/reutilizando Cloud Map service ==="
+# Ojo: list-services SIN filtro de namespace devuelve servicios homonimos de
+# OTROS namespaces (con --output text salen separados por tab, y el ARN queda
+# corrupto). Es lo que dejo a API Gateway apuntando a un service equivocado.
+# Siempre filtrar por NAMESPACE_ID y tomar | [0].
+CLOUDMAP_SVC_ARN=$(aws servicediscovery create-service \
+  --name "${CLOUDMAP_SERVICE}" \
+  --namespace-id "${NAMESPACE_ID}" \
+  --dns-config "NamespaceId=${NAMESPACE_ID},DnsRecords=[{Type=A,TTL=10}]" \
+  --region "${AWS_REGION}" \
+  --query 'Service.Arn' --output text 2>/dev/null || \
+  aws servicediscovery list-services --region "${AWS_REGION}" \
+    --filters "Name=NAMESPACE_ID,Values=${NAMESPACE_ID},Condition=EQ" \
+    --query "Services[?Name=='${CLOUDMAP_SERVICE}'].Arn | [0]" --output text)
+echo "CLOUDMAP_SVC_ARN=${CLOUDMAP_SVC_ARN}"
+
 echo "=== Creando servicio ECS con Cloud Map ==="
 aws ecs create-service \
   --cluster "${ECS_CLUSTER}" \
@@ -101,14 +128,7 @@ aws ecs create-service \
   --desired-count 1 \
   --launch-type FARGATE \
   --network-configuration "awsvpcConfiguration={subnets=[${SUBNET_A},${SUBNET_B}],securityGroups=[${SG_ECS}],assignPublicIp=ENABLED}" \
-  --service-registries "registryArn=$(aws servicediscovery create-service \
-    --name "${CLOUDMAP_SERVICE}" \
-    --namespace-id "${NAMESPACE_ID}" \
-    --dns-config "NamespaceId=${NAMESPACE_ID},DnsRecords=[{Type=A,TTL=10}]" \
-    --region "${AWS_REGION}" \
-    --query 'Service.Arn' --output text 2>/dev/null || \
-    aws servicediscovery list-services --region "${AWS_REGION}" \
-    --query \"Services[?Name=='${CLOUDMAP_SERVICE}'].Arn\" --output text)" \
+  --service-registries "registryArn=${CLOUDMAP_SVC_ARN}" \
   --region "${AWS_REGION}" \
   --query 'service.serviceArn' --output text
 
@@ -123,6 +143,7 @@ echo "Task corriendo: ${TASK_ARN}"
 cat >> "${SCRIPT_DIR}/.env.deploy" <<EOF
 NAMESPACE_ID=${NAMESPACE_ID}
 TASK_DEF_ARN=${TASK_DEF_ARN}
+CLOUDMAP_SVC_ARN=${CLOUDMAP_SVC_ARN}
 EOF
 
 rm -f /tmp/task-def.json

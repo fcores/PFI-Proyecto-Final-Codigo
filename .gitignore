@@ -194,6 +194,9 @@ __marimo__/
 !frontend/**/tsconfig*.json
 !frontend/**/jsconfig.json
 !.vscode/extensions.json
+# Indices de CouchDB del chaincode: se empaquetan con el chaincode en deployCC.
+# Sin ellos las rich queries con "sort" fallan en runtime contra CouchDB.
+!chaincode/**/META-INF/statedb/couchdb/indexes/*.json
 !.vscode/settings.json
 !ml_models/artefactos/categorias_modelo.json
 !ml_models/artefactos/metricas_modelo.json
