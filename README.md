@@ -270,17 +270,35 @@ Para la guía paso a paso de configuración de la blockchain, ver [`ARQUITECTURA
 
 ## Despliegue en AWS
 
-La aplicacion esta desplegada en produccion en:
+La aplicacion esta desplegada y **operativa** en:
 
 **https://d3qe3o25c33oqd.cloudfront.net**
 
+> Estado verificado el 18/08/2026 con 25/25 checks end-to-end: alta on-chain con
+> TxID real de Fabric, ciclo completo de auditoria, cadena de hashes en
+> `valido: true`, los 3 peers en verde y la RDS sin rastro off-chain. El detalle
+> del despliegue y de los bloqueantes que aparecieron esta en
+> [docs/06-deploy-cambios-onchain.md](docs/06-deploy-cambios-onchain.md).
+
 ### Arquitectura en la nube
 
-| Capa | Servicio AWS | Descripcion |
-|------|-------------|-------------|
-| **Frontend** | S3 + CloudFront | SPA estatica servida con HTTPS |
-| **Backend** | ECS Fargate + API Gateway HTTP API | Contenedor Docker serverless |
-| **Blockchain** | EC2 dedicada | Red Fabric 2.5 con Docker |
+| Capa | Servicio AWS | Identificador | Descripcion |
+|------|-------------|---------------|-------------|
+| **Frontend** | S3 + CloudFront | `E3UXMQZNKANQDB` | SPA estatica servida con HTTPS |
+| **Entrada API** | API Gateway HTTP API + VPC Link | `vl5nsf5jt5` / `q6olhm` | Enruta al backend por red privada |
+| **Service discovery** | Cloud Map | `srv-ty4v27ve53xropsy` | Registros **SRV** (IP + puerto); ECS registra sus tasks solo |
+| **Backend** | ECS Fargate | `medchain-backend-svc`, task def `:5` | Contenedor Docker serverless |
+| **Datos maestros** | RDS PostgreSQL 16 | `medchain-db` | Usuarios, pacientes (PHI cifrada), medicamentos |
+| **Blockchain** | EC2 `t3.large` | `i-0331b3fbeaadee294` | Orderer + 3 peers + 3 CouchDB + gateway |
+| **Conectividad** | VPC peering | `pcx-040412e3bff5c43a4` | Une `medchain-vpc` (10.0/16) con la VPC de la EC2 (172.31/16) |
+| **Secretos** | Secrets Manager | `medchain/*` | auth, base, clave de cifrado, PAT de GitHub |
+
+El backend llega al gateway de Fabric por la **IP privada** `172.31.89.189:8081`
+a traves del peering: ese puerto solo acepta trafico desde `10.0.0.0/16` y el
+trafico nunca sale a internet.
+
+> Inventario completo con todos los IDs en
+> [docs/06 §9](docs/06-deploy-cambios-onchain.md).
 
 ### URLs de produccion
 
@@ -293,24 +311,34 @@ La aplicacion esta desplegada en produccion en:
 
 ### Guias de despliegue
 
-> Para entender **como funciona todo** (infraestructura, frontend, backend y
-> blockchain) antes de meterse con el despliegue:
-> [docs/07-como-funciona-todo.md](docs/07-como-funciona-todo.md).
+> **Empeza por aca si no conoces el sistema:**
+> [docs/07-como-funciona-todo.md](docs/07-como-funciona-todo.md) explica de forma
+> didactica como quedo todo — infraestructura, frontend, backend y blockchain —
+> y sigue una prescripcion de punta a punta.
 
-- **Cambios on-chain (que falta para deployarlos):** [docs/06-deploy-cambios-onchain.md](docs/06-deploy-cambios-onchain.md)
+- **Despliegue on-chain en AWS (que se hizo y con que se tropezo):** [docs/06-deploy-cambios-onchain.md](docs/06-deploy-cambios-onchain.md)
 - **Paso a paso por consola web:** [docs/05-deploy-aws-consola.md](docs/05-deploy-aws-consola.md)
 - **Scripts automatizados (CLI):** ver carpeta `deploy/`
 - **Blockchain en EC2:** [docs/04-aws-ec2-setup.md](docs/04-aws-ec2-setup.md)
+- **Convencion de hashing verificable:** [docs/HASHING.md](docs/HASHING.md)
 
-### Actualizar el frontend en produccion
+### Actualizar en produccion
+
+> Lo normal es **pushear a `desarrollo`** y dejar que el pipeline haga el
+> trabajo, o usar *Run workflow* si no hay cambios de codigo. Los comandos
+> manuales de abajo quedan como via de escape: no verifican rollback ni corren
+> los tests.
+
+#### Frontend (manual)
 
 ```bash
 cd frontend
 npm run build
 aws s3 sync dist/ s3://medchain-frontend-007072540405-007072540405-us-east-1-an/ --delete
+aws cloudfront create-invalidation --distribution-id E3UXMQZNKANQDB --paths '/*'
 ```
 
-### Actualizar el backend en produccion
+#### Backend (manual)
 
 ```bash
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 007072540405.dkr.ecr.us-east-1.amazonaws.com
@@ -320,6 +348,69 @@ docker push 007072540405.dkr.ecr.us-east-1.amazonaws.com/medchain-backend:latest
 aws ecs update-service --cluster medchain-cluster --service medchain-backend-svc --force-new-deployment --region us-east-1
 ```
 
+### Apagar y volver a encender (ahorro de costos)
+
+El orden importa, sobre todo al encender.
+
+> ⚠️ **Nunca uses `network.sh down` para apagar.** Ese comando hace
+> `docker compose down --volumes` y ademas borra `organizations/`: te destruye
+> **el ledger y el material criptografico**. Es para rehacer la red de cero.
+> Para apagar alcanza con detener la EC2.
+
+**Bajar** — de arriba hacia abajo:
+
+```bash
+# 1. ECS a cero primero, para que no quede crasheando contra servicios caidos
+aws ecs update-service --cluster medchain-cluster --service medchain-backend-svc \
+  --desired-count 0 --region us-east-1
+
+# 2. La EC2 (los contenedores de Fabric se detienen con ella)
+aws ec2 stop-instances --instance-ids i-0331b3fbeaadee294 --region us-east-1
+
+# 3. La base
+aws rds stop-db-instance --db-instance-identifier medchain-db --region us-east-1
+```
+
+**Levantar** — de abajo hacia arriba, respetando las esperas:
+
+```bash
+# 1. RDS PRIMERO: el backend hace fail-fast y corre migraciones al arrancar
+aws rds start-db-instance --db-instance-identifier medchain-db --region us-east-1
+aws rds wait db-instance-available --db-instance-identifier medchain-db --region us-east-1
+
+# 2. La EC2
+aws ec2 start-instances --instance-ids i-0331b3fbeaadee294 --region us-east-1
+aws ec2 wait instance-running --instance-ids i-0331b3fbeaadee294 --region us-east-1
+
+# 3. Levantar Fabric a mano: el compose NO declara `restart:`, asi que los
+#    contenedores quedan apagados al bootear
+aws ssm send-command --instance-ids i-0331b3fbeaadee294 \
+  --document-name AWS-RunShellScript --region us-east-1 --timeout-seconds 600 \
+  --parameters 'commands=["sudo -u ubuntu -H bash -lc \"cd ~/PFI-Proyecto-Final/fabric && ./network.sh up\"","sleep 20","curl -sf http://localhost:8081/health"]'
+
+# 4. ECS al final, cuando el gateway ya responde
+aws ecs update-service --cluster medchain-cluster --service medchain-backend-svc \
+  --desired-count 1 --region us-east-1
+aws ecs wait services-stable --cluster medchain-cluster --services medchain-backend-svc --region us-east-1
+
+# 5. Verificar
+curl -s https://vl5nsf5jt5.execute-api.us-east-1.amazonaws.com/
+#    esperado: "database":"connected" y "fabric_gateway":"ok"
+```
+
+Tres cosas que no hace falta rehacer:
+
+- **La IP privada de la EC2 no cambia** al detenerla (AWS la conserva mientras la
+  instancia exista), asi que `FABRIC_GATEWAY_URL` sigue siendo valida. La
+  **publica** si cambia, pero no la usa el sistema — solo vos para SSH.
+- **El ledger sobrevive**: los volumenes (`orderer.medchain.com`, `peer0.*`) son
+  *named volumes* de Docker y no se borran al detener contenedores.
+- **`network.sh up` es idempotente**: ve que `organizations/` ya existe, saltea la
+  generacion de criptografia y solo arranca los contenedores.
+
+> AWS **reinicia sola** una instancia RDS detenida a los 7 dias. Si la vas a
+> dejar apagada mas tiempo, tenelo presente.
+
 ### Limpieza de recursos
 
 ```bash
@@ -328,26 +419,96 @@ bash deploy/99-cleanup.sh
 
 ### CI/CD (GitHub Actions)
 
-El repositorio tiene un workflow automatico que despliega a AWS cada vez que se pushea a la rama `desarrollo`.
+Hay dos workflows. **`ci.yml`** corre en cada push a `desarrollo` y en cada PR;
+**`deploy.yml`** solo cuando cambian rutas que afectan a produccion.
 
-**Que despliega:**
-- Si cambia `backend/`, `Dockerfile` o `requirements.txt` -> reconstruye la imagen Docker, la sube a ECR y fuerza un nuevo deploy en ECS Fargate.
-- Si cambia `frontend/` -> hace build del frontend, lo sube a S3 e invalida el cache de CloudFront.
-- Si cambia `chaincode/`, `fabric-gateway-svc/` o `fabric/` -> via AWS SSM en la EC2: git pull, redeploy del chaincode (secuencia automatica) y rebuild del gateway, con smoke test de `/health`.
-- Los tres jobs corren en paralelo si hay cambios en multiples componentes.
+#### Orden de ejecucion de `deploy.yml`
 
-**Configuracion necesaria (una sola vez):**
+```
+┌──────────────────┐   ┌──────────────────┐
+│  security-scan   │   │     changes      │   ← arrancan juntos
+│   (gitleaks)     │   │ (filtro de paths)│
+└────────┬─────────┘   └────────┬─────────┘
+         └──────────┬───────────┘
+                    │  ambos deben pasar
+     ┌──────────────┼──────────────┐
+     ▼              ▼              ▼
+┌─────────┐   ┌──────────┐   ┌────────────┐
+│ backend │   │ frontend │   │ blockchain │   ← en PARALELO entre si
+└─────────┘   └──────────┘   └────────────┘
+```
 
-Ir a **GitHub > Settings > Secrets and variables > Actions** y crear estos secrets:
+**Los tres jobs de deploy corren en paralelo y no se esperan entre si.** Es
+seguro porque el backend tolera que el gateway de Fabric no responda: arranca
+igual y contesta `503` en las operaciones de prescripciones hasta que la red
+vuelve. Lo que **no** tolera es que falte una variable de entorno o que la base
+no este disponible (fail-fast, ver mas abajo).
+
+`security-scan` es bloqueante: si gitleaks encuentra un secreto, no se despliega
+nada.
+
+#### Que despliega cada job
+
+| Job | Se dispara con | Que hace |
+|-----|----------------|----------|
+| `deploy-backend` | `backend/**`, `sql/**`, `alembic/**`, `ml_models/artefactos/**`, `Dockerfile`, `requirements.txt` | Build + push a ECR, `update-service` en ECS, espera estabilidad y **verifica que ECS no haya revertido** |
+| `deploy-frontend` | `frontend/**` | `npm run build`, sync a S3, invalidacion de CloudFront |
+| `deploy-blockchain` | `chaincode/**`, `fabric-gateway-svc/**`, `fabric/**` | Por SSM en la EC2: `git reset --hard`, `deployCC`, rebuild del gateway y smoke test de `/health` |
+
+#### Deteccion de rollback (importante)
+
+El servicio ECS tiene `deploymentCircuitBreaker.rollback=true`: si las tasks
+nuevas no arrancan, ECS **revierte a la revision anterior y el servicio queda
+estable igual**. Un `aws ecs wait services-stable` a secas retorna 0 y el
+pipeline quedaria **verde sobre un despliegue fallido** — exactamente lo que
+paso el 17/08/2026.
+
+Por eso `deploy-backend` guarda el ID del deployment que crea y verifica despues
+que siga siendo el `PRIMARY` con `rolloutState=COMPLETED`. Si ECS revirtio,
+falla el job y vuelca los eventos del servicio y los logs de la task muerta.
+
+#### Redespliegue manual (`workflow_dispatch`)
+
+Desde **Actions → Deploy to AWS → Run workflow** se puede desplegar sin
+commitear, eligiendo por checkbox que componente. Sirve despues de rehacer la
+red Fabric, rotar un secreto o reponer una task definition.
+
+En ese modo los filtros de paths no aplican: manda lo que se elige.
+
+#### Configuracion necesaria (una sola vez)
+
+**GitHub → Settings → Secrets and variables → Actions:**
 
 | Secret | Valor |
 |--------|-------|
 | `AWS_ACCESS_KEY_ID` | Access Key del usuario IAM `medchain-admin` |
 | `AWS_SECRET_ACCESS_KEY` | Secret Key del usuario IAM `medchain-admin` |
 
-El deploy de blockchain usa **AWS SSM Run Command** (no SSH): la EC2 solo necesita el agente SSM y el rol IAM correspondiente.
+El deploy de blockchain usa **AWS SSM Run Command** (no SSH): la EC2 solo
+necesita el agente SSM y su rol IAM.
 
-El workflow se encuentra en `.github/workflows/deploy.yml`.
+> El repositorio es **privado**, asi que la EC2 necesita credenciales para hacer
+> `git pull`. Se resuelve con un credential helper
+> (`/usr/local/bin/git-credential-medchain`) que lee el PAT desde el secreto
+> `medchain/github-token` usando el instance role: el token no queda en disco ni
+> viaja por los parametros de SSM. Para rotarlo alcanza con un
+> `put-secret-value` sobre ese secreto, sin tocar la instancia.
+
+## Usuarios de la aplicacion
+
+`AuthService._seed_users()` siembra cuatro cuentas al primer arranque con base
+disponible. **Son contraseñas por defecto**: cambialas desde la pantalla de
+Usuarios (`super_admin`) antes de exponer la app.
+
+| Usuario | Contraseña | Rol |
+|---------|-----------|-----|
+| `superadmin` | `super123` | super_admin |
+| `admin` | `admin123` | administrador |
+| `prescriptor` | `presc123` | prescriptor |
+| `auditor` | `audit123` | auditor |
+
+El seed es idempotente (solo inserta si el usuario no existe), asi que rotarlas
+es seguro: no se reponen en el proximo deploy. Minimo 8 caracteres.
 
 ## Notas
 
@@ -356,3 +517,6 @@ El workflow se encuentra en `.github/workflows/deploy.yml`.
 - `FABRIC_GATEWAY_URL` y `GATEWAY_AUTH_TOKEN` son obligatorias en produccion: sin la red Fabric no se pueden crear ni auditar prescripciones (fail-fast).
 - La carpeta `ml_models/` contiene el pipeline de entrenamiento del modelo de validacion de prescripciones (cancer de colon) y los artefactos asociados.
 - La convencion de hashing verificable (payload canonico + cadena de eventos de auditoria) esta documentada en [docs/HASHING.md](docs/HASHING.md).
+- La canonicalizacion **normaliza los flotantes enteros** (`174.0` → `174`) antes de hashear: CouchDB los devuelve asi, y sin esa normalizacion el asset releido nunca reproduce su propio `payload_hash`.
+- La politica de endorsement es `AND` de las tres organizaciones. Es la garantia central del sistema y tiene un costo explicito: **si un peer se cae, no se puede escribir nada**. Visible en la pantalla de Salud y en `/health`.
+- El chaincode incluye **indices CouchDB** en `META-INF/statedb/couchdb/indexes/`. Sin ellos las consultas con `sort` (listado, cola de auditoria, historial por paciente) fallan en runtime aunque el alta funcione.
