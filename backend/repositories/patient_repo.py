@@ -19,6 +19,29 @@ def _get_crypto():
         return None
 
 
+def _load_medications(valor) -> list:
+    """Normaliza patients.medications a lista.
+
+    La migracion 005 pasa la columna de TEXT a JSONB: desde entonces psycopg2
+    devuelve una lista/dict ya deserializado en vez de un str, y aplicarle
+    json.loads revienta con "the JSON object must be str, bytes or bytearray".
+    Se aceptan los dos formatos para que el repo funcione contra una base
+    migrada y contra una que todavia no lo esta.
+    """
+    if valor is None or valor == "":
+        return []
+    if isinstance(valor, list):
+        return valor
+    if isinstance(valor, dict):
+        return [valor]
+    try:
+        cargado = json.loads(valor)
+    except (TypeError, ValueError):
+        logger.warning("medications con formato inesperado: %r", valor)
+        return []
+    return cargado if isinstance(cargado, list) else [cargado]
+
+
 class PatientRepository:
     """Repositorio de pacientes con cifrado PHI en columnas _enc."""
 
@@ -274,7 +297,7 @@ class PatientRepository:
                         return None
                     columns = [desc[0] for desc in cur.description]
                     data = dict(zip(columns, row))
-                    data["medications"] = json.loads(data.get("medications") or "[]")
+                    data["medications"] = _load_medications(data.get("medications"))
                     data = self._decrypt_row(data)
                     self._log_phi_access([patient_id], "read", "all_phi", user_id, username)
                     return Patient(**data)
@@ -311,7 +334,7 @@ class PatientRepository:
             result = []
             for row in rows:
                 data = dict(zip(columns, row))
-                data["medications"] = json.loads(data.get("medications") or "[]")
+                data["medications"] = _load_medications(data.get("medications"))
                 data = self._decrypt_row(data)
                 result.append(Patient(**data))
             if result:
@@ -346,7 +369,7 @@ class PatientRepository:
             result = []
             for row in rows:
                 data = dict(zip(columns, row))
-                data["medications"] = json.loads(data.get("medications") or "[]")
+                data["medications"] = _load_medications(data.get("medications"))
                 data = self._decrypt_row(data)
                 result.append(Patient(**data))
             if result:

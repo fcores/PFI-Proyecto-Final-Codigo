@@ -147,7 +147,8 @@ completo" y aun así nada funcionaba.
 
 | # | Síntoma | Causa | Corrección |
 |---|---|---|---|
-| 1 | Contenedor en crash loop sin traceback, siempre en `Running upgrade 004 -> 005` | La migración 005 castea 5 columnas a JSONB, pero tienen `DEFAULT '[]'::text`. Postgres aborta con `default for column ... cannot be cast automatically to type jsonb` | 005 ahora hace `DROP DEFAULT` → `ALTER TYPE` → `SET DEFAULT '[]'::jsonb` |
+| 1a | Contenedor en crash loop, siempre en `Running upgrade 004 -> 005` | La migración 005 castea 5 columnas a JSONB, pero tienen `DEFAULT '[]'::text`. Postgres aborta con `default for column ... cannot be cast automatically to type jsonb` | 005 ahora hace `DROP DEFAULT` → `ALTER TYPE` → `SET DEFAULT '[]'::jsonb` |
+| 1b | Ídem, después de corregir 1a | 005 crea `chk_users_role` con solo 3 roles, pero la base ya tiene `superadmin` con rol `super_admin` → `CheckViolation`. 005 es anterior al rol nuevo, que agrega la 006 | 005 omite la constraint si hay filas fuera del set (mismo criterio defensivo que sus bloques de FK); la 006 la recrea con los 4 roles |
 | 2 | `go build` del gateway falla en la EC2 y en CI | `fabric-gateway v1.11.0` exige Go ≥ 1.25; el Dockerfile usaba 1.24 y `ci.yml` 1.23 | Go 1.25 en Dockerfile, `go.mod` y `ci.yml` |
 | 3 | `peer lifecycle chaincode install` devuelve `invalid UTF-8` | El repo no versionaba `chaincode/.../go.sum`, así que `go mod vendor` fallaba y se empaquetaba un chaincode incompleto | `go.sum` versionado |
 | 4 | `deployCC` aborta con `failed to determine module root: exec: "go": not found` | Go estaba instalado en la EC2 pero fuera del PATH de root, que es con quien corre SSM | Symlinks en `/usr/local/bin` + `/etc/profile.d/go.sh` en la EC2 |
@@ -156,9 +157,18 @@ completo" y aun así nada funcionaba.
 | 7 | API Gateway pasa de 503 a **500** tras repuntar el Cloud Map | ECS registraba la instancia sin `AWS_INSTANCE_PORT` (el service usa registros A). API Gateway necesita el puerto para rutear | Cloud Map nuevo con registros **SRV** (`medchain-backend-srv`) y `serviceRegistries` con `containerName` + `containerPort` |
 | 8 | `TestSinTimeNowEnElContrato` falla siempre | Hacía `strings.Contains(src, "time.Now(")` y matcheaba el **comentario** de `contract.go` que documenta la prohibición | Ahora inspecciona el AST buscando la llamada real |
 
+| 9 | El job `deploy-blockchain` muere en el primer comando: `fatal: $HOME not set` | `AWS-RunShellScript` corre como root sin `HOME`, y `git config --global` lo necesita para ubicar `~/.gitconfig` | El job exporta `HOME`, agrega Go al `PATH` y corre git + `deployCC` como `ubuntu` (`-H`), que además es el dueño del repo |
+
 > Los tipos de registro de un service de Cloud Map **no se pueden cambiar**
 > (`A` → `SRV` da `InvalidInput`): hay que crear un service nuevo y repuntar
 > `serviceRegistries` del servicio ECS y la integración del API Gateway.
+
+**Cómo diagnosticar migraciones sin gastar un ciclo de deploy.** Un fallo de
+Alembic cuesta build + push + crash loop + rollback (~10 min) y el traceback se
+pierde si el contenedor muere antes de que el driver `awslogs` haga flush. Como
+la RDS es `PubliclyAccessible` y su SG ya permite las IPs de desarrollo, sale
+mucho más barato extraer el SQL de cada migración y ejecutarlo contra la base
+real dentro de una transacción con `ROLLBACK`. Así se encontraron 1a y 1b.
 
 ---
 
