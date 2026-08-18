@@ -519,6 +519,10 @@ deploy vuelve a fallar por fail-fast y ECS lo revierte (sección 3.1).
   gateway y valida `/health`.
 - Corregido: la secuencia del chaincode se calculaba con `--name basic` (otro
   chaincode); ahora la autodetecta `deployChaincode.sh`.
+- **Nuevo — `workflow_dispatch`**: se puede redesplegar a mano desde la pestaña
+  Actions eligiendo por checkbox qué desplegar (backend / frontend / blockchain),
+  sin necesidad de commitear. Útil tras recrear la red Fabric o rotar un secreto.
+  En push no cambia nada: sigue mandando el filtro de paths.
 - **Nuevo — detección de rollback**: `deploy-backend` guarda el ID del deployment
   que crea `update-service` y, después de `wait services-stable`, verifica que
   siga siendo el `PRIMARY` con `rolloutState=COMPLETED`. Si el circuit breaker de
