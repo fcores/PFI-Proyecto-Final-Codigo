@@ -90,19 +90,25 @@ verificable está en [HASHING.md](HASHING.md); el endpoint
 
 ## 3. Qué falta en AWS — resumen
 
-> **Estado al 18/08/2026**, verificado contra la cuenta `007072540405` con
-> llamadas read-only de AWS CLI. De estas tareas, la única hecha es la 6.
+> **Ejecutado el 18/08/2026** contra la cuenta `007072540405`. El sistema quedó
+> operativo y verificado end-to-end (25/25 checks, ver sección 7). Esta tabla
+> queda como registro de lo que hubo que hacer.
 
-| # | Tarea | Dónde | Bloqueante |
+| # | Tarea | Dónde | Estado |
 |---|---|---|---|
-| 1 | Agregar `GATEWAY_AUTH_TOKEN` al secreto de Secrets Manager | Secrets Manager | Sí |
-| 2 | Resolver la conectividad ECS ↔ EC2:8081 (**VPC peering**) | VPC / SG | Sí |
-| 3 | Registrar nueva revisión de la task definition con las env vars nuevas | ECS | Sí |
-| 4 | Rehacer la red Fabric con 3 orgs + levantar el gateway | EC2 | Sí |
-| 5 | Backup de la RDS antes de la migración 007 (borra prescripciones) | RDS | **Sí** (007 es irreversible: `downgrade()` lanza `NotImplementedError`) |
-| 6 | ~~Agregar `ENCRYPTION_SECRET_ARN` a la task definition~~ | ECS | **Ya está hecho** — ver 4.6 |
-| 7 | Cambiar las contraseñas de las **4** cuentas sembradas | App | **Sí** |
-| 8 | Repuntar API Gateway al Cloud Map correcto | API GW | **Sí** — ver 4.7 |
+| 1 | Agregar `GATEWAY_AUTH_TOKEN` al secreto de Secrets Manager | Secrets Manager | **Hecho** |
+| 2 | Conectividad ECS ↔ EC2:8081 por **VPC peering** | VPC / SG | **Hecho** (`pcx-040412e3bff5c43a4`) |
+| 3 | Nueva revisión de la task definition | ECS | **Hecho** (`medchain-backend:5`) |
+| 4 | Red Fabric de 3 orgs + gateway | EC2 | **Hecho** |
+| 5 | Backup de la RDS antes de la 007 | RDS | **Hecho** (`medchain-pre-007-20260818`) |
+| 6 | ~~`ENCRYPTION_SECRET_ARN` en la task definition~~ | ECS | Ya estaba — ver 4.6 |
+| 7 | Cambiar las contraseñas de las **4** cuentas sembradas | App | **PENDIENTE — lo tenés que hacer vos** |
+| 8 | Repuntar API Gateway al Cloud Map correcto | API GW | **Hecho** (`srv-ty4v27ve53xropsy`, registros SRV) |
+
+> ⚠️ **Lo único que queda pendiente es la tarea 7.** Las cuatro cuentas siguen
+> con las contraseñas sembradas (`superadmin/super123`, `admin/admin123`,
+> `prescriptor/presc123`, `auditor/audit123`). Cambialas desde la pantalla de
+> Usuarios antes de exponer la app a cualquiera.
 
 ### 3.1 El deploy del 17/08 falló y ECS lo revirtió
 
@@ -163,14 +169,20 @@ completo" y aun así nada funcionaba.
 
 | 12 | `GET /api/prescriptions/{id}/verify` devuelve `valido: false` con `payload_hash no coincide` para **toda** prescripción real | El chaincode no re-serializa el payload, pero el world state **sí pasa por CouchDB**, que normaliza los números: se hashea `"talla_cm":174.0` y al releer vuelve `"talla_cm":174`. La cadena de `event_hash` verificaba bien; fallaba solo la reconstrucción del payload | `canonical_json()` normaliza los floats integrales a entero antes de serializar, que es la forma que sobrevive el round-trip. Los vectores compartidos con Go usan enteros, así que no cambian |
 
+| 13 | El job `deploy-blockchain` marca rojo aunque el despliegue termine bien | `aws ssm wait command-executed` agota sus reintentos a los ~100 s; `deployCC` instala en 3 peers y construye 3 contenedores, así que tarda varios minutos. El paso siguiente leía un estado todavía `InProgress` | Poll propio de hasta 15 min que corta ante cualquier estado terminal |
+| 14 | El chequeo anti-rollback (agregado en esta misma tanda) fallaba deploys sanos | Leía `rolloutState` una sola vez apenas volvía `services-stable`, pero ECS marca `COMPLETED` unos segundos después | Poll acotado que corta apenas deja de ser `IN_PROGRESS`, o antes si cambió el `PRIMARY` (ahí sí hubo rollback) |
+
 > **Los bloqueantes 11 y 12 son los más instructivos del lote**, y por el mismo
 > motivo: el pipeline nunca ejercitó una **escritura**. La red levantaba, el
 > canal se creaba, el chaincode se commiteaba y las lecturas andaban; el smoke
 > test (`curl /health`) y el `ListPrescriptions` de `deployCC` pasaban los dos.
 > El 11 rompía toda alta y el 12 invalidaba la garantía de no adulteración —que
 > es la tesis del trabajo— y ninguno era visible sin dar de alta una
-> prescripción y verificarla. Vale la pena agregar al pipeline un alta contra un
-> asset de descarte seguida de su `/verify`.
+> prescripción y verificarla.
+>
+> **Mejora pendiente recomendada**: agregar al pipeline un alta contra un asset
+> de descarte seguida de su `/verify`. Es el único smoke test que hubiera
+> atrapado 11 y 12, y cuesta dos llamadas HTTP.
 
 > Los tipos de registro de un service de Cloud Map **no se pueden cambiar**
 > (`A` → `SRV` da `InvalidInput`): hay que crear un service nuevo y repuntar
@@ -535,6 +547,13 @@ curl -s localhost:8081/health | jq '.orgs'
 #    esperado: prescriptor / auditor / prepaga en "ok"
 ```
 
+**Resultado de la corrida del 18/08/2026**: 25/25 checks OK — API Gateway
+enruta, el backend es el refactorizado y ve la red (`fabric_gateway: ok`),
+login de los 4 roles, los 3 peers en verde, alta on-chain con TxID real,
+`revision` → `aprobar`, 3 transacciones en el ledger, **`verify` → `valido:
+true`**, cola paginada por bookmark, Alembic en `007` y RDS sin tablas
+off-chain.
+
 Checklist funcional en la UI:
 
 1. **Login `superadmin`** → ve Usuarios y Salud del sistema; la pantalla de
@@ -580,7 +599,44 @@ rechazada por control de acceso de MSP.
 
 ---
 
-## 9. Referencias
+## 9. Inventario de la infraestructura (18/08/2026)
+
+Recursos que hoy sostienen el sistema, con los IDs reales.
+
+| Recurso | Identificador | Nota |
+|---|---|---|
+| VPC de la app | `vpc-0c98e7d7f299bf5e8` (`medchain-vpc`, 10.0.0.0/16) | ECS + RDS |
+| VPC de Fabric | `vpc-09fcdbfb17d5cae13` (default, 172.31.0.0/16) | La EC2 vive acá |
+| **VPC peering** | `pcx-040412e3bff5c43a4` | Rutas en `rtb-06535a6a07f86d8af` y `rtb-059dd8261a2ca0f17` |
+| EC2 de Fabric | `i-0331b3fbeaadee294` (`t3.large`, IP privada `172.31.89.189`) | IP pública **dinámica**: resolverla con `describe-instances` |
+| SG de Fabric | `sg-0c6d00bf321b64291` | Solo 22 (mundo) y 8081 (`10.0.0.0/16`) |
+| Cluster / servicio ECS | `medchain-cluster` / `medchain-backend-svc` | Task definition `medchain-backend:5` |
+| Cloud Map (en uso) | `srv-ty4v27ve53xropsy` (`medchain-backend-srv`) | Registros **SRV**: aporta `AWS_INSTANCE_PORT` |
+| Cloud Map (obsoletos) | `srv-lmoij4mfyg2tbvu2`, `srv-ndgsq7branjc4pek` | Sin uso; se pueden borrar |
+| API Gateway | `vl5nsf5jt5` + VPC Link `q6olhm` | Integración `41deb2p` |
+| CloudFront / S3 | `E3UXMQZNKANQDB` / `medchain-frontend-…-an` | Frontend |
+| RDS | `medchain-db` (PostgreSQL 16) | Alembic en `007` |
+| Snapshot de rollback | `medchain-pre-007-20260818` | Previo a la 007 |
+| Secretos | `medchain/auth-credentials`, `/database-credentials`, `/encryption-key`, `/github-token` | |
+| Rol de la EC2 | `ec2-ssm-fabric` | SSM + CloudWatch + `AllowGitHubTokenRead` |
+
+**Acceso de la EC2 al repo privado.** El repositorio es privado y la instancia
+no tenía credenciales, lo que también rompía el job `deploy-blockchain`. Se
+instaló un credential helper en `/usr/local/bin/git-credential-medchain`
+(registrado con `git config --system credential.helper medchain`) que resuelve
+el PAT desde `medchain/github-token` usando el instance role. **El token no
+queda en disco ni viaja por los parámetros de SSM**, que quedan registrados en
+el historial de comandos. Para rotarlo alcanza con `put-secret-value` sobre ese
+secreto: no hay que tocar la instancia.
+
+Además se instaló el **AWS CLI v2** en la EC2 (lo necesita el credential
+helper) y se dejó Go accesible en el `PATH` de root vía symlinks en
+`/usr/local/bin` más `/etc/profile.d/go.sh`, porque SSM corre como root y
+`peer lifecycle chaincode package` necesita `go` para resolver el módulo.
+
+---
+
+## 10. Referencias
 
 - Convención de hashing verificable: [HASHING.md](HASHING.md)
 - Arquitectura de la red de 3 orgs: [02-arquitectura.md](02-arquitectura.md)
