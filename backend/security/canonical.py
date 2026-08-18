@@ -16,15 +16,21 @@ Convencion (docs/HASHING.md), espejada con chaincode/prescription-contract:
   donde prev_hash arranca en payload_hash y cada accion de auditoria encadena
   el siguiente eslabon. current_hash es el ultimo eslabon.
 
-Nota sobre floats: json.dumps de Python usa la representacion mas corta que
-round-trippea (repr). Como el chaincode nunca re-serializa el payload y la
-verificacion parte de los valores parseados (mismo double IEEE-754), la
-representacion es estable de punta a punta.
+Nota sobre floats: el chaincode no re-serializa el payload, pero el world state
+SI pasa por CouchDB, que normaliza los numeros y devuelve 174.0 como 174. Si se
+hashea la forma con .0, el asset releido ya no reproduce el payload_hash y la
+verificacion externa falla siempre. Por eso canonical_json normaliza los floats
+integrales a entero ANTES de serializar: asi la representacion que se hashea es
+la misma que sobrevive el ida y vuelta por CouchDB.
 """
 
 import hashlib
 import json
 from typing import Any
+
+# Mas alla de 2^53 un double ya no representa enteros de forma exacta, asi que
+# fuera de ese rango no se toca el valor.
+_ENTERO_SEGURO = 2**53
 
 TRANSICIONES_VALIDAS = {
     "PENDIENTE_AUDITORIA": ("EN_REVISION", "APROBADA", "RECHAZADA"),
@@ -40,9 +46,30 @@ ACCION_A_ESTADO = {
 }
 
 
+def normalizar_numeros(data: Any) -> Any:
+    """Convierte floats integrales a int (174.0 -> 174), recursivamente.
+
+    Es la forma en que CouchDB devuelve esos valores, de modo que hashear ya
+    normalizado hace que el payload_hash sobreviva el ida y vuelta por el
+    world state.
+    """
+    if isinstance(data, dict):
+        return {k: normalizar_numeros(v) for k, v in data.items()}
+    if isinstance(data, (list, tuple)):
+        return [normalizar_numeros(v) for v in data]
+    if isinstance(data, float) and data.is_integer() and abs(data) < _ENTERO_SEGURO:
+        return int(data)
+    return data
+
+
 def canonical_json(data: Any) -> str:
     """Serializa a JSON canonico: claves ordenadas, sin espacios, UTF-8."""
-    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(
+        normalizar_numeros(data),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
 
 
 def sha256_hex(text: str) -> str:

@@ -113,3 +113,40 @@ def test_verify_chain_detecta_cadena_rota():
     asset["audit_events"][1]["prev_hash"] = "f" * 64
     resultado = verify_chain(asset)
     assert not resultado["valido"]
+
+
+# ── Estabilidad del payload_hash a traves de CouchDB ────────────────────────
+#
+# El chaincode no re-serializa el payload, pero el world state SI pasa por
+# CouchDB, que devuelve 174.0 como 174. Si se hashea la forma con .0, el asset
+# releido no reproduce el payload_hash y /verify da invalido para toda
+# prescripcion que tenga algun float integral (talla_cm, dosis_mg, ...).
+
+
+def test_canonical_json_normaliza_floats_integrales():
+    """174.0 se serializa como 174, que es lo que devuelve CouchDB."""
+    assert canonical_json({"talla_cm": 174.0}) == '{"talla_cm":174}'
+    assert canonical_json({"dosis": [{"mg": 780.0}]}) == '{"dosis":[{"mg":780}]}'
+
+
+def test_canonical_json_respeta_los_no_integrales():
+    """Solo se tocan los integrales: el resto conserva su representacion."""
+    assert canonical_json({"p": 0.0625, "q": 78.5, "r": -2.7053}) == '{"p":0.0625,"q":78.5,"r":-2.7053}'
+
+
+def test_canonical_json_no_confunde_booleanos_con_numeros():
+    assert canonical_json({"a": True, "b": False}) == '{"a":true,"b":false}'
+
+
+def test_payload_hash_sobrevive_el_roundtrip_por_couchdb():
+    """Re-canonicalizar lo que devolveria CouchDB da el mismo hash."""
+    clinical = {"talla_cm": 174.0, "peso_kg": 78.5, "dosis_por_farmaco": [{"dosis_mg": 780.0}]}
+    ml = {"probabilidad_concordante": 0.0625, "umbral": 1.0}
+    creado = build_canonical_payload(clinical, ml, "2026-01-01T00:00:00Z")
+
+    # Lo que vuelve del world state: ya normalizado por CouchDB
+    devuelto = json.loads(creado)
+    recalculado = build_canonical_payload(devuelto["clinical"], devuelto["ml"], devuelto["created_at"])
+
+    assert recalculado == creado
+    assert sha256_hex(recalculado) == sha256_hex(creado)

@@ -49,10 +49,19 @@ verificador externo puede:
 2. Re-canonicalizar (`{"clinical":...,"created_at":"...","ml":...}`).
 3. Recomputar SHA-256 y comparar contra `payload_hash`.
 
-**Nota sobre números**: Python serializa floats con la representación más
-corta que round-trippea (repr). Como el chaincode no re-serializa y la
-verificación parte de los valores parseados (mismo double IEEE-754), la
-representación es estable de punta a punta, incluso pasando por CouchDB.
+**Nota sobre números**: el chaincode no re-serializa el payload, pero el world
+state **sí pasa por CouchDB**, que normaliza los números y devuelve `174.0`
+como `174`. Hashear la forma con `.0` hacía que el asset releído nunca
+reprodujera su `payload_hash`: `/verify` daba inválido para toda prescripción
+con algún float integral (`talla_cm`, `dosis_mg`, …).
+
+Por eso la canonicalización **normaliza los floats integrales a entero antes de
+serializar** (`174.0` → `174`), que es exactamente la forma que sobrevive el ida
+y vuelta por el world state. Los no integrales (`78.5`, `0.0625`) conservan su
+representación, y por encima de 2⁵³ no se toca nada porque el double ya no
+representa enteros de forma exacta. Quien verifique desde afuera debe aplicar la
+misma normalización — ver `normalizar_numeros()` en
+`backend/security/canonical.py`.
 
 ## 4. Cadena de eventos de auditoría (event_hash)
 
