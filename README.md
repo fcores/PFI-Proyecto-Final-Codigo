@@ -293,6 +293,10 @@ La aplicacion esta desplegada en produccion en:
 
 ### Guias de despliegue
 
+> Para entender **como funciona todo** (infraestructura, frontend, backend y
+> blockchain) antes de meterse con el despliegue:
+> [docs/07-como-funciona-todo.md](docs/07-como-funciona-todo.md).
+
 - **Cambios on-chain (que falta para deployarlos):** [docs/06-deploy-cambios-onchain.md](docs/06-deploy-cambios-onchain.md)
 - **Paso a paso por consola web:** [docs/05-deploy-aws-consola.md](docs/05-deploy-aws-consola.md)
 - **Scripts automatizados (CLI):** ver carpeta `deploy/`
