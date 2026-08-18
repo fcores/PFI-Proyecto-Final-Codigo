@@ -93,9 +93,21 @@ BEGIN
     -- =====================================================================
     -- P2: CHECK constraints en campos categoricos
     -- =====================================================================
+    -- Esta migracion es anterior al rol super_admin (lo agrega la 006). Una base
+    -- que ya tenga usuarios super_admin sembrados viola este CHECK y la
+    -- migracion aborta entera. Se aplica el mismo criterio defensivo que en las
+    -- FKs de mas arriba: si hay filas que no encajan, se omite y sigue.
+    -- La 006 hace DROP + CREATE de esta misma constraint con los 4 roles.
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_users_role') THEN
-        ALTER TABLE users ADD CONSTRAINT chk_users_role
-            CHECK (role IN ('administrador', 'prescriptor', 'auditor'));
+        IF NOT EXISTS (
+            SELECT 1 FROM users
+            WHERE role NOT IN ('administrador', 'prescriptor', 'auditor')
+        ) THEN
+            ALTER TABLE users ADD CONSTRAINT chk_users_role
+                CHECK (role IN ('administrador', 'prescriptor', 'auditor'));
+        ELSE
+            RAISE WARNING '005: users tiene roles fuera del set de esta migracion; la 006 crea el CHECK definitivo';
+        END IF;
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_prescriptions_msi') THEN

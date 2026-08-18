@@ -244,8 +244,8 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["set -e","git config --global --add safe.directory /home/ubuntu/PFI-Proyecto-Final","cd /home/ubuntu/PFI-Proyecto-Final","git fetch origin desarrollo","git checkout desarrollo","git pull origin desarrollo","cd fabric","./network.sh deployCC","echo \"Rebuild del gateway...\"","docker compose --env-file network/.env -f network/compose/compose-net.yaml up -d --build fabric-gateway","sleep 10","curl -sf http://localhost:8081/health || (docker logs --tail 50 fabric-gateway; exit 1)"]' \
-            --timeout-seconds 300 \
+            --parameters 'commands=["set -e","export HOME=/root","export PATH=$PATH:/usr/local/bin:/usr/local/go/bin","sudo -u ubuntu -H bash -lc \"export PATH=\\$PATH:/usr/local/bin:/usr/local/go/bin; cd ~/PFI-Proyecto-Final && git fetch origin desarrollo && git checkout desarrollo && git pull origin desarrollo && cd fabric && ./network.sh deployCC\"","echo \"Rebuild del gateway...\"","cd /home/ubuntu/PFI-Proyecto-Final/fabric","docker compose --env-file network/.env -f network/compose/compose-net.yaml up -d --build fabric-gateway","sleep 15","curl -sf http://localhost:8081/health || (docker logs --tail 50 fabric-gateway; exit 1)"]' \
+            --timeout-seconds 900 \
             --query "Command.CommandId" \
             --output text)
 

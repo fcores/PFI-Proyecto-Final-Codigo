@@ -138,6 +138,28 @@ tareas 1-3 de esta tabla no estaban hechas. Consecuencias a tener presentes:
   corregido en `deploy.yml` con un paso que compara el ID del deployment
   `PRIMARY` antes y después (ver sección 6).
 
+### 3.2 Bloqueantes que aparecieron al desatascar el deploy
+
+Ninguno de estos se había ejercitado nunca: el `continue-on-error` del job de
+blockchain y el rollback silencioso de ECS los mantenían ocultos. Todos están
+corregidos en el repo; se listan porque explican por qué "el código estaba
+completo" y aun así nada funcionaba.
+
+| # | Síntoma | Causa | Corrección |
+|---|---|---|---|
+| 1 | Contenedor en crash loop sin traceback, siempre en `Running upgrade 004 -> 005` | La migración 005 castea 5 columnas a JSONB, pero tienen `DEFAULT '[]'::text`. Postgres aborta con `default for column ... cannot be cast automatically to type jsonb` | 005 ahora hace `DROP DEFAULT` → `ALTER TYPE` → `SET DEFAULT '[]'::jsonb` |
+| 2 | `go build` del gateway falla en la EC2 y en CI | `fabric-gateway v1.11.0` exige Go ≥ 1.25; el Dockerfile usaba 1.24 y `ci.yml` 1.23 | Go 1.25 en Dockerfile, `go.mod` y `ci.yml` |
+| 3 | `peer lifecycle chaincode install` devuelve `invalid UTF-8` | El repo no versionaba `chaincode/.../go.sum`, así que `go mod vendor` fallaba y se empaquetaba un chaincode incompleto | `go.sum` versionado |
+| 4 | `deployCC` aborta con `failed to determine module root: exec: "go": not found` | Go estaba instalado en la EC2 pero fuera del PATH de root, que es con quien corre SSM | Symlinks en `/usr/local/bin` + `/etc/profile.d/go.sh` en la EC2 |
+| 5 | Gateway arriba pero las 3 orgs en error: `error leyendo clave privada: permission denied` | El contenedor corre como uid 10001 (no-root) y cryptogen genera las claves 600 del usuario del host | `network.sh` cede las identidades `User1` al uid 10001 antes de levantar |
+| 6 | `git pull` en la EC2: `could not read Username for github.com` | El repo es **privado** y la instancia no tenía credenciales. También habría roto el job `deploy-blockchain` | PAT en Secrets Manager (`medchain/github-token`) + credential helper que lo resuelve con el instance role; el token no queda en disco |
+| 7 | API Gateway pasa de 503 a **500** tras repuntar el Cloud Map | ECS registraba la instancia sin `AWS_INSTANCE_PORT` (el service usa registros A). API Gateway necesita el puerto para rutear | Cloud Map nuevo con registros **SRV** (`medchain-backend-srv`) y `serviceRegistries` con `containerName` + `containerPort` |
+| 8 | `TestSinTimeNowEnElContrato` falla siempre | Hacía `strings.Contains(src, "time.Now(")` y matcheaba el **comentario** de `contract.go` que documenta la prohibición | Ahora inspecciona el AST buscando la llamada real |
+
+> Los tipos de registro de un service de Cloud Map **no se pueden cambiar**
+> (`A` → `SRV` da `InvalidInput`): hay que crear un service nuevo y repuntar
+> `serviceRegistries` del servicio ECS y la integración del API Gateway.
+
 ---
 
 ## 4. Detalle de las tareas
