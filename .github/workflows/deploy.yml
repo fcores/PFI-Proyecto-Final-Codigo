@@ -1,6 +1,23 @@
 name: Deploy to AWS
 
 on:
+  # Permite redesplegar sin commitear (p. ej. tras recrear la red Fabric o
+  # rotar un secreto). Los filtros de paths no aplican en este modo: se puede
+  # elegir explicitamente que desplegar.
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: "Desplegar backend (ECR + ECS)"
+        type: boolean
+        default: true
+      frontend:
+        description: "Desplegar frontend (S3 + CloudFront)"
+        type: boolean
+        default: false
+      blockchain:
+        description: "Desplegar chaincode y gateway en la EC2"
+        type: boolean
+        default: false
   push:
     branches:
       - desarrollo
@@ -51,14 +68,17 @@ jobs:
     name: Detect changes
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      blockchain: ${{ steps.filter.outputs.blockchain }}
+      # En workflow_dispatch no hay diff contra el cual filtrar: manda lo que
+      # eligio quien dispara.
+      backend: ${{ github.event_name == 'workflow_dispatch' && inputs.backend || steps.filter.outputs.backend }}
+      frontend: ${{ github.event_name == 'workflow_dispatch' && inputs.frontend || steps.filter.outputs.frontend }}
+      blockchain: ${{ github.event_name == 'workflow_dispatch' && inputs.blockchain || steps.filter.outputs.blockchain }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name != 'workflow_dispatch'
         with:
           filters: |
             backend:
