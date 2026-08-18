@@ -68,11 +68,18 @@ jobs:
     name: Detect changes
     runs-on: ubuntu-latest
     outputs:
-      # En workflow_dispatch no hay diff contra el cual filtrar: manda lo que
-      # eligio quien dispara.
-      backend: ${{ github.event_name == 'workflow_dispatch' && inputs.backend || steps.filter.outputs.backend }}
-      frontend: ${{ github.event_name == 'workflow_dispatch' && inputs.frontend || steps.filter.outputs.frontend }}
-      blockchain: ${{ github.event_name == 'workflow_dispatch' && inputs.blockchain || steps.filter.outputs.blockchain }}
+      # En push manda el filtro de paths (comportamiento de siempre); en
+      # workflow_dispatch no hay diff contra el cual filtrar, asi que manda lo
+      # que eligio quien dispara.
+      #
+      # Las dos ramas se escriben completas a proposito. El atajo
+      # "cond && inputs.x || steps.filter..." parece equivalente pero no lo es:
+      # cuando inputs.x es false, el && da false y la expresion cae al || ,
+      # devolviendo el valor del filtro y desplegando algo que se pidio NO
+      # desplegar.
+      backend: ${{ (github.event_name == 'workflow_dispatch' && inputs.backend) || (github.event_name != 'workflow_dispatch' && steps.filter.outputs.backend == 'true') }}
+      frontend: ${{ (github.event_name == 'workflow_dispatch' && inputs.frontend) || (github.event_name != 'workflow_dispatch' && steps.filter.outputs.frontend == 'true') }}
+      blockchain: ${{ (github.event_name == 'workflow_dispatch' && inputs.blockchain) || (github.event_name != 'workflow_dispatch' && steps.filter.outputs.blockchain == 'true') }}
     steps:
       - uses: actions/checkout@v4
 
