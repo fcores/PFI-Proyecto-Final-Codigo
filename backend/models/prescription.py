@@ -26,6 +26,17 @@ class CostoFarmaco(BaseModel):
     presentaciones_usadas: int = Field(0, title="Cantidad de presentaciones")
 
 
+class AlternativaEconomica(BaseModel):
+    """Regimen terapeuticamente equivalente con menor costo de tratamiento."""
+
+    id_regimen: str = Field(..., title="ID de régimen alternativo")
+    nombre: str = Field(..., title="Nombre del régimen alternativo")
+    costo_tratamiento: float = Field(..., title="Costo del tratamiento completo")
+    ahorro: float = Field(..., title="Ahorro frente al prescrito")
+    pct_ahorro: float = Field(..., title="Ahorro porcentual")
+    ciclos: int = Field(..., title="Ciclos del esquema estándar")
+
+
 class ValidationResult(BaseModel):
     """Resultado de la validacion hibrida reglas + ML."""
 
@@ -48,6 +59,19 @@ class ValidationResult(BaseModel):
         title="Costo por fármaco",
     )
     costo_total: float | None = Field(None, title="Costo total estimado")
+    costo_tratamiento: float | None = Field(
+        None,
+        title="Costo del tratamiento completo",
+    )
+    alternativas_economicas: list[AlternativaEconomica] = Field(
+        default_factory=list,
+        title="Alternativas equivalentes de menor costo",
+    )
+    ahorro_potencial: float | None = Field(None, title="Ahorro potencial")
+    requiere_justificacion_costo: bool = Field(
+        False,
+        title="Exige justificación económica del prescriptor",
+    )
 
 
 class PrescriptionBase(BaseModel):
@@ -88,6 +112,12 @@ class PrescriptionBase(BaseModel):
     dosis_mg_m2: float | None = Field(None, title="Dosis (mg/m²) derivada")
     medico_prescriptor: str = Field(..., title="Médico prescriptor")
     matricula: str = Field(..., title="Matrícula")
+    justificacion_costo: str | None = Field(
+        None,
+        min_length=5,
+        max_length=2000,
+        title="Justificación clínica de la elección económica",
+    )
 
 
 # Veredictos posibles del motor hibrido reglas + ML (soporte de decision).

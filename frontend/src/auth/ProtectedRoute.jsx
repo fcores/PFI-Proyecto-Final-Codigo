@@ -2,11 +2,14 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 export default function ProtectedRoute({ children, roles }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logoutReason } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    // Tras un cierre de sesión (manual o por expiración) no se recuerda la ruta:
+    // el próximo usuario puede tener otro rol y no tener acceso a ella.
+    const state = logoutReason ? { reason: logoutReason } : { from: location };
+    return <Navigate to="/login" replace state={state} />;
   }
 
   if (roles && !roles.includes(user?.role)) {

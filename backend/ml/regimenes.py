@@ -64,6 +64,69 @@ FARMACOS_ORALES = frozenset(
     }
 )
 
+# Esquema de administracion estandar por regimen. Se usa para expresar el costo
+# en terminos del tratamiento completo y no del ciclo aislado: dos esquemas con
+# igual costo por ciclo pero distinta frecuencia o duracion tienen impacto
+# presupuestario muy distinto. Los valores siguen los esquemas estandar de las
+# guias NCCN, ESMO y AAOC empleadas en este trabajo.
+ESQUEMA_ADMINISTRACION = {
+    "R01": {"dias_ciclo": 14, "ciclos_estandar": 12},
+    "R02": {"dias_ciclo": 21, "ciclos_estandar": 8},
+    "R03": {"dias_ciclo": 14, "ciclos_estandar": 12},
+    "R04": {"dias_ciclo": 14, "ciclos_estandar": 12},
+    "R05": {"dias_ciclo": 14, "ciclos_estandar": 12},
+    "R06": {"dias_ciclo": 21, "ciclos_estandar": 8},
+    "R07": {"dias_ciclo": 14, "ciclos_estandar": 12},
+    "R08": {"dias_ciclo": 14, "ciclos_estandar": 12},
+    "R09": {"dias_ciclo": 21, "ciclos_estandar": 17},
+    "R10": {"dias_ciclo": 28, "ciclos_estandar": 6},
+    "R11": {"dias_ciclo": 21, "ciclos_estandar": 4},
+    "R12": {"dias_ciclo": 28, "ciclos_estandar": 6},
+    "R13": {"dias_ciclo": 28, "ciclos_estandar": 6},
+}
+
+# Grupos de regimenes que las guias consideran intercambiables para una misma
+# indicacion y linea de tratamiento. La comparacion economica solo se practica
+# DENTRO de un grupo: comparar esquemas de distinta intencion terapeutica no
+# tendria sentido clinico.
+GRUPOS_EQUIVALENCIA = {
+    "doblete_primera_linea": ["R01", "R02", "R03"],
+    "fluoropirimidina_sola": ["R05", "R06"],
+}
+
+_GRUPO_POR_REGIMEN = {}
+for _nombre_grupo, _miembros in GRUPOS_EQUIVALENCIA.items():
+    for _rid in _miembros:
+        _GRUPO_POR_REGIMEN[_rid] = _nombre_grupo
+
+
+def ciclos_estandar(id_regimen):
+    """Devuelve la cantidad de ciclos del esquema estandar del regimen."""
+    try:
+        info = ESQUEMA_ADMINISTRACION.get(id_regimen)
+        if info is None:
+            return 1
+        return int(info["ciclos_estandar"])
+    except Exception as exc:
+        logger.error("Error al obtener ciclos de %s: %s", id_regimen, exc, exc_info=True)
+        raise
+
+
+def alternativas_equivalentes(id_regimen):
+    """Devuelve los regimenes intercambiables con el dado, excluyendolo.
+
+    Si el regimen no pertenece a ningun grupo de equivalencia devuelve una
+    lista vacia: no toda prescripcion admite sustitucion economica.
+    """
+    try:
+        grupo = _GRUPO_POR_REGIMEN.get(id_regimen)
+        if grupo is None:
+            return []
+        return [rid for rid in GRUPOS_EQUIVALENCIA[grupo] if rid != id_regimen]
+    except Exception as exc:
+        logger.error("Error al obtener alternativas de %s: %s", id_regimen, exc, exc_info=True)
+        raise
+
 
 def nombre_regimen(id_regimen):
     """Devuelve el nombre legible del regimen dado su ID."""

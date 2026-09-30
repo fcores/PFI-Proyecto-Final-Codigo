@@ -30,6 +30,10 @@ export default function PrescripcionPage() {
   const [idRegimen, setIdRegimen] = useState("");
   const [dosisRows, setDosisRows] = useState([]);
   const [guiaNota, setGuiaNota] = useState("");
+  // RF-34: se activa cuando el motor detecta una alternativa terapeuticamente
+  // equivalente de menor costo y el alta fue rechazada por falta de
+  // justificacion clinica.
+  const [requiereJustificacion, setRequiereJustificacion] = useState(false);
 
   const superficie = useMemo(
     () => bodySurfaceArea(preview.peso, preview.talla),
@@ -141,6 +145,11 @@ export default function PrescripcionPage() {
       matricula: (data.get("matricula") || "").trim(),
     };
 
+    const justificacionCosto = (data.get("justificacion_costo") || "").trim();
+    if (justificacionCosto) {
+      body.justificacion_costo = justificacionCosto;
+    }
+
     setLoading("Validando y registrando en la blockchain (endoso de las 3 organizaciones)...");
     setResult(null);
 
@@ -153,8 +162,13 @@ export default function PrescripcionPage() {
       setIdRegimen("");
       setDosisRows([]);
       setGuiaNota("");
+      setRequiereJustificacion(false);
     } catch (err) {
-      setError(err.message || "Ocurrió un error al registrar la prescripción.");
+      const mensaje = err.message || "Ocurrió un error al registrar la prescripción.";
+      if (mensaje.includes("justificacion_costo")) {
+        setRequiereJustificacion(true);
+      }
+      setError(mensaje);
     }
   }
 
@@ -373,6 +387,37 @@ export default function PrescripcionPage() {
                 <FormField label="Matrícula" htmlFor="matricula" required span={4}>
                   <input id="matricula" name="matricula" type="text" placeholder="MN 12345" required />
                 </FormField>
+
+                <FormField
+                  label={
+                    requiereJustificacion
+                      ? "Justificación clínica de la elección económica"
+                      : "Justificación clínica de la elección económica (opcional)"
+                  }
+                  htmlFor="justificacion_costo"
+                  required={requiereJustificacion}
+                  span={12}
+                >
+                  <textarea
+                    id="justificacion_costo"
+                    name="justificacion_costo"
+                    rows={3}
+                    minLength={5}
+                    maxLength={2000}
+                    required={requiereJustificacion}
+                    placeholder={
+                      requiereJustificacion
+                        ? "Existe una alternativa equivalente más económica. Indique la razón clínica por la que se prescribe el esquema elegido."
+                        : "Se completa solo si el motor detecta una alternativa equivalente de menor costo."
+                    }
+                  />
+                  {requiereJustificacion ? (
+                    <p className="muted" style={{ marginTop: "0.4em" }}>
+                      La justificación queda registrada de forma inmutable junto con la prescripción y
+                      acompaña al expediente durante la auditoría.
+                    </p>
+                  ) : null}
+                </FormField>
               </div>
 
               {dosisRows.length > 0 && (
@@ -474,11 +519,46 @@ export default function PrescripcionPage() {
                     </ul>
                   </div>
                 )}
+                {result.ml.alternativas_economicas?.length > 0 && (
+                  <div className="features-aportes">
+                    <h4>Alternativas terapéuticas de menor costo</h4>
+                    <p className="muted" style={{ margin: "0.4em 0" }}>
+                      Costo del esquema prescrito por tratamiento completo: $
+                      {result.ml.costo_tratamiento?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </p>
+                    <table className="dosis-table" style={{ marginTop: "0.5em" }}>
+                      <thead>
+                        <tr>
+                          <th>Régimen</th>
+                          <th>Ciclos</th>
+                          <th>Costo del tratamiento</th>
+                          <th>Ahorro</th>
+                          <th>%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.ml.alternativas_economicas.map((alt) => (
+                          <tr key={alt.id_regimen}>
+                            <td>
+                              {alt.id_regimen} — {alt.nombre}
+                            </td>
+                            <td>{alt.ciclos}</td>
+                            <td>
+                              ${alt.costo_tratamiento.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td>${alt.ahorro.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
+                            <td>{alt.pct_ahorro}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {result.ml.costo_total != null && (
                   <div className="features-aportes">
                     <h4>Costo estimado del régimen</h4>
                     <p style={{ fontWeight: 600, fontSize: "1.1em", margin: "0.5em 0" }}>
-                      Total: ${result.ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      Total por ciclo: ${result.ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </p>
                     {result.ml.costo_por_farmaco?.length > 0 && (
                       <table className="dosis-table" style={{ marginTop: "0.5em" }}>

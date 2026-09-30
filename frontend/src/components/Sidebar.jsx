@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { ROLE_LABEL } from "../constants/roles";
 
 const PACIENTES_SUBTYPES = [
   { to: "/pacientes/alta", label: "Alta de Pacientes" },
@@ -21,13 +22,6 @@ const AUDITORIAS_SUBTYPES = [
   { to: "/auditoria/cola", label: "Cola de Auditoría" },
   { to: "/trazabilidad", label: "Trazabilidad" },
 ];
-
-const ROLE_LABEL = {
-  super_admin: "Super Admin",
-  administrador: "Administrativo",
-  prescriptor: "Prescriptor",
-  auditor: "Auditor",
-};
 
 function NavGroup({ emoji, label, active, open, onToggle, subtypes }) {
   return (
@@ -61,7 +55,7 @@ function NavGroup({ emoji, label, active, open, onToggle, subtypes }) {
 
 export default function Sidebar() {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, loggingOut } = useAuth();
   const role = user?.role;
 
   const esSuperAdmin = role === "super_admin";
@@ -187,10 +181,17 @@ export default function Sidebar() {
             <span className="sidebar-user-name">{user?.display_name || user?.username || "Usuario"}</span>
             <span className="sidebar-user-role">{ROLE_LABEL[role] || role || "Sesión activa"}</span>
           </div>
-          <button className="icon-btn" title="Cerrar sesión" onClick={logout}>
-            ⎋
-          </button>
         </div>
+        <button
+          type="button"
+          className="sidebar-logout-btn"
+          title="Cerrar sesión"
+          onClick={logout}
+          disabled={loggingOut}
+        >
+          <span aria-hidden="true">⎋</span>
+          <span className="sidebar-logout-label">{loggingOut ? "Cerrando…" : "Cerrar sesión"}</span>
+        </button>
       </div>
     </aside>
   );

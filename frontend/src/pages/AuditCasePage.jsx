@@ -151,6 +151,20 @@ export default function AuditCasePage() {
               <FormField label="Matrícula" htmlFor="case_matricula" span={3}>
                 <input id="case_matricula" type="text" value={clinical.matricula || ""} readOnly />
               </FormField>
+              {clinical.justificacion_costo ? (
+                <FormField
+                  label="Justificación económica del prescriptor"
+                  htmlFor="case_justificacion_costo"
+                  span={12}
+                >
+                  <textarea
+                    id="case_justificacion_costo"
+                    rows={3}
+                    value={clinical.justificacion_costo}
+                    readOnly
+                  />
+                </FormField>
+              ) : null}
               <FormField label="Hash del contenido" htmlFor="case_payload_hash" span={6}>
                 <input id="case_payload_hash" type="text" value={presc.payload_hash || ""} readOnly title={presc.payload_hash} />
               </FormField>
@@ -209,11 +223,52 @@ export default function AuditCasePage() {
                   </ul>
                 </FormField>
               )}
+              {ml.alternativas_economicas?.length > 0 && (
+                <FormField
+                  label="Alternativas terapéuticas de menor costo"
+                  htmlFor="case_val_alternativas"
+                  span={12}
+                >
+                  <div id="case_val_alternativas">
+                    <p className="muted" style={{ margin: "0 0 0.4em" }}>
+                      Esquema prescrito: $
+                      {ml.costo_tratamiento?.toLocaleString("es-AR", { minimumFractionDigits: 2 })} por
+                      tratamiento completo
+                    </p>
+                    <table className="dosis-table" style={{ marginTop: "0.25em" }}>
+                      <thead>
+                        <tr>
+                          <th>Régimen</th>
+                          <th>Ciclos</th>
+                          <th>Costo del tratamiento</th>
+                          <th>Ahorro</th>
+                          <th>%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ml.alternativas_economicas.map((alt) => (
+                          <tr key={alt.id_regimen}>
+                            <td>
+                              {alt.id_regimen} — {alt.nombre}
+                            </td>
+                            <td>{alt.ciclos}</td>
+                            <td>
+                              ${alt.costo_tratamiento.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td>${alt.ahorro.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
+                            <td>{alt.pct_ahorro}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </FormField>
+              )}
               {ml.costo_total != null && (
                 <FormField label="Costo estimado" htmlFor="case_val_costo" span={12}>
                   <div>
                     <p style={{ fontWeight: 600, margin: "0 0 0.4em" }}>
-                      Total: ${ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      Total por ciclo: ${ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </p>
                     {ml.costo_por_farmaco?.length > 0 && (
                       <table className="dosis-table" style={{ marginTop: "0.25em" }}>

@@ -1,4 +1,11 @@
+import { useAuth } from "../auth/AuthContext";
+import { ROLE_LABEL } from "../constants/roles";
+
 export default function TopBar({ title, subtitle, badge }) {
+  const { user, logout, loggingOut } = useAuth();
+  const displayName = user?.display_name || user?.username || "Usuario";
+  const roleLabel = ROLE_LABEL[user?.role] || user?.role || "";
+
   return (
     <header className="top-bar">
       <div className="page-heading">
@@ -16,8 +23,21 @@ export default function TopBar({ title, subtitle, badge }) {
         <button className="icon-btn" title="Configuración">
           ⚙
         </button>
-        <button className="icon-btn" title="Usuario">
-          G
+        <span
+          className="icon-btn user-initial"
+          title={roleLabel ? `${displayName} · ${roleLabel}` : displayName}
+        >
+          {displayName.charAt(0).toUpperCase()}
+        </span>
+        <button
+          type="button"
+          className="logout-btn"
+          title="Cerrar sesión"
+          onClick={logout}
+          disabled={loggingOut}
+        >
+          <span aria-hidden="true">⎋</span>
+          <span className="logout-btn-label">{loggingOut ? "Cerrando…" : "Cerrar sesión"}</span>
         </button>
       </div>
     </header>

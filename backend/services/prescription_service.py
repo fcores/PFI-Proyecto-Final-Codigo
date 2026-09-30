@@ -23,7 +23,7 @@ from datetime import UTC, datetime
 from ulid import ULID
 
 from backend.blockchain.fabric_client import FabricBusinessError
-from backend.error_handlers import NotFoundError
+from backend.error_handlers import DomainError, NotFoundError
 from backend.ml.regimenes import nombre_regimen
 from backend.models.prescription import (
     ClinicalData,
@@ -115,6 +115,26 @@ class PrescriptionService:
                 data_completa = data_completa.model_copy(update={"dosis_por_farmaco": dosis_objs})
 
             validacion = self._validation_service.validate(data_completa)
+
+            # RF-34: si el motor detecto una alternativa terapeuticamente
+            # equivalente de menor costo, la eleccion del esquema mas caro debe
+            # venir fundamentada. No se rechaza la prescripcion por su costo
+            # ---la decision es clinica--- pero si se exige que quede asentada
+            # la razon, que viaja al registro inmutable junto con el resto del
+            # expediente y queda disponible para el auditor.
+            if validacion.requiere_justificacion_costo:
+                justificacion = (data_completa.justificacion_costo or "").strip()
+                if len(justificacion) < 5:
+                    mejor = validacion.alternativas_economicas[0]
+                    raise DomainError(
+                        "Existe una alternativa terapeuticamente equivalente de menor costo "
+                        "(%s, %s, %.1f%% mas economica). Para prescribir el esquema elegido "
+                        "debe consignarse una justificacion clinica en el campo "
+                        "'justificacion_costo'."
+                        % (mejor.id_regimen, mejor.nombre, mejor.pct_ahorro),
+                        status_code=422,
+                        error_type="validation_error",
+                    )
 
             clinical = ClinicalData(
                 superficie_corporal_m2=superficie,

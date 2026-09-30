@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Navigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { LOGOUT_REASON, useAuth } from "../auth/AuthContext";
+
+const LOGOUT_MESSAGES = {
+  [LOGOUT_REASON.MANUAL]: "Cerraste sesión correctamente.",
+  [LOGOUT_REASON.EXPIRED]: "Tu sesión expiró. Volvé a ingresar.",
+};
 
 export default function LoginPage() {
   const { isAuthenticated, login, user } = useAuth();
@@ -18,6 +23,7 @@ export default function LoginPage() {
   }
 
   const savedRedirect = location.state?.from?.pathname;
+  const logoutMessage = LOGOUT_MESSAGES[location.state?.reason];
 
   if (isAuthenticated) {
     return <Navigate to={savedRedirect || getDefaultRoute(user?.role)} replace />;
@@ -104,7 +110,11 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && <div className="login-error">{error}</div>}
+              {error ? (
+                <div className="login-error">{error}</div>
+              ) : (
+                logoutMessage && <div className="login-info" role="status">{logoutMessage}</div>
+              )}
 
               <button type="submit" className="btn-primary login-submit" disabled={loading}>
                 {loading ? "Ingresando..." : "Ingresar"}
@@ -116,8 +126,8 @@ export default function LoginPage() {
             <div className="login-hint">
               <span className="login-hint-icon">🔒</span>
               <p>
-                Tu sesión se protege con un token temporal. Al finalizar, cerrá sesión
-                desde el menú lateral.
+                Tu sesión se protege con un token temporal. Al finalizar, usá el botón
+                "Cerrar sesión".
               </p>
             </div>
 

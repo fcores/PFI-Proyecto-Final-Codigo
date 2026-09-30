@@ -6,9 +6,14 @@ import math
 from backend.ml.feature_mapper import prescription_a_datos_modelo, prescription_a_features
 from backend.ml.guias import regimen_por_guias
 from backend.ml.model_loader import cargar_modelo, modelo_disponible
-from backend.ml.regimenes import nombre_regimen
+from backend.ml.regimenes import alternativas_equivalentes, ciclos_estandar, nombre_regimen
 from backend.ml.reglas import aplicar_reglas
-from backend.models.prescription import FeatureAporte, PrescriptionBase, ValidationResult
+from backend.models.prescription import (
+    AlternativaEconomica,
+    FeatureAporte,
+    PrescriptionBase,
+    ValidationResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +84,76 @@ class ValidationService:
             logger.error("Error en contraste de guias: %s", exc, exc_info=True)
             raise
 
+    def _alternativa_economica(self, id_regimen, bsa, peso_kg):
+        """Compara el costo del tratamiento completo contra los equivalentes.
+
+        Devuelve (costo_tratamiento, alternativas, ahorro, motivo). La regla es
+        ASESORA: nunca rechaza. La eleccion entre esquemas terapeuticamente
+        equivalentes es una decision clinica, de modo que el sistema se limita a
+        exponer la diferencia de costo y a exigir que el prescriptor la
+        fundamente.
+
+        El costo se expresa sobre el tratamiento completo ---costo por ciclo por
+        la cantidad de ciclos del esquema estandar--- y no sobre el ciclo
+        aislado, porque dos esquemas de igual costo unitario pueden tener
+        impacto presupuestario muy distinto si difieren en frecuencia o
+        duracion.
+        """
+        try:
+            if self._dosis_service is None:
+                return None, [], None, None
+
+            equivalentes = alternativas_equivalentes(id_regimen)
+            if not equivalentes:
+                return None, [], None, None
+
+            _costos, costo_ciclo = self._dosis_service.costear_regimen(id_regimen, bsa, peso_kg)
+            if costo_ciclo is None or costo_ciclo <= 0:
+                return None, [], None, None
+            costo_prescrito = costo_ciclo * ciclos_estandar(id_regimen)
+
+            alternativas = []
+            for rid in equivalentes:
+                _c, costo_alt_ciclo = self._dosis_service.costear_regimen(rid, bsa, peso_kg)
+                if costo_alt_ciclo is None or costo_alt_ciclo <= 0:
+                    continue
+                costo_alt = costo_alt_ciclo * ciclos_estandar(rid)
+                if costo_alt >= costo_prescrito:
+                    continue
+                ahorro = costo_prescrito - costo_alt
+                alternativas.append(
+                    AlternativaEconomica(
+                        id_regimen=rid,
+                        nombre=nombre_regimen(rid),
+                        costo_tratamiento=round(costo_alt, 2),
+                        ahorro=round(ahorro, 2),
+                        pct_ahorro=round(100.0 * ahorro / costo_prescrito, 2),
+                        ciclos=ciclos_estandar(rid),
+                    )
+                )
+
+            if not alternativas:
+                return round(costo_prescrito, 2), [], None, None
+
+            alternativas.sort(key=lambda a: a.ahorro, reverse=True)
+            mejor = alternativas[0]
+            motivo = (
+                "Existe una alternativa terapéuticamente equivalente de menor costo: %s (%s) "
+                "cuesta %.2f por tratamiento completo frente a %.2f del esquema prescrito, "
+                "un %.1f%% menos. Se requiere justificación clínica de la elección."
+                % (
+                    mejor.id_regimen,
+                    mejor.nombre,
+                    mejor.costo_tratamiento,
+                    costo_prescrito,
+                    mejor.pct_ahorro,
+                )
+            )
+            return round(costo_prescrito, 2), alternativas, round(mejor.ahorro, 2), motivo
+        except Exception as exc:
+            logger.error("Error en analisis de alternativa economica: %s", exc, exc_info=True)
+            raise
+
     def _aportes_pred_contrib(self, model, X_row, feature_names):
         """Obtiene aportes tipo SHAP via pred_contrib de LightGBM."""
         try:
@@ -140,6 +215,18 @@ class ValidationService:
                     data.peso_kg,
                 )
 
+            costo_tratamiento, alternativas, ahorro, motivo_economico = self._alternativa_economica(
+                data.id_regimen,
+                superficie,
+                data.peso_kg,
+            )
+            economia = {
+                "costo_tratamiento": costo_tratamiento,
+                "alternativas_economicas": alternativas,
+                "ahorro_potencial": ahorro,
+                "requiere_justificacion_costo": bool(alternativas),
+            }
+
             datos_modelo = prescription_a_datos_modelo(data, superficie, excedente)
             motivos_reglas = aplicar_reglas(datos_modelo)
             id_sugerido, reglas_guias, motivo_contraste = self._contraste_guias(
@@ -151,6 +238,8 @@ class ValidationService:
                 motivos = list(motivos_reglas)
                 if motivo_contraste:
                     motivos.append(motivo_contraste)
+                if motivo_economico:
+                    motivos.append(motivo_economico)
                 return ValidationResult(
                     estado=ESTADO_RECHAZADO,
                     motivos=motivos,
@@ -161,12 +250,15 @@ class ValidationService:
                     nivel_confianza="baja",
                     costo_por_farmaco=costo_por_farmaco,
                     costo_total=costo_total,
+                    **economia,
                 )
 
             if not modelo_disponible():
                 motivos = ["Motor ML no disponible. Se deriva a revisión humana (modo solo-reglas)."]
                 if motivo_contraste:
                     motivos.append(motivo_contraste)
+                if motivo_economico:
+                    motivos.append(motivo_economico)
                 return ValidationResult(
                     estado=ESTADO_REVISION,
                     motivos=motivos,
@@ -175,6 +267,7 @@ class ValidationService:
                     reglas_guias=reglas_guias,
                     costo_por_farmaco=costo_por_farmaco,
                     costo_total=costo_total,
+                    **economia,
                 )
 
             artefacto = cargar_modelo()
@@ -214,6 +307,8 @@ class ValidationService:
 
             if motivo_contraste:
                 motivos.append(motivo_contraste)
+            if motivo_economico:
+                motivos.append(motivo_economico)
 
             return ValidationResult(
                 estado=estado,
@@ -229,6 +324,7 @@ class ValidationService:
                 reglas_guias=reglas_guias,
                 costo_por_farmaco=costo_por_farmaco,
                 costo_total=costo_total,
+                **economia,
             )
         except Exception as exc:
             logger.error("Error en validate: %s", exc, exc_info=True)

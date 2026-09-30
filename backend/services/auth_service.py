@@ -225,22 +225,41 @@ class AuthService:
             logger.error("Error al resolver token: %s", exc, exc_info=True)
             raise
 
-    def logout(self, token: str | None) -> None:
-        """Cierra la sesion invalidando el token."""
+    def logout(self, token: str | None) -> UserInfo | None:
+        """Cierra la sesion invalidando el token. Es idempotente.
+
+        Devuelve el usuario dueño de la sesion cerrada, o None si el token
+        no existia o ya habia expirado.
+        """
         try:
             if not token:
-                return
-            self._tokens_mem.pop(token, None)
+                logger.info("Logout sin token.")
+                return None
+
+            user = self._tokens_mem.pop(token, None)
             if self._db_available():
                 token_hash = self._hash_token(token)
-                self._cache.pop(token_hash, None)
+                cached = self._cache.pop(token_hash, None)
+                if cached:
+                    user = cached[0]
 
                 from backend.db import get_db, load_query
 
                 token_queries = load_query("auth_tokens.sql")
                 with get_db() as conn:
                     with conn.cursor() as cur:
+                        if user is None:
+                            cur.execute(token_queries["find_valid_token"], (token_hash,))
+                            row = cur.fetchone()
+                            if row is not None:
+                                user = UserInfo(username=row[0], display_name=row[1], role=row[2])
                         cur.execute(token_queries["delete_token"], (token_hash,))
+
+            if user is None:
+                logger.info("Logout con token inexistente o expirado.")
+            else:
+                logger.info("Sesion cerrada: usuario=%s rol=%s", user.username, user.role)
+            return user
         except Exception as exc:
             logger.error("Error en logout: %s", exc, exc_info=True)
             raise
