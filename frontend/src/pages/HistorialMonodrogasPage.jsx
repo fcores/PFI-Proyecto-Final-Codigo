@@ -1,29 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
-import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import { fetchMonodrugs } from "../api/monodrugs";
 
-const TABLE_COLUMNS = [
-  "ID",
-  "Código",
-  "Descripción",
-];
+const TABLE_COLUMNS = ["Código", "Descripción"];
 
 export default function HistorialMonodrogasPage() {
   const [monodrugs, setMonodrugs] = useState([]);
-  const [filters, setFilters] = useState({
-    query: "",
-    codigo: "",
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [query, setQuery] = useState("");
 
   const loadMonodrugs = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       setMonodrugs(await fetchMonodrugs());
-    } catch {
+    } catch (err) {
+      setError(err.message || "No se pudo cargar el maestro de monodrogas.");
       setMonodrugs([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -32,55 +31,35 @@ export default function HistorialMonodrogasPage() {
   }, [loadMonodrugs]);
 
   const filteredMonodrugs = useMemo(() => {
-    const normalizedQuery = filters.query.trim().toLowerCase();
-    const normalizedCodigo = filters.codigo.trim().toLowerCase();
-
-    return monodrugs.filter((monodrug) => {
-      const searchableText = [
-        monodrug.descripcion,
-        monodrug.codigo,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      const matchesQuery = normalizedQuery
-        ? searchableText.includes(normalizedQuery)
-        : true;
-      const matchesCodigo = normalizedCodigo
-        ? (monodrug.codigo || "").toLowerCase().includes(normalizedCodigo)
-        : true;
-
-      return matchesQuery && matchesCodigo;
-    });
-  }, [filters, monodrugs]);
-
-  function updateFilter(field, value) {
-    setFilters((current) => ({ ...current, [field]: value }));
-  }
-
-  function clearFilters() {
-    setFilters({
-      query: "",
-      codigo: "",
-    });
-  }
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return monodrugs;
+    return monodrugs.filter((monodrug) =>
+      [monodrug.descripcion, monodrug.codigo].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery),
+    );
+  }, [query, monodrugs]);
 
   function renderMonodrugRow(monodrug) {
     return (
       <tr key={monodrug.id}>
-        <td>{monodrug.id}</td>
-        <td>{monodrug.codigo}</td>
+        <td className="cell-nowrap">{monodrug.codigo}</td>
         <td>{monodrug.descripcion}</td>
       </tr>
     );
   }
 
+  const emptyText = loading
+    ? "Cargando monodrogas…"
+    : error
+      ? "No se pudo cargar el maestro."
+      : query
+        ? "No hay monodrogas que coincidan con la búsqueda."
+        : "Todavía no hay monodrogas cargadas.";
+
   return (
     <>
       <TopBar
         title="Historial de monodrogas"
-        subtitle="Consultá el maestro de monodrogas y aplicá filtros por descripción o código."
+        subtitle="Consultá el maestro de monodrogas por descripción o código."
         badge="Monodrogas"
       />
 
@@ -89,59 +68,41 @@ export default function HistorialMonodrogasPage() {
           <section className="card card-table">
             <header className="agreements-header">
               <div>
-                <span className="card-eyebrow">Actividad</span>
+                <span className="card-eyebrow">Maestro farmacológico</span>
                 <h2>Monodrogas cargadas</h2>
-                <p className="muted">
-                  Usá los filtros para consultar las monodrogas cargadas en el maestro farmacológico.
-                </p>
               </div>
               <PanelStat count={filteredMonodrugs.length} singular="resultado" plural="resultados" />
             </header>
 
             <div className="history-toolbar">
-              <CardHeader
-                eyebrow="Consultas"
-                title="Filtros generales"
-                description="Buscá por descripción o por código autogenerado (MONO-XXXX)."
-              />
-
               <div className="form-grid history-filters">
-                <FormField label="Buscar" htmlFor="history_monodrug_query" span={8}>
+                <FormField label="Buscar" htmlFor="history_monodrug_query" span={10}>
                   <input
                     id="history_monodrug_query"
-                    name="history_monodrug_query"
-                    type="text"
-                    placeholder="Descripción o código"
-                    value={filters.query}
-                    onChange={(event) => updateFilter("query", event.target.value)}
+                    type="search"
+                    placeholder="Descripción o código (MONO-0001)"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
                   />
                 </FormField>
-
-                <FormField label="Código" htmlFor="history_monodrug_codigo" span={4}>
-                  <input
-                    id="history_monodrug_codigo"
-                    name="history_monodrug_codigo"
-                    type="text"
-                    placeholder="MONO-0001"
-                    value={filters.codigo}
-                    onChange={(event) => updateFilter("codigo", event.target.value)}
-                  />
-                </FormField>
-              </div>
-
-              <div className="history-toolbar-actions">
-                <button type="button" className="btn-secondary" onClick={clearFilters}>
-                  Limpiar filtros
-                </button>
+                <div className="form-group form-group--action field-span-2">
+                  <button type="button" className="btn-secondary" disabled={!query} onClick={() => setQuery("")}>
+                    Limpiar
+                  </button>
+                </div>
               </div>
             </div>
 
-            <DataTable
-              columns={TABLE_COLUMNS}
-              rows={filteredMonodrugs}
-              renderRow={renderMonodrugRow}
-              emptyText="No hay monodrogas que coincidan con los filtros."
-            />
+            {error && (
+              <p className="status error status--block" role="alert">
+                {error}{" "}
+                <button type="button" className="btn-link" onClick={loadMonodrugs}>
+                  Reintentar
+                </button>
+              </p>
+            )}
+
+            <DataTable columns={TABLE_COLUMNS} rows={filteredMonodrugs} renderRow={renderMonodrugRow} emptyText={emptyText} />
           </section>
         </section>
       </main>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import TopBar from "../components/TopBar";
 import CardHeader from "../components/CardHeader";
+import SimpleTable from "../components/SimpleTable";
 import StatusChip from "../components/StatusChip";
 import { get } from "../api/client";
 
@@ -12,12 +13,14 @@ export default function SaludPage() {
   const [health, setHealth] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [checkedAt, setCheckedAt] = useState(null);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       setHealth(await get("/health"));
+      setCheckedAt(new Date());
     } catch (err) {
       setError(err.message || "No se pudo consultar el estado del sistema.");
       setHealth(null);
@@ -33,6 +36,37 @@ export default function SaludPage() {
   const fabric = health?.fabric_gateway || {};
   const orgs = fabric.orgs || {};
 
+  const filas = health
+    ? [
+        {
+          key: "db",
+          componente: "Base de datos (RDS)",
+          ok: health.database === "connected",
+          detalle: health.database === "connected" ? "Conectada" : health.database,
+        },
+        {
+          key: "ml",
+          componente: "Modelo ML",
+          ok: health.modelo_disponible,
+          detalle: health.modelo_version ? `v${health.modelo_version}` : "No disponible",
+        },
+        {
+          key: "gateway",
+          componente: "Puente Fabric (gateway)",
+          ok: fabric.status === "ok",
+          detalle: `${fabric.status || "sin configurar"}${
+            fabric.channel ? ` · canal ${fabric.channel} · chaincode ${fabric.chaincode}` : ""
+          }`,
+        },
+        ...Object.entries(orgs).map(([actor, org]) => ({
+          key: actor,
+          componente: `Peer ${org.msp_id || actor}`,
+          ok: org.status === "ok",
+          detalle: `${org.peer || ""}${org.error ? ` — ${org.error}` : ""}`,
+        })),
+      ]
+    : [];
+
   return (
     <>
       <TopBar
@@ -47,58 +81,38 @@ export default function SaludPage() {
             <CardHeader
               split
               eyebrow="Monitoreo"
-              title="🩺 Componentes"
+              title="Componentes"
               description="La red Fabric es la fuente de verdad de las prescripciones: si un peer está caído, las escrituras se bloquean (endorsement AND de las 3 orgs)."
             />
 
-            <div className="history-toolbar-actions" style={{ marginBottom: "16px" }}>
+            <div className="toolbar-row">
+              <span className="muted">
+                {checkedAt ? `Última consulta: ${checkedAt.toLocaleTimeString("es-AR")}` : "Consultando…"}
+              </span>
               <button type="button" className="btn-secondary" onClick={load} disabled={loading}>
-                {loading ? "Consultando..." : "Actualizar"}
+                {loading ? "Consultando…" : "Actualizar"}
               </button>
             </div>
 
-            {error && <p className="status error">{error}</p>}
+            {error && (
+              <p className="status error status--block" role="alert">
+                {error}
+              </p>
+            )}
 
             {health && (
-              <table className="dosis-table">
-                <thead>
-                  <tr>
-                    <th>Componente</th>
-                    <th>Estado</th>
-                    <th>Detalle</th>
+              <SimpleTable
+                caption="Estado de los componentes"
+                columns={["Componente", "Estado", "Detalle"]}
+                rows={filas}
+                renderRow={(fila) => (
+                  <tr key={fila.key}>
+                    <td>{fila.componente}</td>
+                    <td>{chipFor(fila.ok)}</td>
+                    <td className="cell-text">{fila.detalle}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Base de datos (RDS)</td>
-                    <td>{chipFor(health.database === "connected")}</td>
-                    <td>{health.database}</td>
-                  </tr>
-                  <tr>
-                    <td>Modelo ML</td>
-                    <td>{chipFor(health.modelo_disponible)}</td>
-                    <td>{health.modelo_version ? `v${health.modelo_version}` : "no disponible"}</td>
-                  </tr>
-                  <tr>
-                    <td>Puente Fabric (gateway)</td>
-                    <td>{chipFor(fabric.status === "ok")}</td>
-                    <td>
-                      {fabric.status || "sin configurar"}
-                      {fabric.channel ? ` · canal ${fabric.channel} · chaincode ${fabric.chaincode}` : ""}
-                    </td>
-                  </tr>
-                  {Object.entries(orgs).map(([actor, org]) => (
-                    <tr key={actor}>
-                      <td>Peer {org.msp_id || actor}</td>
-                      <td>{chipFor(org.status === "ok")}</td>
-                      <td>
-                        {org.peer}
-                        {org.error ? ` — ${org.error}` : ""}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                )}
+              />
             )}
           </section>
         </section>

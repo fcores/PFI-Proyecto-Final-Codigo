@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import TopBar from "../components/TopBar";
 import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import FormActions from "../components/FormActions";
+import ReadOnlyField from "../components/ReadOnlyField";
+import SimpleTable from "../components/SimpleTable";
 import StatusChip from "../components/StatusChip";
-import ConfidenceBar from "../components/ConfidenceBar";
+import MlVerdictPanel from "../components/MlVerdictPanel";
 import useFormStatus from "../hooks/useFormStatus";
-import { ESTADO_VARIANT } from "../constants/estadoVariant";
-import {
-  createPrescription,
-  fetchDosisReferencia,
-  fetchRegimenes,
-  recomendarRegimen,
-} from "../api/prescriptions";
+import { ESTADO_VARIANT, estadoLabel } from "../constants/estadoVariant";
+import { createPrescription, fetchDosisReferencia, fetchRegimenes, recomendarRegimen } from "../api/prescriptions";
 import { fetchPatient } from "../api/patients";
+import { formatCurrency } from "../utils/format";
 
 function bodySurfaceArea(pesoKg, tallaCm) {
   const peso = Number(pesoKg);
@@ -22,15 +21,19 @@ function bodySurfaceArea(pesoKg, tallaCm) {
   return Math.sqrt((talla * peso) / 3600).toFixed(2);
 }
 
+const PACIENTE_INICIAL = { estado: "idle", texto: "" };
+
 export default function PrescripcionPage() {
   const formRef = useRef(null);
+  const resultRef = useRef(null);
   const { status, setLoading, setSuccess, setError, clear } = useFormStatus();
   const [result, setResult] = useState(null);
   const [preview, setPreview] = useState({ peso: "", talla: "" });
   const [regimenes, setRegimenes] = useState([]);
+  const [regimenesError, setRegimenesError] = useState(null);
   const [idRegimen, setIdRegimen] = useState("");
   const [dosisRows, setDosisRows] = useState([]);
-  const [guiaNota, setGuiaNota] = useState("");
+  const [guia, setGuia] = useState({ estado: "idle", texto: "" });
   // RF-34: se activa cuando el motor detecta una alternativa terapeuticamente
   // equivalente de menor costo y el alta fue rechazada por falta de
   // justificacion clinica.
@@ -39,51 +42,55 @@ export default function PrescripcionPage() {
   const submittingRef = useRef(false);
   // Verificación del ID de paciente contra el padrón (el backend vuelve a
   // validarlo: es solo una ayuda para detectar el error antes de enviar).
-  const [paciente, setPaciente] = useState({ estado: "idle", texto: "" });
+  const [paciente, setPaciente] = useState(PACIENTE_INICIAL);
   const pacienteConsultaRef = useRef(0);
 
-  const superficie = useMemo(
-    () => bodySurfaceArea(preview.peso, preview.talla),
-    [preview],
-  );
+  const superficie = useMemo(() => bodySurfaceArea(preview.peso, preview.talla), [preview]);
 
   useEffect(() => {
     fetchRegimenes()
-      .then(setRegimenes)
-      .catch(() => setRegimenes([]));
+      .then((items) => {
+        setRegimenes(items);
+        setRegimenesError(null);
+      })
+      .catch((err) => {
+        setRegimenes([]);
+        setRegimenesError(err.message || "No se pudo cargar el catálogo de regímenes.");
+      });
   }, []);
 
+  // Dosis de referencia: se recalculan con régimen + peso + talla y se vacían
+  // si falta alguno (antes quedaban las de la combinación anterior).
   useEffect(() => {
-    async function loadDosis() {
-      if (!idRegimen || !preview.peso || !preview.talla) {
-        return;
-      }
-      try {
-        const rows = await fetchDosisReferencia(
-          idRegimen,
-          Number(preview.peso),
-          Number(preview.talla),
-        );
-        setDosisRows(rows || []);
-      } catch {
-        setDosisRows([]);
-      }
+    if (!idRegimen || !Number(preview.peso) || !Number(preview.talla)) {
+      setDosisRows([]);
+      return undefined;
     }
-    loadDosis();
+    let vigente = true;
+    fetchDosisReferencia(idRegimen, Number(preview.peso), Number(preview.talla))
+      .then((rows) => {
+        if (vigente) setDosisRows((rows || []).map((row) => ({ ...row, dosis_mg: String(row.dosis_mg) })));
+      })
+      .catch(() => {
+        if (vigente) setDosisRows([]);
+      });
+    return () => {
+      vigente = false;
+    };
   }, [idRegimen, preview.peso, preview.talla]);
 
   async function verificarPaciente(rawId) {
     const id = Number(rawId);
     const consulta = ++pacienteConsultaRef.current;
     if (!rawId || !Number.isInteger(id) || id < 1) {
-      setPaciente({ estado: "idle", texto: "" });
+      setPaciente(PACIENTE_INICIAL);
       return;
     }
     setPaciente({ estado: "loading", texto: "Buscando paciente…" });
     try {
       const p = await fetchPatient(id);
       if (consulta !== pacienteConsultaRef.current) return;
-      const nombre = `${p.last_name ?? ""}, ${p.first_name ?? ""}`.replace(/^, |, $/g, "");
+      const nombre = [p.last_name, p.first_name].filter(Boolean).join(", ");
       setPaciente({ estado: "ok", texto: `Paciente: ${nombre || `#${id}`}` });
     } catch (err) {
       if (consulta !== pacienteConsultaRef.current) return;
@@ -96,16 +103,11 @@ export default function PrescripcionPage() {
   }
 
   function updateDosis(index, value) {
-    setDosisRows((current) =>
-      current.map((row, idx) =>
-        idx === index ? { ...row, dosis_mg: Number(value) } : row,
-      ),
-    );
+    setDosisRows((current) => current.map((row, idx) => (idx === index ? { ...row, dosis_mg: value } : row)));
   }
 
   async function handleSugerirGuias() {
-    const form = formRef.current;
-    const data = new FormData(form);
+    const data = new FormData(formRef.current);
     const peso = data.get("peso_kg");
     const talla = data.get("talla_cm");
     const body = {
@@ -123,33 +125,40 @@ export default function PrescripcionPage() {
     if (talla) body.talla_cm = Number(talla);
 
     if (!body.estadio) {
-      setError("Completá el estadio para sugerir según guías.");
+      setGuia({ estado: "error", texto: "Completá el estadio para sugerir según guías." });
+      document.getElementById("estadio")?.focus();
       return;
     }
 
-    setLoading("Consultando guías clínicas...");
+    setGuia({ estado: "loading", texto: "Consultando guías clínicas…" });
     try {
       const reco = await recomendarRegimen(body);
       setIdRegimen(reco.id_regimen);
-      let nota = `Sugerido ${reco.id_regimen} (${reco.nombre_regimen}) por: ${
+      let texto = `Sugerido ${reco.id_regimen} (${reco.nombre_regimen}) por: ${
         (reco.reglas_aplicadas || []).join(", ") || "guías clínicas"
-      }`;
-      if (reco.costo_total != null) {
-        nota += ` — Costo estimado: $${reco.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
-      }
-      setGuiaNota(nota);
-      setSuccess(`Régimen sugerido: ${reco.id_regimen}`);
+      }.`;
+      if (reco.costo_total != null) texto += ` Costo estimado por ciclo: ${formatCurrency(reco.costo_total)}.`;
+      setGuia({ estado: "ok", texto });
     } catch (err) {
-      setError(err.message || "No se pudo obtener la sugerencia de guías.");
+      setGuia({ estado: "error", texto: err.message || "No se pudo obtener la sugerencia de guías." });
     }
+  }
+
+  function resetFormulario() {
+    formRef.current?.reset();
+    setPreview({ peso: "", talla: "" });
+    setIdRegimen("");
+    setDosisRows([]);
+    setGuia({ estado: "idle", texto: "" });
+    setRequiereJustificacion(false);
+    setPaciente(PACIENTE_INICIAL);
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
     // Un doble clic no puede generar dos prescripciones on-chain.
     if (submittingRef.current) return;
-    const form = formRef.current;
-    const data = new FormData(form);
+    const data = new FormData(formRef.current);
 
     const body = {
       patient_id: Number(data.get("patient_id")),
@@ -157,7 +166,7 @@ export default function PrescripcionPage() {
       sexo: data.get("sexo") || "",
       peso_kg: Number(data.get("peso_kg")),
       talla_cm: Number(data.get("talla_cm")),
-      diagnostico_cie10: (data.get("diagnostico_cie10") || "").trim(),
+      diagnostico_cie10: (data.get("diagnostico_cie10") || "").trim().toUpperCase(),
       localizacion_tumor: data.get("localizacion_tumor") || "",
       tipo_histologico: (data.get("tipo_histologico") || "").trim(),
       t: data.get("t") || "",
@@ -171,7 +180,7 @@ export default function PrescripcionPage() {
       id_regimen: idRegimen || data.get("id_regimen") || "",
       dosis_por_farmaco: dosisRows.map((row) => ({
         monodroga: row.monodroga,
-        dosis_mg: Number(row.dosis_mg),
+        dosis_mg: Number(row.dosis_mg) || 0,
       })),
       medico_prescriptor: (data.get("medico_prescriptor") || "").trim(),
       matricula: (data.get("matricula") || "").trim(),
@@ -182,7 +191,7 @@ export default function PrescripcionPage() {
       body.justificacion_costo = justificacionCosto;
     }
 
-    setLoading("Validando y registrando en la blockchain (endoso de las 3 organizaciones)...");
+    setLoading("Validando y registrando en la blockchain (endoso de las 3 organizaciones)…");
     setResult(null);
     submittingRef.current = true;
     setSubmitting(true);
@@ -191,13 +200,9 @@ export default function PrescripcionPage() {
       const created = await createPrescription(body);
       setSuccess(`Prescripción ${created.prescription_code} registrada en la blockchain.`);
       setResult(created);
-      form.reset();
-      setPreview({ peso: "", talla: "" });
-      setIdRegimen("");
-      setDosisRows([]);
-      setGuiaNota("");
-      setRequiereJustificacion(false);
-      setPaciente({ estado: "idle", texto: "" });
+      resetFormulario();
+      // El resultado queda debajo del formulario: se lo trae a la vista.
+      requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
     } catch (err) {
       const mensaje = err.message || "Ocurrió un error al registrar la prescripción.";
       // RF-34: el backend exige justificar el esquema cuando hay una
@@ -219,22 +224,23 @@ export default function PrescripcionPage() {
   }
 
   function handleCancel() {
-    formRef.current.reset();
-    setPreview({ peso: "", talla: "" });
+    resetFormulario();
     setResult(null);
-    setIdRegimen("");
-    setDosisRows([]);
-    setGuiaNota("");
-    setRequiereJustificacion(false);
-    setPaciente({ estado: "idle", texto: "" });
     clear();
   }
+
+  const pacienteHintClass =
+    paciente.estado === "missing" || paciente.estado === "error"
+      ? " field-hint--error"
+      : paciente.estado === "ok"
+        ? " field-hint--ok"
+        : "";
 
   return (
     <>
       <TopBar
-        title="Alta de prescripción de alta complejidad"
-        subtitle="Registro de prescripciones oncológicas (caso piloto: cáncer de colon) con validación híbrida y trazabilidad en blockchain."
+        title="Alta de prescripción"
+        subtitle="Prescripciones oncológicas de alta complejidad (caso piloto: cáncer de colon) con validación híbrida y registro en blockchain."
         badge="Prescripciones"
       />
 
@@ -244,8 +250,8 @@ export default function PrescripcionPage() {
             <form ref={formRef} className="card card-form" onSubmit={handleSubmit}>
               <CardHeader
                 split
-                eyebrow="Auditoría de prescripciones"
-                title="Datos clínicos y prescripción"
+                eyebrow="Paciente"
+                title="Datos del paciente"
                 description="Completá los atributos clínicos, elegí el régimen (opcionalmente sugerido por guías) y validá con el motor híbrido."
                 badge="Cáncer de colon"
               />
@@ -263,11 +269,7 @@ export default function PrescripcionPage() {
                     aria-describedby="patient_id_hint"
                     onBlur={(e) => verificarPaciente(e.target.value)}
                   />
-                  <p
-                    id="patient_id_hint"
-                    className={`field-hint${paciente.estado === "missing" || paciente.estado === "error" ? " field-hint--error" : ""}${paciente.estado === "ok" ? " field-hint--ok" : ""}`}
-                    aria-live="polite"
-                  >
+                  <p id="patient_id_hint" className={`field-hint${pacienteHintClass}`} aria-live="polite">
                     {paciente.texto || "ID del padrón de pacientes."}
                   </p>
                 </FormField>
@@ -276,13 +278,22 @@ export default function PrescripcionPage() {
                 </FormField>
                 <FormField label="Sexo" htmlFor="sexo" required span={3}>
                   <select id="sexo" name="sexo" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="Masculino">Masculino</option>
                     <option value="Femenino">Femenino</option>
                   </select>
                 </FormField>
                 <FormField label="Diagnóstico (CIE-10)" htmlFor="diagnostico_cie10" required span={3}>
-                  <input id="diagnostico_cie10" name="diagnostico_cie10" type="text" placeholder="Ej.: C18.9" required />
+                  <input
+                    id="diagnostico_cie10"
+                    name="diagnostico_cie10"
+                    type="text"
+                    placeholder="Ej.: C18.9"
+                    maxLength={16}
+                    required
+                  />
                 </FormField>
 
                 <FormField label="Peso (kg)" htmlFor="peso_kg" required span={3}>
@@ -291,7 +302,8 @@ export default function PrescripcionPage() {
                     name="peso_kg"
                     type="number"
                     step="0.1"
-                    min="0"
+                    min="1"
+                    max="400"
                     placeholder="72"
                     required
                     onChange={(e) => setPreview((p) => ({ ...p, peso: e.target.value }))}
@@ -303,20 +315,18 @@ export default function PrescripcionPage() {
                     name="talla_cm"
                     type="number"
                     step="0.1"
-                    min="0"
+                    min="1"
+                    max="260"
                     placeholder="170"
                     required
                     onChange={(e) => setPreview((p) => ({ ...p, talla: e.target.value }))}
                   />
                 </FormField>
-                <FormField label="Superficie corporal (m²)" htmlFor="superficie_preview" span={6}>
-                  <input
-                    id="superficie_preview"
-                    type="text"
-                    value={superficie ? `${superficie} m² (Mosteller)` : "Se calcula con peso y talla"}
-                    readOnly
-                  />
-                </FormField>
+                <ReadOnlyField
+                  label="Superficie corporal (Mosteller)"
+                  value={superficie ? `${superficie} m²` : "Se calcula con peso y talla"}
+                  span={6}
+                />
               </div>
 
               <CardHeader
@@ -327,18 +337,29 @@ export default function PrescripcionPage() {
               <div className="form-grid">
                 <FormField label="Localización del tumor" htmlFor="localizacion_tumor" required span={4}>
                   <select id="localizacion_tumor" name="localizacion_tumor" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="Colon derecho">Colon derecho</option>
                     <option value="Colon izquierdo">Colon izquierdo</option>
                     <option value="Colon transverso">Colon transverso</option>
                   </select>
                 </FormField>
                 <FormField label="Tipo histológico" htmlFor="tipo_histologico" required span={4}>
-                  <input id="tipo_histologico" name="tipo_histologico" type="text" placeholder="Ej.: Adenocarcinoma" required />
+                  <input
+                    id="tipo_histologico"
+                    name="tipo_histologico"
+                    type="text"
+                    placeholder="Ej.: Adenocarcinoma"
+                    maxLength={200}
+                    required
+                  />
                 </FormField>
                 <FormField label="Estadio" htmlFor="estadio" required span={4}>
                   <select id="estadio" name="estadio" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="I">I</option>
                     <option value="II">II</option>
                     <option value="III">III</option>
@@ -347,7 +368,9 @@ export default function PrescripcionPage() {
                 </FormField>
                 <FormField label="T (tumor primario)" htmlFor="t" required span={4}>
                   <select id="t" name="t" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="T1">T1</option>
                     <option value="T2">T2</option>
                     <option value="T3">T3</option>
@@ -356,7 +379,9 @@ export default function PrescripcionPage() {
                 </FormField>
                 <FormField label="N (ganglios)" htmlFor="n" required span={4}>
                   <select id="n" name="n" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="N0">N0</option>
                     <option value="N1">N1</option>
                     <option value="N2">N2</option>
@@ -364,7 +389,9 @@ export default function PrescripcionPage() {
                 </FormField>
                 <FormField label="M (metástasis)" htmlFor="m" required span={4}>
                   <select id="m" name="m" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="M0">M0</option>
                     <option value="M1">M1</option>
                     <option value="MX">MX</option>
@@ -375,7 +402,7 @@ export default function PrescripcionPage() {
               <CardHeader
                 eyebrow="Biomarcadores"
                 title="Marcadores moleculares"
-                description="Tres estados: no se imputa wild type si no fue evaluado."
+                description="Tres estados: si no fue evaluado no se asume wild type."
               />
               <div className="form-grid">
                 <FormField label="MSI" htmlFor="msi" required span={4}>
@@ -404,12 +431,14 @@ export default function PrescripcionPage() {
               <CardHeader
                 eyebrow="Prescripción"
                 title="Régimen y dosificación"
-                description="Podés sugerir según guías y luego auditar lo prescrito con el modelo ML."
+                description="Podés pedir una sugerencia según guías; el esquema elegido se audita con el modelo ML."
               />
               <div className="form-grid">
                 <FormField label="Línea de tratamiento" htmlFor="linea_tratamiento" required span={4}>
                   <select id="linea_tratamiento" name="linea_tratamiento" required defaultValue="">
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      Seleccionar
+                    </option>
                     <option value="Primera">Primera</option>
                     <option value="Segunda">Segunda</option>
                   </select>
@@ -422,35 +451,79 @@ export default function PrescripcionPage() {
                     value={idRegimen}
                     onChange={(e) => setIdRegimen(e.target.value)}
                   >
-                    <option value="" disabled>Seleccionar</option>
+                    <option value="" disabled>
+                      {regimenesError ? "Catálogo no disponible" : "Seleccionar"}
+                    </option>
                     {regimenes.map((reg) => (
                       <option key={reg.id_regimen} value={reg.id_regimen}>
                         {reg.id_regimen} — {reg.nombre}
                       </option>
                     ))}
                   </select>
+                  {regimenesError ? <p className="field-hint field-hint--error">{regimenesError}</p> : null}
                 </FormField>
-                <FormField label="Acción" htmlFor="sugerir_guias" span={3}>
+                <div className="form-group form-group--action field-span-3">
                   <button
-                    id="sugerir_guias"
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn-secondary"
                     onClick={handleSugerirGuias}
+                    disabled={guia.estado === "loading"}
                   >
-                    Sugerir según guías
+                    {guia.estado === "loading" ? "Consultando…" : "Sugerir según guías"}
                   </button>
-                </FormField>
-                {guiaNota ? (
-                  <FormField label="Nota de guías" htmlFor="guia_nota" span={12}>
-                    <input id="guia_nota" type="text" value={guiaNota} readOnly />
-                  </FormField>
+                </div>
+                {guia.texto ? (
+                  <div className="field-span-12">
+                    <div
+                      className={`alert ${guia.estado === "error" ? "alert--error" : guia.estado === "ok" ? "alert--info" : ""}`}
+                      role={guia.estado === "error" ? "alert" : "status"}
+                    >
+                      {guia.texto}
+                    </div>
+                  </div>
                 ) : null}
+              </div>
 
+              {dosisRows.length > 0 && (
+                <section className="ml-panel__section">
+                  <h3 className="ml-panel__title">Dosis por fármaco</h3>
+                  <p className="muted">Calculadas por superficie corporal; podés ajustarlas antes de registrar.</p>
+                  <SimpleTable
+                    caption="Dosis por fármaco"
+                    columns={["Monodroga", "Dosis (mg)"]}
+                    rows={dosisRows}
+                    renderRow={(row, index) => (
+                      <tr key={row.monodroga}>
+                        <td>{row.monodroga}</td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={row.dosis_mg}
+                            aria-label={`Dosis de ${row.monodroga} en mg`}
+                            onChange={(e) => updateDosis(index, e.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  />
+                </section>
+              )}
+
+              <div className="form-grid">
                 <FormField label="Médico prescriptor" htmlFor="medico_prescriptor" required span={8}>
-                  <input id="medico_prescriptor" name="medico_prescriptor" type="text" placeholder="Ej.: Dr. Juan Pérez" required />
+                  <input
+                    id="medico_prescriptor"
+                    name="medico_prescriptor"
+                    type="text"
+                    placeholder="Ej.: Dr. Juan Pérez"
+                    maxLength={200}
+                    required
+                  />
                 </FormField>
                 <FormField label="Matrícula" htmlFor="matricula" required span={4}>
-                  <input id="matricula" name="matricula" type="text" placeholder="MN 12345" required />
+                  <input id="matricula" name="matricula" type="text" placeholder="MN 12345" maxLength={50} required />
                 </FormField>
 
                 <FormField
@@ -470,54 +543,26 @@ export default function PrescripcionPage() {
                     minLength={5}
                     maxLength={2000}
                     required={requiereJustificacion}
+                    className={requiereJustificacion ? "is-required-now" : undefined}
                     placeholder={
                       requiereJustificacion
-                        ? "Existe una alternativa equivalente más económica. Indique la razón clínica por la que se prescribe el esquema elegido."
-                        : "Se completa solo si el motor detecta una alternativa equivalente de menor costo."
+                        ? "Existe una alternativa equivalente más económica. Indicá la razón clínica por la que se prescribe el esquema elegido."
+                        : "Solo se exige si el motor detecta una alternativa equivalente de menor costo."
                     }
                   />
                   {requiereJustificacion ? (
-                    <p className="muted" style={{ marginTop: "0.4em" }}>
-                      La justificación queda registrada de forma inmutable junto con la prescripción y
-                      acompaña al expediente durante la auditoría.
+                    <p className="field-hint">
+                      La justificación queda registrada de forma inmutable junto con la prescripción y acompaña al
+                      expediente durante la auditoría.
                     </p>
                   ) : null}
                 </FormField>
               </div>
 
-              {dosisRows.length > 0 && (
-                <div className="dosis-table-wrap">
-                  <h3 className="dosis-table__title">Dosis por fármaco</h3>
-                  <table className="dosis-table">
-                    <thead>
-                      <tr>
-                        <th>Monodroga</th>
-                        <th>Dosis (mg)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dosisRows.map((row, index) => (
-                        <tr key={row.monodroga}>
-                          <td>{row.monodroga}</td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.1"
-                              value={row.dosis_mg}
-                              onChange={(e) => updateDosis(index, e.target.value)}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
               <FormActions
                 status={status}
                 onCancel={handleCancel}
+                cancelLabel="Limpiar"
                 submitLabel="Validar y registrar"
                 submitting={submitting}
                 submittingLabel="Registrando en blockchain…"
@@ -525,134 +570,32 @@ export default function PrescripcionPage() {
             </form>
 
             {result && (
-              <section className="card card-form">
+              <section className="card card-form" ref={resultRef} tabIndex={-1}>
                 <CardHeader
                   split
                   eyebrow="Registrada en blockchain"
                   title={`Prescripción ${result.prescription_code}`}
                   description="Asset inmutable en Hyperledger Fabric, endosado por las 3 organizaciones. Queda pendiente de auditoría; el veredicto del modelo es soporte de decisión."
-                  badge={`Superficie: ${result.clinical?.superficie_corporal_m2} m²`}
+                  badge={`Superficie: ${result.clinical?.superficie_corporal_m2 ?? "—"} m²`}
                 />
                 <div className="form-grid">
-                  <FormField label="Estado on-chain" htmlFor="result_estado_chain" span={4}>
-                    <div>
-                      <StatusChip
-                        variant={ESTADO_VARIANT[result.estado] || "neutral"}
-                        label={result.estado}
-                      />
-                    </div>
-                  </FormField>
-                  <FormField label="Veredicto ML" htmlFor="result_estado" span={4}>
-                    <div>
-                      <StatusChip
-                        variant={ESTADO_VARIANT[result.ml.estado] || "neutral"}
-                        label={result.ml.estado}
-                      />
-                    </div>
-                  </FormField>
-                  <FormField label="Origen / Modelo" htmlFor="result_origen" span={4}>
-                    <input
-                      id="result_origen"
-                      type="text"
-                      value={`${result.ml.origen || "—"} · ${result.ml.version_modelo || "—"}`}
-                      readOnly
-                    />
-                  </FormField>
-                  <FormField label="Confianza" htmlFor="result_confianza" span={12}>
-                    <ConfidenceBar
-                      value={result.ml.probabilidad_concordante}
-                      low={result.ml.umbral_bajo}
-                      high={result.ml.umbral_alto}
-                      label={`Nivel: ${result.ml.nivel_confianza || "—"}`}
-                    />
-                  </FormField>
-                  <FormField label="TxID de Fabric" htmlFor="result_tx" span={6}>
-                    <input id="result_tx" type="text" value={result.tx_id || ""} readOnly />
-                  </FormField>
-                  <FormField label="Hash del contenido" htmlFor="result_hash" span={6}>
-                    <input id="result_hash" type="text" value={result.payload_hash || ""} readOnly />
-                  </FormField>
+                  <ReadOnlyField label="Estado on-chain" span={4}>
+                    <StatusChip variant={ESTADO_VARIANT[result.estado] || "neutral"} label={estadoLabel(result.estado)} />
+                  </ReadOnlyField>
+                  <ReadOnlyField label="TxID de Fabric" value={result.tx_id} span={8} mono copyable />
+                  <ReadOnlyField label="Hash del contenido" value={result.payload_hash} span={12} mono copyable />
                 </div>
-                <ul className="muted">
-                  {result.ml.motivos.map((motivo, idx) => (
-                    <li key={idx}>{motivo}</li>
-                  ))}
-                </ul>
-                {result.ml.features_relevantes?.length > 0 && (
-                  <div className="features-aportes">
-                    <h4>Aportes principales</h4>
-                    <ul>
-                      {result.ml.features_relevantes.map((item) => (
-                        <li key={item.feature}>
-                          {item.feature}: {item.aporte}
-                        </li>
-                      ))}
-                    </ul>
+                <MlVerdictPanel ml={result.ml} />
+                <div className="form-actions">
+                  <div className="buttons">
+                    <Link
+                      to={`/trazabilidad?id=${encodeURIComponent(result.prescription_id)}`}
+                      className="btn-secondary btn-as-link"
+                    >
+                      Ver trazabilidad
+                    </Link>
                   </div>
-                )}
-                {result.ml.alternativas_economicas?.length > 0 && (
-                  <div className="features-aportes">
-                    <h4>Alternativas terapéuticas de menor costo</h4>
-                    <p className="muted" style={{ margin: "0.4em 0" }}>
-                      Costo del esquema prescrito por tratamiento completo: $
-                      {result.ml.costo_tratamiento?.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                    </p>
-                    <table className="dosis-table" style={{ marginTop: "0.5em" }}>
-                      <thead>
-                        <tr>
-                          <th>Régimen</th>
-                          <th>Ciclos</th>
-                          <th>Costo del tratamiento</th>
-                          <th>Ahorro</th>
-                          <th>%</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.ml.alternativas_economicas.map((alt) => (
-                          <tr key={alt.id_regimen}>
-                            <td>
-                              {alt.id_regimen} — {alt.nombre}
-                            </td>
-                            <td>{alt.ciclos}</td>
-                            <td>
-                              ${alt.costo_tratamiento.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                            </td>
-                            <td>${alt.ahorro.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
-                            <td>{alt.pct_ahorro}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {result.ml.costo_total != null && (
-                  <div className="features-aportes">
-                    <h4>Costo estimado del régimen</h4>
-                    <p style={{ fontWeight: 600, fontSize: "1.1em", margin: "0.5em 0" }}>
-                      Total por ciclo: ${result.ml.costo_total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                    </p>
-                    {result.ml.costo_por_farmaco?.length > 0 && (
-                      <table className="dosis-table" style={{ marginTop: "0.5em" }}>
-                        <thead>
-                          <tr>
-                            <th>Fármaco</th>
-                            <th>Dosis (mg)</th>
-                            <th>Costo</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.ml.costo_por_farmaco.map((item) => (
-                            <tr key={item.monodroga}>
-                              <td>{item.monodroga}</td>
-                              <td>{item.dosis_mg}</td>
-                              <td>{item.costo != null ? `$${item.costo.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
+                </div>
               </section>
             )}
           </section>

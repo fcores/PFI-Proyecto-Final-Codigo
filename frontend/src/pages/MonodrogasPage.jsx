@@ -35,7 +35,6 @@ export default function MonodrogasPage() {
                 eyebrow="Maestro farmacológico"
                 title="Datos de la monodroga"
                 description="Ingresá el nombre de la droga. El código (MONO-XXXX) se genera automáticamente."
-                badge="Formulario guiado"
               />
 
               <div className="form-grid">

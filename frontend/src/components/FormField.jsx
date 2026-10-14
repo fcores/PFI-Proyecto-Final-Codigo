@@ -11,8 +11,15 @@ export default function FormField({
   return (
     <div className={`form-group field-span-${span}`}>
       <label htmlFor={htmlFor}>
-        {label}
-        {required && <span className="required"> *</span>}
+        {/* Un solo nodo: si el texto ocupa dos líneas el asterisco queda pegado. */}
+        <span>
+          {label}
+          {required && (
+            <span className="required" aria-hidden="true">
+              {" "}*
+            </span>
+          )}
+        </span>
       </label>
       {children}
     </div>

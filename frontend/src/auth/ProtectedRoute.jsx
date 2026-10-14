@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 export default function ProtectedRoute({ children, roles }) {
@@ -14,10 +14,17 @@ export default function ProtectedRoute({ children, roles }) {
 
   if (roles && !roles.includes(user?.role)) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
-        <h2>Acceso denegado</h2>
-        <p>No tenés permisos para acceder a esta sección.</p>
-      </div>
+      <main className="page">
+        <section className="card state-card" role="alert">
+          <h2>Acceso denegado</h2>
+          <p className="muted">Tu rol no tiene permisos para acceder a esta sección.</p>
+          <div className="state-card__actions">
+            <Link to="/" className="btn-primary btn-as-link">
+              Ir a mi pantalla principal
+            </Link>
+          </div>
+        </section>
+      </main>
     );
   }
 

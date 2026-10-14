@@ -44,8 +44,21 @@ class PatientService:
         lab_file: UploadFile | None,
         receta_file: UploadFile | None,
         otros_file: UploadFile | None,
+        filenames: dict[str, str | None] | None = None,
     ) -> Patient:
-        """Crea un paciente nuevo."""
+        """Crea un paciente nuevo.
+
+        De la documentacion adjunta solo se registra el nombre del archivo
+        (por UploadFile o enviado directamente en `filenames`).
+        """
+        filenames = filenames or {}
+
+        def _nombre(key: str, upload: UploadFile | None) -> str | None:
+            if upload is not None and upload.filename:
+                return upload.filename
+            value = (filenames.get(key) or "").strip()
+            return value or None
+
         patient = Patient(
             id=self._repo.next_id(),
             credential_id=credential_id,
@@ -57,12 +70,12 @@ class PatientService:
             gender=gender,
             treatment=treatment,
             medications=medications,
-            hc_filename=hc_file.filename if hc_file else None,
-            ap_filename=ap_file.filename if ap_file else None,
-            img_filename=img_file.filename if img_file else None,
-            lab_filename=lab_file.filename if lab_file else None,
-            receta_filename=receta_file.filename if receta_file else None,
-            otros_filename=otros_file.filename if otros_file else None,
+            hc_filename=_nombre("hc", hc_file),
+            ap_filename=_nombre("ap", ap_file),
+            img_filename=_nombre("img", img_file),
+            lab_filename=_nombre("lab", lab_file),
+            receta_filename=_nombre("receta", receta_file),
+            otros_filename=_nombre("otros", otros_file),
         )
         return self._repo.add(patient)
 

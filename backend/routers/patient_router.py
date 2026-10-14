@@ -28,6 +28,14 @@ def create_patient(
     lab_file: UploadFile | None = File(None),
     receta_file: UploadFile | None = File(None),
     otros_file: UploadFile | None = File(None),
+    # El frontend envia solo el nombre del archivo: la plataforma registra la
+    # constancia de la documentacion pero no almacena el documento.
+    hc_filename: str | None = Form(None, max_length=255),
+    ap_filename: str | None = Form(None, max_length=255),
+    img_filename: str | None = Form(None, max_length=255),
+    lab_filename: str | None = Form(None, max_length=255),
+    receta_filename: str | None = Form(None, max_length=255),
+    otros_filename: str | None = Form(None, max_length=255),
     authorization: str | None = Header(default=None),
 ):
     """Crea un paciente nuevo. Requiere rol administrador."""
@@ -50,6 +58,14 @@ def create_patient(
         lab_file=lab_file,
         receta_file=receta_file,
         otros_file=otros_file,
+        filenames={
+            "hc": hc_filename,
+            "ap": ap_filename,
+            "img": img_filename,
+            "lab": lab_filename,
+            "receta": receta_filename,
+            "otros": otros_filename,
+        },
     )
 
 

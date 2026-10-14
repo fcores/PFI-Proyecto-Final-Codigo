@@ -127,7 +127,7 @@ export default function LoginPage() {
             </div>
 
             <p className="login-footer">
-              Copyright © 2025 MedChain AI — Salud, Tecnología e IA
+              © {new Date().getFullYear()} MedChain AI — Salud, Tecnología e IA
             </p>
           </div>
         </section>

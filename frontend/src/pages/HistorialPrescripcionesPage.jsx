@@ -1,35 +1,48 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
-import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import StatusChip from "../components/StatusChip";
+import { useAuth } from "../auth/AuthContext";
 import { fetchPrescriptions } from "../api/prescriptions";
-import { ESTADO_VARIANT, ESTADO_LABEL } from "../constants/estadoVariant";
-import { shortHash } from "../utils/shortHash";
+import { ESTADO_VARIANT, ESTADO_LABEL, estadoLabel, mlLabel } from "../constants/estadoVariant";
+import { formatDate } from "../utils/formatDate";
 
 const TABLE_COLUMNS = [
   "Código",
+  "Fecha",
   "Paciente ID",
   "Diagnóstico",
   "Estadio",
   "Régimen",
-  "Estado on-chain",
+  "Estado",
   "Veredicto ML",
   "Confianza",
-  "Hash",
 ];
 
 const ESTADOS_FILTRO = ["PENDIENTE_AUDITORIA", "EN_REVISION", "APROBADA", "RECHAZADA"];
+const ROLES_AUDITORIA = ["auditor", "super_admin"];
 
 export default function HistorialPrescripcionesPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState([]);
   const [bookmark, setBookmark] = useState(null);
   const [estado, setEstado] = useState("");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // El auditor abre el caso (puede dictaminar); el prescriptor, la trazabilidad.
+  const detalleDe = useCallback(
+    (presc) =>
+      ROLES_AUDITORIA.includes(user?.role)
+        ? `/auditoria/caso/${presc.prescription_id}`
+        : `/trazabilidad?id=${encodeURIComponent(presc.prescription_id)}`,
+    [user?.role],
+  );
 
   const load = useCallback(async (targetEstado, currentBookmark = "", append = false) => {
     try {
@@ -61,6 +74,7 @@ export default function HistorialPrescripcionesPage() {
         clinical.diagnostico_cie10,
         clinical.esquema,
         clinical.id_regimen,
+        clinical.medico_prescriptor,
       ]
         .filter(Boolean)
         .join(" ")
@@ -78,32 +92,37 @@ export default function HistorialPrescripcionesPage() {
 
   function renderRow(presc) {
     const clinical = presc.clinical || {};
+    const destino = detalleDe(presc);
     return (
-      <tr key={presc.prescription_id}>
-        <td>{presc.prescription_code}</td>
-        <td>{clinical.patient_id}</td>
+      <tr key={presc.prescription_id} className="row-link" onClick={() => navigate(destino)}>
+        <td>
+          <Link to={destino} className="cell-link" onClick={(e) => e.stopPropagation()}>
+            {presc.prescription_code}
+          </Link>
+        </td>
+        <td className="cell-nowrap">{formatDate(presc.created_at)}</td>
+        <td className="num">{clinical.patient_id}</td>
         <td>{clinical.diagnostico_cie10}</td>
         <td>{clinical.estadio}</td>
-        <td>{clinical.id_regimen || clinical.esquema}</td>
+        <td title={clinical.esquema || ""}>{clinical.id_regimen || clinical.esquema}</td>
         <td>
-          <StatusChip
-            variant={ESTADO_VARIANT[presc.estado] || "neutral"}
-            label={ESTADO_LABEL[presc.estado] || presc.estado}
-          />
+          <StatusChip variant={ESTADO_VARIANT[presc.estado] || "neutral"} label={estadoLabel(presc.estado)} />
         </td>
         <td>
-          <StatusChip
-            variant={ESTADO_VARIANT[presc.ml?.estado] || "neutral"}
-            label={presc.ml?.estado || "—"}
-          />
+          <StatusChip variant={ESTADO_VARIANT[presc.ml?.estado] || "neutral"} label={mlLabel(presc.ml?.estado)} />
         </td>
-        <td>{formatConfianza(presc)}</td>
-        <td title={presc.current_hash || ""}>
-          <code>{shortHash(presc.current_hash)}</code>
-        </td>
+        <td className="cell-nowrap">{formatConfianza(presc)}</td>
       </tr>
     );
   }
+
+  const emptyText = loading
+    ? "Cargando desde la red Fabric…"
+    : error
+      ? "No se pudieron cargar las prescripciones."
+      : query || estado
+        ? "No hay prescripciones que coincidan con los filtros."
+        : "Todavía no hay prescripciones registradas.";
 
   return (
     <>
@@ -119,48 +138,45 @@ export default function HistorialPrescripcionesPage() {
             <header className="agreements-header">
               <div>
                 <span className="card-eyebrow">Actividad</span>
-                <h2>🧬 Prescripciones en la blockchain</h2>
+                <h2>Prescripciones en la blockchain</h2>
                 <p className="muted">
-                  Filtrá por estado del ciclo de auditoría o buscá dentro de los resultados cargados.
+                  El filtro por estado consulta la red; la búsqueda filtra los resultados ya cargados. Hacé clic en
+                  una fila para ver el detalle.
                 </p>
               </div>
-              <PanelStat count={filtered.length} singular="resultado" plural="resultados" />
+              <PanelStat
+                count={filtered.length}
+                singular={bookmark ? "resultado cargado" : "resultado"}
+                plural={bookmark ? "resultados cargados" : "resultados"}
+              />
             </header>
 
             <div className="history-toolbar">
-              <CardHeader
-                eyebrow="Consultas"
-                title="Filtros"
-                description="El filtro por estado consulta la red; la búsqueda por texto filtra los resultados ya cargados."
-              />
-
               <div className="form-grid history-filters">
                 <FormField label="Buscar" htmlFor="history_presc_query" span={6}>
                   <input
                     id="history_presc_query"
-                    type="text"
-                    placeholder="Código, paciente, diagnóstico..."
+                    type="search"
+                    placeholder="Código, paciente, diagnóstico, régimen o médico"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </FormField>
-                <FormField label="Estado on-chain" htmlFor="history_presc_estado" span={3}>
-                  <select
-                    id="history_presc_estado"
-                    value={estado}
-                    onChange={(event) => setEstado(event.target.value)}
-                  >
+                <FormField label="Estado" htmlFor="history_presc_estado" span={4}>
+                  <select id="history_presc_estado" value={estado} onChange={(event) => setEstado(event.target.value)}>
                     <option value="">Todos</option>
                     {ESTADOS_FILTRO.map((value) => (
-                      <option key={value} value={value}>{ESTADO_LABEL[value]}</option>
+                      <option key={value} value={value}>
+                        {ESTADO_LABEL[value]}
+                      </option>
                     ))}
                   </select>
                 </FormField>
-                <FormField label=" " htmlFor="history_presc_clear" span={3}>
+                <div className="form-group form-group--action field-span-2">
                   <button
-                    id="history_presc_clear"
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn-secondary"
+                    disabled={!query && !estado}
                     onClick={() => {
                       setQuery("");
                       setEstado("");
@@ -168,28 +184,30 @@ export default function HistorialPrescripcionesPage() {
                   >
                     Limpiar
                   </button>
-                </FormField>
+                </div>
               </div>
             </div>
 
-            {error && <p className="status error">{error}</p>}
+            {error && (
+              <p className="status error status--block" role="alert">
+                {error}{" "}
+                <button type="button" className="btn-link" onClick={() => load(estado)}>
+                  Reintentar
+                </button>
+              </p>
+            )}
 
-            <DataTable
-              columns={TABLE_COLUMNS}
-              rows={filtered}
-              renderRow={renderRow}
-              emptyMessage={loading ? "Cargando desde la red Fabric..." : "Sin prescripciones."}
-            />
+            <DataTable columns={TABLE_COLUMNS} rows={filtered} renderRow={renderRow} emptyText={emptyText} />
 
             {bookmark && (
-              <div style={{ textAlign: "center", padding: "12px" }}>
+              <div className="load-more">
                 <button
                   type="button"
                   className="btn-secondary"
                   onClick={() => load(estado, bookmark, true)}
                   disabled={loading}
                 >
-                  {loading ? "Cargando..." : "Cargar más"}
+                  {loading ? "Cargando…" : "Cargar más"}
                 </button>
               </div>
             )}

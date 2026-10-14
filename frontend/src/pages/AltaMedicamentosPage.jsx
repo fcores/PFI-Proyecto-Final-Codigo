@@ -10,6 +10,7 @@ import { fetchMonodrugs } from "../api/monodrugs";
 
 export default function AltaMedicamentosPage() {
   const [monodrugs, setMonodrugs] = useState([]);
+  const [monodrugsError, setMonodrugsError] = useState(null);
   const { formRef, status, pending, handleSubmit, handleCancel } = useFormSubmit({
     submitFn: createMedication,
     loadingMsg: "Guardando medicamento...",
@@ -20,7 +21,10 @@ export default function AltaMedicamentosPage() {
   useEffect(() => {
     fetchMonodrugs()
       .then(setMonodrugs)
-      .catch(() => setMonodrugs([]));
+      .catch((err) => {
+        setMonodrugs([]);
+        setMonodrugsError(err.message || "No se pudo cargar el maestro de monodrogas.");
+      });
   }, []);
 
   return (
@@ -44,7 +48,6 @@ export default function AltaMedicamentosPage() {
                 eyebrow="Maestro de materiales"
                 title="Datos del medicamento"
                 description="Completá los atributos del catálogo. El código (MED-XXXX) se genera automáticamente."
-                badge="Formulario guiado"
               />
 
               <div className="form-grid">
@@ -105,6 +108,11 @@ export default function AltaMedicamentosPage() {
                       </option>
                     ))}
                   </select>
+                  {monodrugsError ? (
+                    <p className="field-hint field-hint--error">{monodrugsError}</p>
+                  ) : monodrugs.length === 0 ? (
+                    <p className="field-hint">No hay monodrogas cargadas: dalas de alta primero.</p>
+                  ) : null}
                 </FormField>
 
                 <FormField label="Tamaño / Dimensión" htmlFor="tamano_dimension" required span={6}>

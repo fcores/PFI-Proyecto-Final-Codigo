@@ -1,7 +1,9 @@
 import { get, postForm } from "./client";
 
-export async function fetchPatients() {
-  const data = await get("/patients");
+// El backend pagina por limit/offset (máx. 500 por página).
+export async function fetchPatients({ limit = 200, offset = 0 } = {}) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const data = await get(`/patients?${params.toString()}`);
   return data.patients ?? [];
 }
 

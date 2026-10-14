@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import TopBar from "../components/TopBar";
 import FormField from "../components/FormField";
 import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import StatusChip from "../components/StatusChip";
 import { fetchAuditQueue } from "../api/audit";
-import { ESTADO_VARIANT, ESTADO_LABEL } from "../constants/estadoVariant";
+import { ESTADO_VARIANT, ESTADO_LABEL, mlLabel } from "../constants/estadoVariant";
 import { formatDate } from "../utils/formatDate";
 
 const TABLE_COLUMNS = [
@@ -86,10 +86,19 @@ export default function AuditQueuePage() {
     return (
       <tr
         key={presc.prescription_id}
+        className="row-link"
         onClick={() => navigate(`/auditoria/caso/${presc.prescription_id}`)}
-        style={{ cursor: "pointer" }}
       >
-        <td>{presc.prescription_code}</td>
+        <td>
+          {/* El link hace la fila accesible por teclado; el click en la fila es un atajo. */}
+          <Link
+            to={`/auditoria/caso/${presc.prescription_id}`}
+            className="cell-link"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {presc.prescription_code}
+          </Link>
+        </td>
         <td>{clinical.patient_id}</td>
         <td>{clinical.diagnostico_cie10}</td>
         <td>{clinical.estadio}</td>
@@ -97,11 +106,11 @@ export default function AuditQueuePage() {
         <td>
           <StatusChip
             variant={ESTADO_VARIANT[presc.ml?.estado] || "neutral"}
-            label={presc.ml?.estado || "—"}
+            label={mlLabel(presc.ml?.estado)}
           />
         </td>
         <td>{formatConfianza(presc)}</td>
-        <td>{formatDate(presc.created_at)}</td>
+        <td className="cell-nowrap">{formatDate(presc.created_at)}</td>
       </tr>
     );
   }
@@ -110,7 +119,7 @@ export default function AuditQueuePage() {
     <>
       <TopBar
         title="Cola de Auditoría"
-        subtitle="Toda prescripción nace pendiente de auditoría en la blockchain; el veredicto del modelo es soporte de decisión."
+        subtitle="Toda prescripción nace pendiente de auditoría; el veredicto del modelo es soporte de decisión."
         badge="Auditoría"
       />
 
@@ -125,7 +134,11 @@ export default function AuditQueuePage() {
                   Prescripciones en estado {ESTADO_LABEL[estado].toLowerCase()} leídas de la red Fabric (FIFO).
                 </p>
               </div>
-              <PanelStat count={filtered.length} singular="caso" plural="casos" />
+              <PanelStat
+                count={filtered.length}
+                singular={bookmark ? "caso cargado" : "caso"}
+                plural={bookmark ? "casos cargados" : "casos"}
+              />
             </header>
 
             <div className="history-toolbar">
@@ -150,17 +163,11 @@ export default function AuditQueuePage() {
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </FormField>
-                <FormField label=" " htmlFor="audit_queue_reload" span={2}>
-                  <button
-                    id="audit_queue_reload"
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => load(estado)}
-                    disabled={loading}
-                  >
-                    Actualizar
+                <div className="form-group form-group--action field-span-2">
+                  <button type="button" className="btn-secondary" onClick={() => load(estado)} disabled={loading}>
+                    {loading ? "Actualizando…" : "Actualizar"}
                   </button>
-                </FormField>
+                </div>
               </div>
             </div>
 
@@ -174,7 +181,7 @@ export default function AuditQueuePage() {
             />
 
             {bookmark && (
-              <div style={{ textAlign: "center", padding: "12px" }}>
+              <div className="load-more">
                 <button
                   type="button"
                   className="btn-secondary"

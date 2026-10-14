@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ROLE_LABEL } from "../constants/roles";
+import { useLayout } from "./layoutContext";
 
 const MEDICAMENTOS_SUBTYPES = [
   { to: "/medicamentos/alta", label: "Alta de Medicamentos" },
@@ -19,20 +20,23 @@ const AUDITORIAS_SUBTYPES = [
 ];
 
 function NavGroup({ emoji, label, active, open, onToggle, subtypes }) {
+  const subnavId = `subnav-${label.toLowerCase().replace(/\W+/g, "-")}`;
   return (
     <div className="nav-group">
       <button
         className={`nav-group-toggle${active ? " active" : ""}`}
         onClick={onToggle}
         type="button"
+        aria-expanded={open}
+        aria-controls={subnavId}
       >
-        <span className="nav-emoji">{emoji}</span>
+        <span className="nav-emoji" aria-hidden="true">{emoji}</span>
         <span className="nav-group-label">{label}</span>
-        <span className={`nav-group-chevron${open ? " open" : ""}`}>›</span>
+        <span className={`nav-group-chevron${open ? " open" : ""}`} aria-hidden="true">›</span>
       </button>
 
       {open && (
-        <div className="nav-subnav">
+        <div className="nav-subnav" id={subnavId}>
           {subtypes.map((sub) => (
             <NavLink
               key={sub.to}
@@ -51,6 +55,7 @@ function NavGroup({ emoji, label, active, open, onToggle, subtypes }) {
 export default function Sidebar() {
   const location = useLocation();
   const { user, logout, loggingOut } = useAuth();
+  const { navOpen, setNavOpen } = useLayout();
   const role = user?.role;
 
   const esSuperAdmin = role === "super_admin";
@@ -86,16 +91,34 @@ export default function Sidebar() {
   const [prescripcionesOpen, setPrescripcionesOpen] = useState(prescripcionesActive);
   const [auditoriasOpen, setAuditoriasOpen] = useState(auditoriasActive);
 
+  // Al llegar a una pantalla por un link interno (p. ej. desde el historial),
+  // se despliega el grupo que la contiene para que el usuario vea dónde está.
+  useEffect(() => {
+    if (pacientesActive) setPacientesOpen(true);
+    if (medicamentosActive) setMedicamentosOpen(true);
+    if (monodrogasActive) setMonodrogasOpen(true);
+    if (prescripcionesActive) setPrescripcionesOpen(true);
+    if (auditoriasActive) setAuditoriasOpen(true);
+  }, [pacientesActive, medicamentosActive, monodrogasActive, prescripcionesActive, auditoriasActive]);
+
   return (
-    <aside className="sidebar">
+    <aside id="app-sidebar" className={`sidebar${navOpen ? " sidebar--open" : ""}`}>
       <div className="sidebar-logo">
-        <NavLink to="/">
+        <NavLink to="/" aria-label="Inicio">
           <img src="/medchain-logo.svg" alt="MedChain AI" className="logo-img" />
         </NavLink>
-        <span className="sidebar-brand">MedChain AI</span>
+        <span className="sidebar-brand">Gestión de prescripciones</span>
+        <button
+          type="button"
+          className="sidebar-close"
+          aria-label="Cerrar menú"
+          onClick={() => setNavOpen(false)}
+        >
+          ×
+        </button>
       </div>
 
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" aria-label="Navegación principal">
         {vePrescripciones && (
           <NavGroup
             emoji={"\u{1F9EC}"}
@@ -157,7 +180,7 @@ export default function Sidebar() {
               to="/usuarios"
               className={({ isActive }) => `nav-group-toggle${isActive ? " active" : ""}`}
             >
-              <span className="nav-emoji">{"\u{1F464}"}</span>
+              <span className="nav-emoji" aria-hidden="true">{"\u{1F464}"}</span>
               <span className="nav-group-label">Usuarios</span>
             </NavLink>
           </div>
@@ -169,7 +192,7 @@ export default function Sidebar() {
               to="/salud"
               className={({ isActive }) => `nav-group-toggle${isActive ? " active" : ""}`}
             >
-              <span className="nav-emoji">{"\u{1FA7A}"}</span>
+              <span className="nav-emoji" aria-hidden="true">{"\u{1FA7A}"}</span>
               <span className="nav-group-label">Salud del sistema</span>
             </NavLink>
           </div>
@@ -178,7 +201,7 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <div className="sidebar-avatar">
+          <div className="sidebar-avatar" aria-hidden="true">
             {(user?.display_name || user?.username || "U").charAt(0).toUpperCase()}
           </div>
           <div className="sidebar-user-info">
