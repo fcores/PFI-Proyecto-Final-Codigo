@@ -16,6 +16,7 @@ from .patient import Patient, PatientBase, PatientList
 from .prescription import (
     AuditEvent,
     ClinicalData,
+    ClinicalRecord,
     CostoFarmaco,
     DosisFarmaco,
     FeatureAporte,
@@ -42,6 +43,7 @@ __all__ = [
     "Prescription",
     "PrescriptionList",
     "ClinicalData",
+    "ClinicalRecord",
     "AuditEvent",
     "VerifyResult",
     "ValidationResult",

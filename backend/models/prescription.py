@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.ml.regimenes import REGIMENES
 
@@ -161,6 +161,46 @@ class ClinicalData(PrescriptionBase):
     prescriptor_username: str | None = Field(None, title="Usuario que registró la prescripción")
 
 
+class ClinicalRecord(BaseModel):
+    """Bloque clinico tal como esta asentado on-chain (modelo de LECTURA).
+
+    Deliberadamente sin las validaciones de PrescriptionBase: el ledger es
+    inmutable y guarda assets escritos con reglas anteriores (diagnosticos en
+    texto libre, regimenes con otro codigo, etc.). Validar al leer haria que un
+    solo asset viejo rompa todos los listados. Las reglas se aplican al crear
+    (ClinicalData); al leer se devuelve lo registrado tal cual, incluidos los
+    campos que este modelo no declare.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    patient_id: int | None = None
+    edad: int | None = None
+    sexo: str | None = None
+    peso_kg: float | None = None
+    talla_cm: float | None = None
+    superficie_corporal_m2: float | None = None
+    diagnostico_cie10: str | None = None
+    localizacion_tumor: str | None = None
+    tipo_histologico: str | None = None
+    t: str | None = None
+    n: str | None = None
+    m: str | None = None
+    estadio: str | None = None
+    msi: str | None = None
+    ras: str | None = None
+    braf_v600e: str | None = None
+    linea_tratamiento: str | None = None
+    id_regimen: str | None = None
+    esquema: str | None = None
+    dosis_por_farmaco: list[dict[str, Any]] = Field(default_factory=list)
+    dosis_mg_m2: float | None = None
+    medico_prescriptor: str | None = None
+    matricula: str | None = None
+    justificacion_costo: str | None = None
+    prescriptor_username: str | None = None
+
+
 class AuditEvent(BaseModel):
     """Eslabon de la cadena de auditoria de una prescripcion on-chain."""
 
@@ -188,7 +228,7 @@ class Prescription(BaseModel):
     prescription_id: str = Field(..., title="ID (ULID)")
     prescription_code: str = Field(..., title="Código de prescripción")
     estado: str = Field(..., title="Estado del ciclo de auditoría")
-    clinical: ClinicalData = Field(..., title="Datos clínicos")
+    clinical: ClinicalRecord = Field(..., title="Datos clínicos (tal como están on-chain)")
     ml: ValidationResult = Field(..., title="Veredicto del motor reglas + ML")
     created_at: str = Field(..., title="Fecha de creación (RFC3339)")
     created_by_msp: str | None = Field(None, title="MSP que creó el asset")
