@@ -39,3 +39,13 @@ def test_rechaza_demasiadas_filas(monkeypatch):
 def test_acepta_un_archivo_valido():
     rows = ExcelImportService().read_rows(_xlsx(2), "ok.xlsx", {"descripcion": []})
     assert [r["descripcion"] for r in rows] == ["droga 0", "droga 1"]
+
+
+def test_potencia_con_coma_decimal_del_catalogo():
+    from backend.services.medication_service import MedicationService
+
+    svc = MedicationService.__new__(MedicationService)
+    assert svc._parse_optional_float({"p": "0,9"}, "p") == 0.9
+    assert svc._parse_optional_float({"p": "1.234,5"}, "p") == 1234.5
+    assert svc._parse_optional_float({"p": 20.0}, "p") == 20.0
+    assert svc._parse_optional_float({"p": "80-240"}, "p") is None

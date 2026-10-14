@@ -86,6 +86,9 @@ class MedicationService:
             raw = row.get(key)
             if raw is None or str(raw).strip() == "":
                 return None
+            if isinstance(raw, str) and "," in raw:
+                # Formato es-AR del catalogo: "0,9" o "1.234,56".
+                raw = raw.strip().replace(".", "").replace(",", ".")
             return float(raw)
         except Exception as exc:
             logger.warning("No se pudo parsear float opcional %s: %s", key, exc)

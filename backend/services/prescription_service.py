@@ -175,6 +175,10 @@ class PrescriptionService:
                 raise
 
             return _asset_to_prescription(result["asset"], tx_id=result["tx_id"])
+        except DomainError:
+            # Validaciones de negocio (paciente inexistente, RF-34): esperadas,
+            # no ameritan un traceback en el log.
+            raise
         except Exception as exc:
             logger.error("Error al crear prescripcion: %s", exc, exc_info=True)
             raise
