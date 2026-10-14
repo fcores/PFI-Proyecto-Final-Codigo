@@ -4,6 +4,7 @@ import TopBar from "../components/TopBar";
 import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import ReadOnlyField from "../components/ReadOnlyField";
+import { InfoGrid, InfoGroup } from "../components/InfoGroup";
 import SimpleTable from "../components/SimpleTable";
 import StatusChip from "../components/StatusChip";
 import MlVerdictPanel from "../components/MlVerdictPanel";
@@ -21,6 +22,28 @@ const ACCIONES = [
 
 const ESTADOS_TERMINALES = ["APROBADA", "RECHAZADA"];
 const MIN_JUSTIFICACION = 5;
+
+// Biomarcadores: las alteraciones detectadas se resaltan; "no evaluado" se
+// atenúa para que no se confunda con un resultado negativo.
+const BIOMARCADORES = [
+  { key: "msi", label: "MSI" },
+  { key: "ras", label: "RAS" },
+  { key: "braf_v600e", label: "BRAF V600E" },
+];
+
+const BIOMARCADOR_TEXTO = {
+  no_evaluado: { texto: "No evaluado", tono: "muted" },
+  wild_type: { texto: "Wild type", tono: "neutral" },
+  MSS: { texto: "MSS", tono: "neutral" },
+  "MSI-H": { texto: "MSI-H", tono: "alert" },
+  mutado: { texto: "Mutado", tono: "alert" },
+  presente: { texto: "Presente", tono: "alert" },
+};
+
+function biomarcador(valor) {
+  if (!valor) return { texto: "—", tono: "muted" };
+  return BIOMARCADOR_TEXTO[valor] || { texto: valor, tono: "neutral" };
+}
 
 const EVENT_COLUMNS = ["#", "Acción", "Estado resultante", "Auditor", "Justificación", "Fecha", "Tx", "Hash"];
 
@@ -142,58 +165,85 @@ export default function AuditCasePage() {
               badge={estadoLabel(presc.estado)}
             />
 
-            <div className="form-grid">
-              <ReadOnlyField label="Estado del ciclo" span={4}>
-                <StatusChip variant={ESTADO_VARIANT[presc.estado] || "neutral"} label={estadoLabel(presc.estado)} />
-              </ReadOnlyField>
-              <ReadOnlyField label="Paciente ID" value={clinical.patient_id} span={4} />
-              <ReadOnlyField label="Diagnóstico (CIE-10)" value={clinical.diagnostico_cie10} span={4} />
-              <ReadOnlyField label="Edad / sexo" value={`${clinical.edad ?? "—"} años · ${clinical.sexo || "—"}`} span={4} />
-              <ReadOnlyField
-                label="Peso / talla"
-                value={`${formatNumber(clinical.peso_kg)} kg · ${formatNumber(clinical.talla_cm)} cm`}
-                span={4}
+            <InfoGrid>
+              <InfoGroup
+                title="Paciente"
+                rows={[
+                  { label: "ID", value: clinical.patient_id != null ? `#${clinical.patient_id}` : null },
+                  { label: "Edad", value: clinical.edad != null ? `${clinical.edad} años` : null },
+                  { label: "Sexo", value: clinical.sexo },
+                  { label: "Peso", value: clinical.peso_kg != null ? `${formatNumber(clinical.peso_kg)} kg` : null },
+                  { label: "Talla", value: clinical.talla_cm != null ? `${formatNumber(clinical.talla_cm)} cm` : null },
+                  {
+                    label: "Superficie corporal",
+                    value:
+                      clinical.superficie_corporal_m2 != null ? `${formatNumber(clinical.superficie_corporal_m2)} m²` : null,
+                  },
+                ]}
               />
-              <ReadOnlyField label="Superficie corporal" value={`${formatNumber(clinical.superficie_corporal_m2)} m²`} span={4} />
-              <ReadOnlyField label="Localización" value={clinical.localizacion_tumor} span={4} />
-              <ReadOnlyField label="Tipo histológico" value={clinical.tipo_histologico} span={4} />
-              <ReadOnlyField
-                label="Estadio / TNM"
-                value={`${clinical.estadio || "—"} · ${[clinical.t, clinical.n, clinical.m].filter(Boolean).join(" ") || "—"}`}
-                span={4}
-              />
-              <ReadOnlyField
-                label="Biomarcadores"
-                value={`MSI ${clinical.msi || "—"} · RAS ${clinical.ras || "—"} · BRAF ${clinical.braf_v600e || "—"}`}
-                span={6}
-              />
-              <ReadOnlyField label="Línea de tratamiento" value={clinical.linea_tratamiento} span={6} />
-              <ReadOnlyField label="Esquema" value={clinical.esquema} span={8} />
-              <ReadOnlyField label="Dosis derivada" value={`${formatNumber(clinical.dosis_mg_m2)} mg/m²`} span={4} />
-              <ReadOnlyField label="Médico prescriptor" value={clinical.medico_prescriptor} span={4} />
-              <ReadOnlyField label="Matrícula" value={clinical.matricula} span={4} />
-              <ReadOnlyField label="Registrada por (usuario)" value={clinical.prescriptor_username} span={4} />
-              {clinical.justificacion_costo ? (
-                <ReadOnlyField label="Justificación económica del prescriptor" value={clinical.justificacion_costo} span={12} />
-              ) : null}
-            </div>
 
-            {clinical.dosis_por_farmaco?.length > 0 && (
-              <section className="ml-panel__section">
-                <h3 className="ml-panel__title">Dosis prescritas</h3>
-                <SimpleTable
-                  caption="Dosis por fármaco"
-                  columns={["Monodroga", "Dosis (mg)"]}
-                  rows={clinical.dosis_por_farmaco}
-                  renderRow={(row) => (
-                    <tr key={row.monodroga}>
-                      <td>{row.monodroga}</td>
-                      <td className="num">{formatNumber(row.dosis_mg)}</td>
-                    </tr>
-                  )}
-                />
-              </section>
-            )}
+              <InfoGroup
+                title="Tumor"
+                rows={[
+                  { label: "Diagnóstico (CIE-10)", value: clinical.diagnostico_cie10 },
+                  { label: "Localización", value: clinical.localizacion_tumor },
+                  { label: "Tipo histológico", value: clinical.tipo_histologico },
+                  { label: "Estadio", value: clinical.estadio },
+                  { label: "TNM", value: [clinical.t, clinical.n, clinical.m].filter(Boolean).join(" · ") },
+                ]}
+              />
+
+              <InfoGroup title="Biomarcadores">
+                <div className="biomarker-list">
+                  {BIOMARCADORES.map(({ key, label }) => {
+                    const { texto, tono } = biomarcador(clinical[key]);
+                    return (
+                      <div className="biomarker" key={key}>
+                        <span className="biomarker__name">{label}</span>
+                        <span className={`biomarker__value biomarker__value--${tono}`}>{texto}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </InfoGroup>
+
+              <InfoGroup
+                title="Tratamiento"
+                rows={[
+                  { label: "Línea", value: clinical.linea_tratamiento },
+                  {
+                    label: "Esquema",
+                    value: [clinical.id_regimen, clinical.esquema].filter(Boolean).join(" — "),
+                  },
+                  // Con varios fármacos la "dosis derivada" suma mg de drogas distintas:
+                  // solo se muestra cuando el esquema tiene una sola.
+                  ...((clinical.dosis_por_farmaco ?? []).length === 1 && clinical.dosis_mg_m2 != null
+                    ? [{ label: "Dosis por superficie", value: `${formatNumber(clinical.dosis_mg_m2)} mg/m²` }]
+                    : []),
+                  ...(clinical.dosis_por_farmaco ?? []).map((row) => ({
+                    label: row.monodroga,
+                    value: `${formatNumber(row.dosis_mg)} mg`,
+                  })),
+                ]}
+              />
+
+              <InfoGroup
+                title="Prescriptor"
+                wide
+                rows={[
+                  { label: "Médico", value: clinical.medico_prescriptor },
+                  { label: "Matrícula", value: clinical.matricula },
+                  { label: "Usuario que la registró", value: clinical.prescriptor_username },
+                  { label: "Fecha de registro", value: formatDate(presc.created_at) },
+                ]}
+              />
+
+              {clinical.justificacion_costo ? (
+                <InfoGroup title="Justificación económica del prescriptor" wide>
+                  <p className="info-group__text">{clinical.justificacion_costo}</p>
+                </InfoGroup>
+              ) : null}
+            </InfoGrid>
 
             <div className="form-grid hash-grid">
               <ReadOnlyField label="Hash del contenido" value={presc.payload_hash} span={12} mono copyable />

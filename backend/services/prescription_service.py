@@ -108,15 +108,7 @@ class PrescriptionService:
                 )
 
             superficie = self._body_surface_area(data.peso_kg, data.talla_cm)
-            esquema = self._asegurar_esquema(data)
-            dosis_mg_m2 = self._derivar_dosis_mg_m2(data, superficie)
-
-            data_completa = data.model_copy(
-                update={
-                    "esquema": esquema,
-                    "dosis_mg_m2": dosis_mg_m2,
-                }
-            )
+            data_completa = data.model_copy(update={"esquema": self._asegurar_esquema(data)})
 
             if not data_completa.dosis_por_farmaco and self._dosis_service is not None:
                 refs = self._dosis_service.dosis_referencia_regimen(
@@ -128,6 +120,13 @@ class PrescriptionService:
 
                 dosis_objs = [DosisFarmaco(**item) for item in refs]
                 data_completa = data_completa.model_copy(update={"dosis_por_farmaco": dosis_objs})
+
+            # Se deriva despues de completar las dosis de referencia: antes se
+            # calculaba primero y, sin dosis en el request, quedaba asentado
+            # on-chain el valor de relleno 0.01.
+            data_completa = data_completa.model_copy(
+                update={"dosis_mg_m2": self._derivar_dosis_mg_m2(data_completa, superficie)}
+            )
 
             validacion = self._validation_service.validate(data_completa)
 

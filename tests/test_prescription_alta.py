@@ -149,3 +149,21 @@ def test_commit_incierto_sin_registro_se_informa_como_no_disponible():
 
     with pytest.raises(FabricUnavailableError):
         AuditService(repo).accion(prescription_id, "aprobar", "cumple guias", "aud1")
+
+
+class _DosisStub:
+    def dosis_referencia_regimen(self, id_regimen, bsa, peso_kg):
+        return [{"monodroga": "oxaliplatino", "dosis_mg": 153.0}]
+
+
+def test_dosis_derivada_usa_las_dosis_de_referencia(fake):
+    svc = PrescriptionService(
+        FabricPrescriptionRepository(fake),
+        _ValidacionStub(),
+        dosis_service=_DosisStub(),
+        patient_service=_PacientesStub({1}),
+    )
+    creada = svc.create(PrescriptionBase(**_datos(dosis_por_farmaco=[])), prescriptor_username="presc")
+    assert creada.clinical.dosis_por_farmaco == [{"monodroga": "oxaliplatino", "dosis_mg": 153.0}]
+    # 153 mg / 1.80 m2 = 85 mg/m2 (antes quedaba el relleno 0.01).
+    assert creada.clinical.dosis_mg_m2 == pytest.approx(85.0, abs=0.01)
