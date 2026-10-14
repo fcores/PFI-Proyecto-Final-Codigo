@@ -2071,3 +2071,22 @@ input[type="number"] {
   margin: 0 0 6px;
   font-size: 14px;
 }
+
+/* ===== Field hints ===== */
+
+.field-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.field-hint--ok {
+  color: #0b8f54;
+  font-weight: 600;
+}
+
+.field-hint--error {
+  color: var(--danger);
+  font-weight: 600;
+}

@@ -12,6 +12,7 @@ export default function BulkImportCard({
   const fileRef = useRef(null);
   const [fileName, setFileName] = useState("");
   const [result, setResult] = useState(null);
+  const [pending, setPending] = useState(false);
   const { status, setLoading, setSuccess, setError, clear } = useFormStatus();
 
   function resetFormState() {
@@ -23,6 +24,7 @@ export default function BulkImportCard({
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (pending) return;
 
     const file = fileRef.current?.files?.[0];
     if (!file) {
@@ -33,6 +35,7 @@ export default function BulkImportCard({
     const formData = new FormData();
     formData.append("file", file);
     setLoading("Importando archivo Excel...");
+    setPending(true);
 
     try {
       const response = await importFn(formData);
@@ -44,6 +47,8 @@ export default function BulkImportCard({
       onSuccess?.(response);
     } catch (error) {
       setError(error.message || "No se pudo importar el archivo Excel.");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -75,7 +80,7 @@ export default function BulkImportCard({
         </label>
 
         <p className="bulk-import-hint">
-          {fileName || "Seleccioná un archivo .xlsx con encabezados en la primera fila."}
+          {fileName || "Seleccioná un archivo .xlsx (máx. 5 MB y 5000 filas) con encabezados en la primera fila."}
         </p>
 
         {templateHint ? (
@@ -108,11 +113,11 @@ export default function BulkImportCard({
           {status.message}
         </div>
         <div className="buttons">
-          <button type="button" className="btn-secondary" onClick={handleCancel}>
+          <button type="button" className="btn-secondary" onClick={handleCancel} disabled={pending}>
             Limpiar
           </button>
-          <button type="submit" className="btn-primary">
-            ⬆ Importar Excel
+          <button type="submit" className="btn-primary" disabled={pending}>
+            {pending ? "Importando…" : "Importar Excel"}
           </button>
         </div>
       </footer>

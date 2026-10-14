@@ -17,14 +17,12 @@ import SaludPage from "./pages/SaludPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { useAuth } from "./auth/AuthContext";
+import { defaultRouteFor } from "./constants/roles";
 
 // Landing segun rol: cada perfil aterriza en su pantalla principal.
 function HomeRedirect() {
   const { user } = useAuth();
-  const role = user?.role;
-  if (role === "auditor") return <Navigate to="/auditoria/cola" replace />;
-  if (role === "administrador") return <Navigate to="/pacientes/alta" replace />;
-  return <Navigate to="/prescripciones/alta" replace />;
+  return <Navigate to={defaultRouteFor(user?.role)} replace />;
 }
 
 export default function App() {
@@ -49,9 +47,9 @@ export default function App() {
           <ProtectedRoute roles={["prescriptor", "auditor", "super_admin"]}><HistorialPrescripcionesPage /></ProtectedRoute>
         } />
 
-        <Route path="/pacientes" element={<Navigate to="/pacientes/alta" replace />} />
+        <Route path="/pacientes" element={<Navigate to="/pacientes/historial" replace />} />
         <Route path="/pacientes/alta" element={
-          <ProtectedRoute roles={["administrador", "prescriptor", "super_admin"]}><PacientesPage /></ProtectedRoute>
+          <ProtectedRoute roles={["administrador", "super_admin"]}><PacientesPage /></ProtectedRoute>
         } />
         <Route path="/pacientes/historial" element={
           <ProtectedRoute roles={["administrador", "prescriptor", "super_admin"]}><HistorialPacientesPage /></ProtectedRoute>

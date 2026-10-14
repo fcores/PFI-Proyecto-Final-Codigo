@@ -64,10 +64,12 @@ class PrescriptionService:
         fabric_repo: FabricPrescriptionRepository,
         validation_service: ValidationService,
         dosis_service=None,
+        patient_service=None,
     ) -> None:
         self._repo = fabric_repo
         self._validation_service = validation_service
         self._dosis_service = dosis_service
+        self._patient_service = patient_service
 
     def _body_surface_area(self, peso_kg: float, talla_cm: float) -> float:
         """Calcula la superficie corporal con la formula de Mosteller."""
@@ -89,9 +91,22 @@ class PrescriptionService:
             return data.esquema
         return nombre_regimen(data.id_regimen)
 
-    def create(self, data: PrescriptionBase) -> Prescription:
-        """Crea una prescripcion: valida con el motor hibrido y la asienta en Fabric."""
+    def create(self, data: PrescriptionBase, prescriptor_username: str | None = None) -> Prescription:
+        """Crea una prescripcion: valida con el motor hibrido y la asienta en Fabric.
+
+        prescriptor_username es el usuario autenticado que la registra; queda en
+        el bloque clinico on-chain.
+        """
         try:
+            # El asset es inmutable: una prescripcion sobre un paciente
+            # inexistente no podria corregirse despues.
+            if self._patient_service is not None and not self._patient_service.exists(data.patient_id):
+                raise DomainError(
+                    f"El paciente {data.patient_id} no existe en el padron.",
+                    status_code=422,
+                    error_type="validation_error",
+                )
+
             superficie = self._body_surface_area(data.peso_kg, data.talla_cm)
             esquema = self._asegurar_esquema(data)
             dosis_mg_m2 = self._derivar_dosis_mg_m2(data, superficie)
@@ -130,14 +145,14 @@ class PrescriptionService:
                         "Existe una alternativa terapeuticamente equivalente de menor costo "
                         "(%s, %s, %.1f%% mas economica). Para prescribir el esquema elegido "
                         "debe consignarse una justificacion clinica en el campo "
-                        "'justificacion_costo'."
-                        % (mejor.id_regimen, mejor.nombre, mejor.pct_ahorro),
+                        "'justificacion_costo'." % (mejor.id_regimen, mejor.nombre, mejor.pct_ahorro),
                         status_code=422,
                         error_type="validation_error",
                     )
 
             clinical = ClinicalData(
                 superficie_corporal_m2=superficie,
+                prescriptor_username=prescriptor_username,
                 **data_completa.model_dump(),
             )
             created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

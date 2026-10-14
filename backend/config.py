@@ -21,10 +21,6 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     log_level: str = "INFO"
 
-    auth_username: str = "admin"
-    auth_password: str = "admin123"
-    auth_display_name: str = "Administrador"
-
     ml_model_path: str = "ml_models/artefactos/modelo_gbm.joblib"
 
     encryption_key_dev: str | None = None

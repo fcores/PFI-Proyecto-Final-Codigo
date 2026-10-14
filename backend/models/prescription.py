@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from backend.ml.regimenes import REGIMENES
 
 
 class FeatureAporte(BaseModel):
@@ -13,7 +15,7 @@ class FeatureAporte(BaseModel):
 class DosisFarmaco(BaseModel):
     """Dosis prescrita para un farmaco del regimen."""
 
-    monodroga: str = Field(..., title="Monodroga")
+    monodroga: str = Field(..., max_length=200, title="Monodroga")
     dosis_mg: float = Field(..., ge=0, title="Dosis (mg)")
 
 
@@ -75,19 +77,21 @@ class ValidationResult(BaseModel):
 
 
 class PrescriptionBase(BaseModel):
-    patient_id: int = Field(..., title="ID Paciente")
+    # Los topes de largo acotan lo que viaja al registro inmutable: todo este
+    # bloque se asienta on-chain y no puede corregirse despues.
+    patient_id: int = Field(..., ge=1, title="ID Paciente")
     edad: int = Field(..., ge=0, le=120, title="Edad")
-    sexo: str = Field(..., title="Sexo")
-    peso_kg: float = Field(..., gt=0, title="Peso (kg)")
-    talla_cm: float = Field(..., gt=0, title="Talla (cm)")
+    sexo: str = Field(..., min_length=1, max_length=20, title="Sexo")
+    peso_kg: float = Field(..., gt=0, le=400, title="Peso (kg)")
+    talla_cm: float = Field(..., gt=0, le=260, title="Talla (cm)")
 
-    diagnostico_cie10: str = Field(..., title="Diagnóstico (CIE-10)")
-    localizacion_tumor: str = Field(..., title="Localización del tumor primario")
-    tipo_histologico: str = Field(..., title="Tipo histológico")
-    t: str = Field(..., title="T (tumor primario)")
-    n: str = Field(..., title="N (ganglios regionales)")
-    m: str = Field(..., title="M (metástasis a distancia)")
-    estadio: str = Field(..., title="Estadio")
+    diagnostico_cie10: str = Field(..., min_length=1, max_length=16, title="Diagnóstico (CIE-10)")
+    localizacion_tumor: str = Field(..., min_length=1, max_length=100, title="Localización del tumor primario")
+    tipo_histologico: str = Field(..., min_length=1, max_length=200, title="Tipo histológico")
+    t: str = Field(..., min_length=1, max_length=10, title="T (tumor primario)")
+    n: str = Field(..., min_length=1, max_length=10, title="N (ganglios regionales)")
+    m: str = Field(..., min_length=1, max_length=10, title="M (metástasis a distancia)")
+    estadio: str = Field(..., min_length=1, max_length=10, title="Estadio")
 
     msi: Literal["MSI-H", "MSS", "no_evaluado"] = Field(
         "no_evaluado",
@@ -102,22 +106,30 @@ class PrescriptionBase(BaseModel):
         title="Estado BRAF V600E",
     )
 
-    linea_tratamiento: str = Field(..., title="Línea de tratamiento")
-    id_regimen: str = Field(..., title="ID de régimen")
-    esquema: str | None = Field(None, title="Esquema y medicamento prescrito")
+    linea_tratamiento: str = Field(..., min_length=1, max_length=50, title="Línea de tratamiento")
+    id_regimen: str = Field(..., max_length=10, title="ID de régimen")
+    esquema: str | None = Field(None, max_length=300, title="Esquema y medicamento prescrito")
     dosis_por_farmaco: list[DosisFarmaco] = Field(
         default_factory=list,
+        max_length=20,
         title="Dosis por fármaco",
     )
-    dosis_mg_m2: float | None = Field(None, title="Dosis (mg/m²) derivada")
-    medico_prescriptor: str = Field(..., title="Médico prescriptor")
-    matricula: str = Field(..., title="Matrícula")
+    dosis_mg_m2: float | None = Field(None, ge=0, title="Dosis (mg/m²) derivada")
+    medico_prescriptor: str = Field(..., min_length=1, max_length=200, title="Médico prescriptor")
+    matricula: str = Field(..., min_length=1, max_length=50, title="Matrícula")
     justificacion_costo: str | None = Field(
         None,
         min_length=5,
         max_length=2000,
         title="Justificación clínica de la elección económica",
     )
+
+    @field_validator("id_regimen")
+    @classmethod
+    def _regimen_conocido(cls, value: str) -> str:
+        if value not in REGIMENES:
+            raise ValueError(f"Régimen desconocido: {value}")
+        return value
 
 
 # Veredictos posibles del motor hibrido reglas + ML (soporte de decision).
@@ -137,9 +149,16 @@ ESTADOS_PRESCRIPCION = (
 
 
 class ClinicalData(PrescriptionBase):
-    """Bloque clinico del asset on-chain: los datos de entrada mas la BSA."""
+    """Bloque clinico del asset on-chain: los datos de entrada mas la BSA.
+
+    prescriptor_username lo completa el backend con el usuario de la sesion; no
+    forma parte de PrescriptionBase, de modo que el cliente no puede fijarlo.
+    Es opcional para que los assets anteriores a este campo sigan leyendose (la
+    verificacion de hashes trabaja sobre el JSON crudo, no sobre este modelo).
+    """
 
     superficie_corporal_m2: float = Field(..., title="Superficie corporal (m²)")
+    prescriptor_username: str | None = Field(None, title="Usuario que registró la prescripción")
 
 
 class AuditEvent(BaseModel):

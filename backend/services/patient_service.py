@@ -66,17 +66,21 @@ class PatientService:
         )
         return self._repo.add(patient)
 
-    def find_by_id(self, patient_id: int) -> Patient | None:
-        """Busca un paciente por ID."""
-        return self._repo.find_by_id(patient_id)
+    def find_by_id(self, patient_id: int, username: str = "system") -> Patient | None:
+        """Busca un paciente por ID (el acceso queda en phi_access_log)."""
+        return self._repo.find_by_id(patient_id, username=username)
 
-    def search(self, query: str) -> list[Patient]:
+    def exists(self, patient_id: int) -> bool:
+        """Indica si el paciente existe (sin leer PHI)."""
+        return self._repo.exists(patient_id)
+
+    def search(self, query: str, username: str = "system") -> list[Patient]:
         """Busca pacientes por nombre/apellido."""
-        return self._repo.search(query)
+        return self._repo.search(query, username=username)
 
-    def list_all(self, limit: int = 100, offset: int = 0) -> PatientList:
+    def list_all(self, limit: int = 100, offset: int = 0, username: str = "system") -> PatientList:
         """Lista pacientes con paginacion."""
-        return PatientList(patients=self._repo.list_all(limit=limit, offset=offset))
+        return PatientList(patients=self._repo.list_all(limit=limit, offset=offset, username=username))
 
     def bulk_import(self, file_bytes: bytes, filename: str) -> BulkImportResult:
         """Importa pacientes masivamente desde Excel."""

@@ -7,7 +7,7 @@ import useFormSubmit from "../hooks/useFormSubmit";
 import { bulkImportMonodrugs, createMonodrug } from "../api/monodrugs";
 
 export default function MonodrogasPage() {
-  const { formRef, status, handleSubmit, handleCancel } = useFormSubmit({
+  const { formRef, status, pending, handleSubmit, handleCancel } = useFormSubmit({
     submitFn: createMonodrug,
     loadingMsg: "Guardando monodroga...",
     successMsg: "Monodroga creada correctamente.",
@@ -53,7 +53,8 @@ export default function MonodrogasPage() {
               <FormActions
                 status={status}
                 onCancel={handleCancel}
-                submitLabel="✅ Agregar"
+                submitLabel="Agregar"
+                submitting={pending}
               />
             </form>
 

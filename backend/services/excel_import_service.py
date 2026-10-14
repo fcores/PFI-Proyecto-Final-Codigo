@@ -9,11 +9,24 @@ from typing import Any
 import pandas as pd
 from fastapi import HTTPException
 
+# Topes de la carga masiva: se validan ANTES de entregarle el archivo a pandas
+# (un .xlsx es un zip y puede expandirse mucho en memoria).
+MAX_IMPORT_BYTES = 5 * 1024 * 1024
+MAX_IMPORT_ROWS = 5000
+_XLSX_MAGIC = b"PK"
+
 
 class ExcelImportService:
     def read_rows(self, file_bytes: bytes, filename: str, aliases: dict[str, list[str]]) -> list[dict[str, Any]]:
         if not filename.lower().endswith(".xlsx"):
             raise HTTPException(status_code=400, detail="Solo se admiten archivos Excel .xlsx.")
+        if len(file_bytes) > MAX_IMPORT_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"El archivo supera el maximo de {MAX_IMPORT_BYTES // (1024 * 1024)} MB.",
+            )
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            raise HTTPException(status_code=400, detail="El archivo no es un Excel .xlsx valido.")
 
         try:
             dataframe = pd.read_excel(BytesIO(file_bytes))
@@ -21,6 +34,11 @@ class ExcelImportService:
             raise HTTPException(status_code=400, detail="No se pudo leer el archivo Excel.") from exc
 
         dataframe = dataframe.dropna(how="all")
+        if len(dataframe) > MAX_IMPORT_ROWS:
+            raise HTTPException(
+                status_code=413,
+                detail=f"El archivo tiene {len(dataframe)} filas; el maximo por importacion es {MAX_IMPORT_ROWS}.",
+            )
         alias_map = self._build_alias_map(aliases)
 
         rows: list[dict[str, Any]] = []

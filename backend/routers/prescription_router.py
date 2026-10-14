@@ -59,7 +59,7 @@ class RegimenList(BaseModel):
 
 
 @router.get("/regimenes", response_model=RegimenList)
-async def listar_regimenes(authorization: str | None = Header(default=None)):
+def listar_regimenes(authorization: str | None = Header(default=None)):
     """Lista los regimenes R00-R13 del nucleo compartido."""
     user = require_auth(authorization)
     require_role(user, _ROLES_LECTURA)
@@ -76,7 +76,7 @@ async def listar_regimenes(authorization: str | None = Header(default=None)):
 
 
 @router.get("/dosis-referencia", response_model=list[DosisFarmaco])
-async def dosis_referencia(
+def dosis_referencia(
     id_regimen: str = Query(...),
     peso_kg: float = Query(..., gt=0),
     talla_cm: float = Query(..., gt=0),
@@ -94,7 +94,7 @@ async def dosis_referencia(
 
 
 @router.post("/recomendacion", response_model=RecomendacionResponse)
-async def recomendar_regimen(
+def recomendar_regimen(
     data: RecomendacionRequest,
     authorization: str | None = Header(default=None),
 ):
@@ -106,7 +106,7 @@ async def recomendar_regimen(
 
 
 @router.post("", response_model=Prescription)
-async def create_prescription(
+def create_prescription(
     data: PrescriptionBase,
     authorization: str | None = Header(default=None),
 ):
@@ -114,11 +114,11 @@ async def create_prescription(
     user = require_auth(authorization)
     require_role(user, _ROLES_ESCRITURA)
     svc = get_prescription_service()
-    return svc.create(data)
+    return svc.create(data, prescriptor_username=user.username)
 
 
 @router.get("", response_model=PrescriptionList)
-async def list_prescriptions(
+def list_prescriptions(
     estado: str | None = Query(None, description="Filtra por estado del ciclo de auditoria"),
     page_size: int = Query(50, ge=1, le=200, description="Tamano de pagina"),
     bookmark: str = Query("", description="Bookmark devuelto por la pagina anterior"),
@@ -140,7 +140,7 @@ async def list_prescriptions(
 
 
 @router.get("/by-patient/{patient_id}", response_model=PrescriptionList)
-async def list_by_patient(
+def list_by_patient(
     patient_id: int,
     page_size: int = Query(50, ge=1, le=200),
     bookmark: str = Query(""),
@@ -154,7 +154,7 @@ async def list_by_patient(
 
 
 @router.get("/{prescription_id}", response_model=Prescription)
-async def get_prescription(
+def get_prescription(
     prescription_id: str,
     authorization: str | None = Header(default=None),
 ):
@@ -166,7 +166,7 @@ async def get_prescription(
 
 
 @router.get("/{prescription_id}/history")
-async def get_prescription_history(
+def get_prescription_history(
     prescription_id: str,
     authorization: str | None = Header(default=None),
 ):
@@ -178,7 +178,7 @@ async def get_prescription_history(
 
 
 @router.get("/{prescription_id}/verify", response_model=VerifyResult)
-async def verify_prescription(
+def verify_prescription(
     prescription_id: str,
     authorization: str | None = Header(default=None),
 ):

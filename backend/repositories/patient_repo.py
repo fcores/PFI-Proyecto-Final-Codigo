@@ -306,6 +306,18 @@ class PatientRepository:
                 return p
         return None
 
+    def exists(self, patient_id: int) -> bool:
+        """Indica si el paciente existe, sin descifrar ni registrar acceso a PHI."""
+        if self._db_available():
+            from backend.db import get_db, load_query
+
+            queries = load_query("patients.sql")
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(queries["patient_exists"], (patient_id,))
+                    return cur.fetchone() is not None
+        return any(p.id == patient_id for p in self._store)
+
     def search(self, query: str, user_id: int = 0, username: str = "system") -> list[Patient]:
         """Busca pacientes usando blind index (exacto) o token search (por palabra)."""
         if self._db_available():

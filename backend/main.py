@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(api)
 
     @app.get("/")
-    async def root():
+    def root():
         """Health check: estado del modelo ML, la base de datos y el puente Fabric."""
         from backend.db import is_db_available
 

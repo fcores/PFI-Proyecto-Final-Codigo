@@ -90,7 +90,7 @@ export default function TrazabilidadPage() {
                 split
                 eyebrow="Asset on-chain"
                 title={`Prescripción ${prescription.prescription_code}`}
-                description={`Creada por ${prescription.created_by_msp || "—"} · ${formatDate(prescription.created_at)}`}
+                description={`Creada por ${prescription.clinical?.prescriptor_username ? `${prescription.clinical.prescriptor_username} (${prescription.created_by_msp || "—"})` : prescription.created_by_msp || "—"} · ${formatDate(prescription.created_at)}`}
                 badge={ESTADO_LABEL[prescription.estado] || prescription.estado}
               />
 

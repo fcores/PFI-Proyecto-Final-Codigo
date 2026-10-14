@@ -12,3 +12,7 @@ export async function createPatient(formData) {
 export async function bulkImportPatients(formData) {
   return postForm("/patients/bulk-import", formData);
 }
+
+export async function fetchPatient(patientId) {
+  return get(`/patients/${patientId}`);
+}

@@ -151,6 +151,9 @@ export default function AuditCasePage() {
               <FormField label="Matrícula" htmlFor="case_matricula" span={3}>
                 <input id="case_matricula" type="text" value={clinical.matricula || ""} readOnly />
               </FormField>
+              <FormField label="Registrada por (usuario)" htmlFor="case_creador" span={6}>
+                <input id="case_creador" type="text" value={clinical.prescriptor_username || "—"} readOnly />
+              </FormField>
               {clinical.justificacion_costo ? (
                 <FormField
                   label="Justificación económica del prescriptor"

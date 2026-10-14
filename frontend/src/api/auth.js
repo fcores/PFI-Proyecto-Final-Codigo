@@ -7,3 +7,10 @@ export async function login(username, password) {
 export async function logout() {
   return postJson("/auth/logout", {});
 }
+
+export async function changePassword(currentPassword, newPassword) {
+  return postJson("/auth/password", {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+}

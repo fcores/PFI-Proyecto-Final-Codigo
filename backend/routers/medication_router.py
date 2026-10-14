@@ -4,12 +4,13 @@ from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import get_medication_service
 from backend.models.bulk_import import BulkImportResult
 from backend.models.medication import Medication, MedicationList
+from backend.services.excel_import_service import MAX_IMPORT_BYTES
 
 router = APIRouter(prefix="/medications", tags=["medications"])
 
 
 @router.post("", response_model=Medication)
-async def create_medication(
+def create_medication(
     descripcion: str = Form(...),
     ean: str = Form(...),
     codigo_alfabeta: str = Form(...),
@@ -43,7 +44,7 @@ async def create_medication(
 
 
 @router.get("", response_model=MedicationList)
-async def list_medications(authorization: str | None = Header(default=None)):
+def list_medications(authorization: str | None = Header(default=None)):
     """Lista todos los medicamentos (lectura para prescribir o administrar)."""
     user = require_auth(authorization)
     require_role(user, ["prescriptor", "administrador", "super_admin"])
@@ -52,7 +53,7 @@ async def list_medications(authorization: str | None = Header(default=None)):
 
 
 @router.post("/bulk-import", response_model=BulkImportResult)
-async def bulk_import_medications(
+def bulk_import_medications(
     file: UploadFile = File(...),
     authorization: str | None = Header(default=None),
 ):
@@ -60,5 +61,5 @@ async def bulk_import_medications(
     user = require_auth(authorization)
     require_role(user, ["administrador", "super_admin"])
     svc = get_medication_service()
-    file_bytes = await file.read()
+    file_bytes = file.file.read(MAX_IMPORT_BYTES + 1)
     return svc.bulk_import(file_bytes, file.filename or "medicamentos.xlsx")

@@ -158,3 +158,55 @@ def test_reset_password(svc, repo):
     row = repo._rows[cuenta.id]
     assert verify_password("clave-nueva-9", row["password_hash"], row["salt"])
     assert not verify_password("clave-larga-1", row["password_hash"], row["salt"])
+
+
+@pytest.fixture()
+def revocadas():
+    return []
+
+
+@pytest.fixture()
+def svc_revoca(repo, revocadas):
+    return UserService(repo, revoke_sessions=revocadas.append)
+
+
+def _cuenta(svc_revoca, username="medico1", role="prescriptor"):
+    return svc_revoca.create(
+        UserCreateRequest(username=username, password="clave-segura", display_name="Medico", role=role)
+    )
+
+
+def test_desactivar_cierra_las_sesiones(svc_revoca, revocadas, super_admin):
+    cuenta = _cuenta(svc_revoca)
+    svc_revoca.update(
+        cuenta.id,
+        UserUpdateRequest(display_name="Medico", role="prescriptor", active=False),
+        UserInfo(username="root", display_name="Root", role="super_admin"),
+    )
+    assert revocadas == ["medico1"]
+
+
+def test_cambiar_el_rol_cierra_las_sesiones(svc_revoca, revocadas, super_admin):
+    cuenta = _cuenta(svc_revoca)
+    svc_revoca.update(
+        cuenta.id,
+        UserUpdateRequest(display_name="Medico", role="auditor", active=True),
+        UserInfo(username="root", display_name="Root", role="super_admin"),
+    )
+    assert revocadas == ["medico1"]
+
+
+def test_editar_solo_el_nombre_no_cierra_sesiones(svc_revoca, revocadas, super_admin):
+    cuenta = _cuenta(svc_revoca)
+    svc_revoca.update(
+        cuenta.id,
+        UserUpdateRequest(display_name="Dr. Medico", role="prescriptor", active=True),
+        UserInfo(username="root", display_name="Root", role="super_admin"),
+    )
+    assert revocadas == []
+
+
+def test_resetear_la_clave_cierra_las_sesiones(svc_revoca, revocadas):
+    cuenta = _cuenta(svc_revoca)
+    svc_revoca.reset_password(cuenta.id, PasswordResetRequest(password="otra-clave-1"))
+    assert revocadas == ["medico1"]

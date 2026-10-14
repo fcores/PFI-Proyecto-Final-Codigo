@@ -6,12 +6,13 @@ from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import get_patient_service
 from backend.models.bulk_import import BulkImportResult
 from backend.models.patient import Patient, PatientList
+from backend.services.excel_import_service import MAX_IMPORT_BYTES
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
 
 @router.post("", response_model=Patient)
-async def create_patient(
+def create_patient(
     credential_id: str | None = Form(None),
     provider_id: str | None = Form(None),
     provider: str | None = Form(None),
@@ -53,7 +54,7 @@ async def create_patient(
 
 
 @router.get("", response_model=PatientList)
-async def list_patients(
+def list_patients(
     q: str | None = Query(None, min_length=2, description="Buscar por nombre/apellido"),
     limit: int = Query(100, ge=1, le=500, description="Cantidad maxima de resultados"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginacion"),
@@ -64,13 +65,13 @@ async def list_patients(
     require_role(user, ["prescriptor", "administrador", "super_admin"])
     svc = get_patient_service()
     if q:
-        patients = svc.search(q)
+        patients = svc.search(q, username=user.username)
         return PatientList(patients=patients)
-    return svc.list_all(limit=limit, offset=offset)
+    return svc.list_all(limit=limit, offset=offset, username=user.username)
 
 
 @router.get("/{patient_id}", response_model=Patient)
-async def get_patient(
+def get_patient(
     patient_id: int,
     authorization: str | None = Header(default=None),
 ):
@@ -78,14 +79,14 @@ async def get_patient(
     user = require_auth(authorization)
     require_role(user, ["prescriptor", "administrador", "super_admin"])
     svc = get_patient_service()
-    patient = svc.find_by_id(patient_id)
+    patient = svc.find_by_id(patient_id, username=user.username)
     if not patient:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     return patient
 
 
 @router.post("/bulk-import", response_model=BulkImportResult)
-async def bulk_import_patients(
+def bulk_import_patients(
     file: UploadFile = File(...),
     authorization: str | None = Header(default=None),
 ):
@@ -93,5 +94,5 @@ async def bulk_import_patients(
     user = require_auth(authorization)
     require_role(user, ["administrador", "super_admin"])
     svc = get_patient_service()
-    file_bytes = await file.read()
+    file_bytes = file.file.read(MAX_IMPORT_BYTES + 1)
     return svc.bulk_import(file_bytes, file.filename or "pacientes.xlsx")

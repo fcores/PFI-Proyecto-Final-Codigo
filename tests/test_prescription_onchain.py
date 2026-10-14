@@ -3,7 +3,7 @@
 import pytest
 
 from backend.blockchain.fabric_client import FabricBusinessError
-from backend.error_handlers import ConflictError, NotFoundError
+from backend.error_handlers import ConflictError, DomainError, NotFoundError
 from backend.repositories.fabric_prescription_repo import FabricPrescriptionRepository
 from backend.security.canonical import build_canonical_payload
 from backend.services.audit_service import AuditService
@@ -143,8 +143,9 @@ def test_cola_de_auditoria_filtra_por_estado(repo, audit):
 
 
 def test_cola_rechaza_estados_terminales(audit):
-    with pytest.raises(ConflictError):
+    with pytest.raises(DomainError) as exc_info:
         audit.queue(estado="APROBADA")
+    assert exc_info.value.status_code == 422
 
 
 def test_listado_paginado_por_bookmark(repo):

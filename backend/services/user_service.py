@@ -1,6 +1,7 @@
 """Servicio de gestion de usuarios (ABM, solo super_admin)."""
 
 import logging
+from collections.abc import Callable
 
 from backend.error_handlers import ConflictError, NotFoundError
 from backend.models.auth import (
@@ -20,8 +21,14 @@ logger = logging.getLogger(__name__)
 class UserService:
     """ABM de cuentas de usuario y asignacion de roles."""
 
-    def __init__(self, repo: UserRepository) -> None:
+    def __init__(self, repo: UserRepository, revoke_sessions: Callable[[str], None] | None = None) -> None:
+        """revoke_sessions(username) cierra las sesiones abiertas de una cuenta."""
         self._repo = repo
+        self._revoke_sessions = revoke_sessions
+
+    def _revoke(self, username: str) -> None:
+        if self._revoke_sessions is not None:
+            self._revoke_sessions(username)
 
     def list(self) -> UserList:
         """Lista todas las cuentas."""
@@ -57,6 +64,9 @@ class UserService:
                 raise ConflictError("No podes cambiar tu propio rol.")
 
         self._repo.update_profile(user_id, data.display_name, data.role, data.active)
+        # Una baja o un cambio de rol no pueden esperar a que expire el token.
+        if not data.active or data.role != target["role"]:
+            self._revoke(target["username"])
         updated = self._repo.find_by_id(user_id)
         return UserAccount(**updated)
 
@@ -67,4 +77,5 @@ class UserService:
             raise NotFoundError("Usuario no encontrado.")
         password_hash, salt = hash_password(data.password)
         self._repo.update_password(user_id, password_hash, salt)
+        self._revoke(target["username"])
         logger.info("Password de '%s' reseteada por un super admin.", target["username"])

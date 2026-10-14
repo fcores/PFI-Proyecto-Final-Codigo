@@ -8,13 +8,13 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 
 @router.get("")
-async def system_health(authorization: str | None = Header(default=None)):
+def system_health(authorization: str | None = Header(default=None)):
     """Estado detallado: base de datos, modelo ML, puente Fabric y peers."""
     user = require_auth(authorization)
     require_role(user, ["super_admin"])
 
-    from backend.blockchain.fabric_client import get_fabric_client
     from backend.db import is_db_available
+    from backend.dependencies import get_fabric_client
     from backend.ml.model_loader import cargar_modelo, modelo_disponible
 
     artefacto = cargar_modelo()

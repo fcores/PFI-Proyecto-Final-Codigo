@@ -4,12 +4,13 @@ from backend.auth_middleware import require_auth, require_role
 from backend.dependencies import get_monodrug_service
 from backend.models.bulk_import import BulkImportResult
 from backend.models.monodrug import Monodrug, MonodrugList
+from backend.services.excel_import_service import MAX_IMPORT_BYTES
 
 router = APIRouter(prefix="/monodrugs", tags=["monodrugs"])
 
 
 @router.post("", response_model=Monodrug)
-async def create_monodrug(
+def create_monodrug(
     descripcion: str = Form(...),
     authorization: str | None = Header(default=None),
 ):
@@ -21,7 +22,7 @@ async def create_monodrug(
 
 
 @router.get("", response_model=MonodrugList)
-async def list_monodrugs(authorization: str | None = Header(default=None)):
+def list_monodrugs(authorization: str | None = Header(default=None)):
     """Lista todas las monodrogas (lectura para prescribir o administrar)."""
     user = require_auth(authorization)
     require_role(user, ["prescriptor", "administrador", "super_admin"])
@@ -30,7 +31,7 @@ async def list_monodrugs(authorization: str | None = Header(default=None)):
 
 
 @router.post("/bulk-import", response_model=BulkImportResult)
-async def bulk_import_monodrugs(
+def bulk_import_monodrugs(
     file: UploadFile = File(...),
     authorization: str | None = Header(default=None),
 ):
@@ -38,5 +39,5 @@ async def bulk_import_monodrugs(
     user = require_auth(authorization)
     require_role(user, ["administrador", "super_admin"])
     svc = get_monodrug_service()
-    file_bytes = await file.read()
+    file_bytes = file.file.read(MAX_IMPORT_BYTES + 1)
     return svc.bulk_import(file_bytes, file.filename or "monodrogas.xlsx")

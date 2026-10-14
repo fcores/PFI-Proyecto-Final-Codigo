@@ -10,11 +10,12 @@ puede dictaminar y su username queda registrado en el evento.
 
 import logging
 
-from backend.blockchain.fabric_client import FabricBusinessError
-from backend.error_handlers import ConflictError, NotFoundError
+from backend.blockchain.fabric_client import FabricBusinessError, FabricUnavailableError
+from backend.error_handlers import ConflictError, DomainError, NotFoundError
 from backend.models.audit import AuditDetail
 from backend.models.prescription import Prescription, PrescriptionList
 from backend.repositories.fabric_prescription_repo import FabricPrescriptionRepository
+from backend.security.canonical import ACCION_A_ESTADO
 from backend.services.prescription_service import _asset_to_prescription, _paged_to_list
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,11 @@ class AuditService:
         """Cola de auditoria: prescripciones por estado, FIFO."""
         try:
             if estado not in ESTADOS_COLA:
-                raise ConflictError(f"Estado de cola invalido: {estado}. Validos: {', '.join(ESTADOS_COLA)}")
+                raise DomainError(
+                    f"Estado de cola invalido: {estado}. Validos: {', '.join(ESTADOS_COLA)}",
+                    status_code=422,
+                    error_type="validation_error",
+                )
             paged = self._repo.list_by_estado(estado, page_size, bookmark, actor="auditor")
             return _paged_to_list(paged)
         except Exception as exc:
@@ -74,6 +79,20 @@ class AuditService:
         try:
             result = self._repo.audit_action(prescription_id, accion, justificacion, auditor)
             return _asset_to_prescription(result["asset"], tx_id=result["tx_id"])
+        except FabricUnavailableError as exc:
+            # Escritura de resultado incierto (timeout esperando el commit): si
+            # el asset ya refleja exactamente esta accion, se informa el exito
+            # en lugar de pedirle al auditor que la repita.
+            if exc.uncertain:
+                recuperada = self._accion_ya_registrada(prescription_id, accion, justificacion, auditor)
+                if recuperada is not None:
+                    logger.warning(
+                        "Accion '%s' sobre %s confirmada releyendo el asset tras un commit incierto",
+                        accion,
+                        prescription_id,
+                    )
+                    return recuperada
+            raise
         except FabricBusinessError as exc:
             message = str(exc)
             if "no encontrada" in message:
@@ -86,3 +105,29 @@ class AuditService:
         except Exception as exc:
             logger.error("Error al registrar accion '%s' sobre %s: %s", accion, prescription_id, exc, exc_info=True)
             raise
+
+    def _accion_ya_registrada(
+        self,
+        prescription_id: str,
+        accion: str,
+        justificacion: str,
+        auditor: str,
+    ) -> Prescription | None:
+        """Devuelve el asset si su ultimo evento es exactamente esta accion."""
+        try:
+            asset = self._repo.get(prescription_id, actor="auditor")
+        except Exception:
+            return None
+        if not asset or not asset.get("audit_events"):
+            return None
+        ultimo = asset["audit_events"][-1]
+        coincide = (
+            ultimo.get("accion") == accion
+            and ultimo.get("auditor") == auditor
+            and ultimo.get("justificacion") == justificacion
+            and ultimo.get("estado_resultante") == ACCION_A_ESTADO.get(accion)
+            and asset.get("estado") == ACCION_A_ESTADO.get(accion)
+        )
+        if not coincide:
+            return None
+        return _asset_to_prescription(asset, tx_id=ultimo.get("tx_id"))

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("", response_model=UserList)
-async def list_users(authorization: str | None = Header(default=None)):
+def list_users(authorization: str | None = Header(default=None)):
     """Lista todas las cuentas de usuario."""
     user = require_auth(authorization)
     require_role(user, ["super_admin"])
@@ -24,7 +24,7 @@ async def list_users(authorization: str | None = Header(default=None)):
 
 
 @router.post("", response_model=UserAccount, status_code=201)
-async def create_user(
+def create_user(
     data: UserCreateRequest,
     authorization: str | None = Header(default=None),
 ):
@@ -35,7 +35,7 @@ async def create_user(
 
 
 @router.put("/{user_id}", response_model=UserAccount)
-async def update_user(
+def update_user(
     user_id: int,
     data: UserUpdateRequest,
     authorization: str | None = Header(default=None),
@@ -47,7 +47,7 @@ async def update_user(
 
 
 @router.post("/{user_id}/password")
-async def reset_password(
+def reset_password(
     user_id: int,
     data: PasswordResetRequest,
     authorization: str | None = Header(default=None),

@@ -17,7 +17,7 @@ _ROLES_AUDITORIA = ["auditor", "super_admin"]
 
 
 @router.get("/queue", response_model=PrescriptionList)
-async def audit_queue(
+def audit_queue(
     estado: str = Query("PENDIENTE_AUDITORIA", description="PENDIENTE_AUDITORIA o EN_REVISION"),
     page_size: int = Query(50, ge=1, le=200),
     bookmark: str = Query(""),
@@ -31,7 +31,7 @@ async def audit_queue(
 
 
 @router.get("/{prescription_id}", response_model=AuditDetail)
-async def audit_detail(
+def audit_detail(
     prescription_id: str,
     authorization: str | None = Header(default=None),
 ):
@@ -43,7 +43,7 @@ async def audit_detail(
 
 
 @router.post("/{prescription_id}/accion", response_model=Prescription)
-async def audit_action(
+def audit_action(
     prescription_id: str,
     data: AuditActionRequest,
     authorization: str | None = Header(default=None),

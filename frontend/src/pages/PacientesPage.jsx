@@ -17,7 +17,7 @@ const ACCORDION_ITEMS = [
 ];
 
 export default function PacientesPage() {
-  const { formRef, status, handleSubmit, handleCancel } = useFormSubmit({
+  const { formRef, status, pending, handleSubmit, handleCancel } = useFormSubmit({
     submitFn: createPatient,
     loadingMsg: "Guardando paciente...",
     successMsg: "Paciente creado correctamente.",
@@ -112,7 +112,8 @@ export default function PacientesPage() {
               <FormActions
                 status={status}
                 onCancel={handleCancel}
-                submitLabel="✅ Agregar"
+                submitLabel="Agregar"
+                submitting={pending}
               />
             </form>
 

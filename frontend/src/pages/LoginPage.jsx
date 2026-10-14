@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { LOGOUT_REASON, useAuth } from "../auth/AuthContext";
+import { defaultRouteFor } from "../constants/roles";
 
 const LOGOUT_MESSAGES = {
   [LOGOUT_REASON.MANUAL]: "Cerraste sesión correctamente.",
@@ -16,17 +17,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function getDefaultRoute(userRole) {
-    if (userRole === "auditor") return "/trazabilidad";
-    if (userRole === "prescriptor") return "/prescripciones/alta";
-    return "/pacientes/alta";
-  }
-
   const savedRedirect = location.state?.from?.pathname;
   const logoutMessage = LOGOUT_MESSAGES[location.state?.reason];
 
   if (isAuthenticated) {
-    return <Navigate to={savedRedirect || getDefaultRoute(user?.role)} replace />;
+    return <Navigate to={savedRedirect || defaultRouteFor(user?.role)} replace />;
   }
 
   async function handleSubmit(event) {
@@ -35,7 +30,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await login(username.trim(), password);
-      const destination = savedRedirect || getDefaultRoute(data.user?.role);
+      const destination = savedRedirect || defaultRouteFor(data.user?.role);
       navigate(destination, { replace: true });
     } catch (err) {
       setError(err.message || "No se pudo iniciar sesión.");

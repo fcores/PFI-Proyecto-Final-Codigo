@@ -32,3 +32,6 @@ JOIN patient_name_tokens t ON t.patient_id = p.id
 WHERE t.token_bidx = %s
 ORDER BY p.last_name, p.first_name
 LIMIT 50;
+
+-- name: patient_exists
+SELECT 1 FROM patients WHERE id = %s;

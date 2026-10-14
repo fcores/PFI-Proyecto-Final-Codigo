@@ -10,7 +10,7 @@ import { fetchMonodrugs } from "../api/monodrugs";
 
 export default function AltaMedicamentosPage() {
   const [monodrugs, setMonodrugs] = useState([]);
-  const { formRef, status, handleSubmit, handleCancel } = useFormSubmit({
+  const { formRef, status, pending, handleSubmit, handleCancel } = useFormSubmit({
     submitFn: createMedication,
     loadingMsg: "Guardando medicamento...",
     successMsg: "Medicamento creado correctamente.",
@@ -161,7 +161,8 @@ export default function AltaMedicamentosPage() {
               <FormActions
                 status={status}
                 onCancel={handleCancel}
-                submitLabel="✅ Agregar"
+                submitLabel="Agregar"
+                submitting={pending}
               />
             </form>
 

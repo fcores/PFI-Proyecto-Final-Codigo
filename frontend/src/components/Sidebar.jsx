@@ -3,11 +3,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ROLE_LABEL } from "../constants/roles";
 
-const PACIENTES_SUBTYPES = [
-  { to: "/pacientes/alta", label: "Alta de Pacientes" },
-  { to: "/pacientes/historial", label: "Historial de Pacientes" },
-];
-
 const MEDICAMENTOS_SUBTYPES = [
   { to: "/medicamentos/alta", label: "Alta de Medicamentos" },
   { to: "/medicamentos/historial", label: "Historial de Medicamentos" },
@@ -68,12 +63,21 @@ export default function Sidebar() {
   const prescripcionesSubtypes = [
     ...(creaPrescripciones ? [{ to: "/prescripciones/alta", label: "Alta de Prescripciones" }] : []),
     { to: "/prescripciones/historial", label: "Historial de Prescripciones" },
+    // El auditor llega a Trazabilidad desde Auditorías; el prescriptor, desde acá.
+    ...(role === "prescriptor" ? [{ to: "/trazabilidad", label: "Trazabilidad" }] : []),
+  ];
+
+  const pacientesSubtypes = [
+    ...(veDatosMaestros ? [{ to: "/pacientes/alta", label: "Alta de Pacientes" }] : []),
+    { to: "/pacientes/historial", label: "Historial de Pacientes" },
   ];
 
   const pacientesActive = location.pathname.startsWith("/pacientes");
   const medicamentosActive = location.pathname.startsWith("/medicamentos");
   const monodrogasActive = location.pathname.startsWith("/monodrogas");
-  const prescripcionesActive = location.pathname.startsWith("/prescripciones");
+  const prescripcionesActive =
+    location.pathname.startsWith("/prescripciones") ||
+    (role === "prescriptor" && location.pathname.startsWith("/trazabilidad"));
   const auditoriasActive =
     location.pathname.startsWith("/auditoria") || location.pathname.startsWith("/trazabilidad");
   const [pacientesOpen, setPacientesOpen] = useState(pacientesActive);
@@ -110,7 +114,7 @@ export default function Sidebar() {
             active={pacientesActive}
             open={pacientesOpen}
             onToggle={() => setPacientesOpen((o) => !o)}
-            subtypes={PACIENTES_SUBTYPES}
+            subtypes={pacientesSubtypes}
           />
         )}
 

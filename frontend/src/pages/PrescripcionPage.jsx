@@ -13,6 +13,7 @@ import {
   fetchRegimenes,
   recomendarRegimen,
 } from "../api/prescriptions";
+import { fetchPatient } from "../api/patients";
 
 function bodySurfaceArea(pesoKg, tallaCm) {
   const peso = Number(pesoKg);
@@ -34,6 +35,12 @@ export default function PrescripcionPage() {
   // equivalente de menor costo y el alta fue rechazada por falta de
   // justificacion clinica.
   const [requiereJustificacion, setRequiereJustificacion] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  // Verificación del ID de paciente contra el padrón (el backend vuelve a
+  // validarlo: es solo una ayuda para detectar el error antes de enviar).
+  const [paciente, setPaciente] = useState({ estado: "idle", texto: "" });
+  const pacienteConsultaRef = useRef(0);
 
   const superficie = useMemo(
     () => bodySurfaceArea(preview.peso, preview.talla),
@@ -64,6 +71,29 @@ export default function PrescripcionPage() {
     }
     loadDosis();
   }, [idRegimen, preview.peso, preview.talla]);
+
+  async function verificarPaciente(rawId) {
+    const id = Number(rawId);
+    const consulta = ++pacienteConsultaRef.current;
+    if (!rawId || !Number.isInteger(id) || id < 1) {
+      setPaciente({ estado: "idle", texto: "" });
+      return;
+    }
+    setPaciente({ estado: "loading", texto: "Buscando paciente…" });
+    try {
+      const p = await fetchPatient(id);
+      if (consulta !== pacienteConsultaRef.current) return;
+      const nombre = `${p.last_name ?? ""}, ${p.first_name ?? ""}`.replace(/^, |, $/g, "");
+      setPaciente({ estado: "ok", texto: `Paciente: ${nombre || `#${id}`}` });
+    } catch (err) {
+      if (consulta !== pacienteConsultaRef.current) return;
+      setPaciente(
+        err.status === 404
+          ? { estado: "missing", texto: `No existe un paciente con ID ${id}.` }
+          : { estado: "error", texto: "No se pudo verificar el paciente." },
+      );
+    }
+  }
 
   function updateDosis(index, value) {
     setDosisRows((current) =>
@@ -116,6 +146,8 @@ export default function PrescripcionPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    // Un doble clic no puede generar dos prescripciones on-chain.
+    if (submittingRef.current) return;
     const form = formRef.current;
     const data = new FormData(form);
 
@@ -152,6 +184,8 @@ export default function PrescripcionPage() {
 
     setLoading("Validando y registrando en la blockchain (endoso de las 3 organizaciones)...");
     setResult(null);
+    submittingRef.current = true;
+    setSubmitting(true);
 
     try {
       const created = await createPrescription(body);
@@ -163,12 +197,24 @@ export default function PrescripcionPage() {
       setDosisRows([]);
       setGuiaNota("");
       setRequiereJustificacion(false);
+      setPaciente({ estado: "idle", texto: "" });
     } catch (err) {
       const mensaje = err.message || "Ocurrió un error al registrar la prescripción.";
-      if (mensaje.includes("justificacion_costo")) {
+      // RF-34: el backend exige justificar el esquema cuando hay una
+      // alternativa equivalente más económica.
+      if (err.status === 422 && mensaje.includes("justificacion_costo")) {
         setRequiereJustificacion(true);
+        setError(
+          "Existe una alternativa terapéuticamente equivalente de menor costo. " +
+            "Completá la justificación clínica para registrar el esquema elegido.",
+        );
+        document.getElementById("justificacion_costo")?.focus();
+      } else {
+        setError(mensaje);
       }
-      setError(mensaje);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -179,6 +225,8 @@ export default function PrescripcionPage() {
     setIdRegimen("");
     setDosisRows([]);
     setGuiaNota("");
+    setRequiereJustificacion(false);
+    setPaciente({ estado: "idle", texto: "" });
     clear();
   }
 
@@ -204,7 +252,24 @@ export default function PrescripcionPage() {
 
               <div className="form-grid">
                 <FormField label="ID Paciente" htmlFor="patient_id" required span={4}>
-                  <input id="patient_id" name="patient_id" type="number" min="1" placeholder="Ej.: 1" required />
+                  <input
+                    id="patient_id"
+                    name="patient_id"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="Ej.: 1"
+                    required
+                    aria-describedby="patient_id_hint"
+                    onBlur={(e) => verificarPaciente(e.target.value)}
+                  />
+                  <p
+                    id="patient_id_hint"
+                    className={`field-hint${paciente.estado === "missing" || paciente.estado === "error" ? " field-hint--error" : ""}${paciente.estado === "ok" ? " field-hint--ok" : ""}`}
+                    aria-live="polite"
+                  >
+                    {paciente.texto || "ID del padrón de pacientes."}
+                  </p>
                 </FormField>
                 <FormField label="Edad" htmlFor="edad" required span={2}>
                   <input id="edad" name="edad" type="number" min="0" max="120" placeholder="65" required />
@@ -450,7 +515,13 @@ export default function PrescripcionPage() {
                 </div>
               )}
 
-              <FormActions status={status} onCancel={handleCancel} submitLabel="✅ Validar y registrar" />
+              <FormActions
+                status={status}
+                onCancel={handleCancel}
+                submitLabel="Validar y registrar"
+                submitting={submitting}
+                submittingLabel="Registrando en blockchain…"
+              />
             </form>
 
             {result && (

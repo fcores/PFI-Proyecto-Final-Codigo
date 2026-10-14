@@ -30,6 +30,10 @@ from backend.config import get_settings
 logger = logging.getLogger(__name__)
 
 _TIMEOUT_SECONDS = 45
+# Las escrituras no se reintentan y se cortan antes que el limite de
+# inactividad de API Gateway (29 s): asi el 503 disenado llega al navegador en
+# lugar de un 504 opaco.
+_WRITE_TIMEOUT_SECONDS = 27
 _MAX_RETRIES = 3
 _BACKOFF_BASE = 2.0
 _CIRCUIT_FAILURE_THRESHOLD = 5
@@ -41,7 +45,21 @@ class FabricError(Exception):
 
 
 class FabricUnavailableError(FabricError):
-    """La red Fabric o el puente no estan disponibles (retryable)."""
+    """La red Fabric o el puente no estan disponibles (retryable).
+
+    uncertain=True indica una escritura cuyo resultado se desconoce: el request
+    llego al puente pero no hubo confirmacion del commit. Quien la invoco debe
+    releer el estado antes de decidir si reintentar.
+    """
+
+    def __init__(self, message: str, uncertain: bool = False):
+        super().__init__(message)
+        self.uncertain = uncertain
+        if uncertain:
+            self.public_message = (
+                "La red blockchain no confirmo la operacion a tiempo. Verifica el estado "
+                "de la prescripcion antes de reintentar."
+            )
 
 
 class FabricBusinessError(FabricError):
@@ -104,7 +122,12 @@ class FabricClient:
         Returns:
             {"tx_id": str, "payload": str} — payload es el JSON que devolvio el contrato.
         """
-        return self._call("/invoke", {"function": function, "args": args, "actor": actor})
+        return self._call(
+            "/invoke",
+            {"function": function, "args": args, "actor": actor},
+            retry=False,
+            timeout=_WRITE_TIMEOUT_SECONDS,
+        )
 
     def query(self, function: str, args: list[str], actor: str = "prepaga") -> str:
         """Evalua una funcion de lectura sin commit. Devuelve el payload JSON."""
@@ -130,7 +153,19 @@ class FabricClient:
 
     # ── interno ──────────────────────────────────────────────────────────────
 
-    def _call(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+    def _call(
+        self,
+        path: str,
+        body: dict[str, Any],
+        retry: bool = True,
+        timeout: float = _TIMEOUT_SECONDS,
+    ) -> dict[str, Any]:
+        """POST al puente.
+
+        retry=False para escrituras: AuditPrescription no es idempotente, y un
+        reintento tras un commit que si se completo terminaria en "transicion
+        invalida" aunque la accion haya quedado registrada.
+        """
         if not self._base_url:
             raise FabricUnavailableError(
                 "FABRIC_GATEWAY_URL no configurada: el backend no puede operar sin la red blockchain"
@@ -139,7 +174,9 @@ class FabricClient:
             raise FabricUnavailableError("Circuit breaker abierto: la red Fabric no responde")
 
         last_error = ""
-        for attempt in range(_MAX_RETRIES):
+        uncertain = False
+        attempts = _MAX_RETRIES if retry else 1
+        for attempt in range(attempts):
             try:
                 data = json.dumps(body).encode("utf-8")
                 req = Request(
@@ -151,7 +188,7 @@ class FabricClient:
                     },
                     method="POST",
                 )
-                with urlopen(req, timeout=_TIMEOUT_SECONDS) as resp:
+                with urlopen(req, timeout=timeout) as resp:
                     result = json.loads(resp.read().decode("utf-8"))
                 self._circuit.record_success()
                 return result
@@ -171,6 +208,7 @@ class FabricClient:
                         # trata como indisponibilidad (el reintento con el mismo
                         # ID es seguro por idempotencia del chaincode).
                         last_error = message
+                        uncertain = True
                         self._circuit.record_failure()
                     else:
                         # Error de negocio (endorsement/chaincode): no retry.
@@ -181,9 +219,15 @@ class FabricClient:
 
             except (URLError, OSError, json.JSONDecodeError) as exc:
                 last_error = str(exc)
+                # Un timeout de lectura en una escritura no dice si el commit
+                # ocurrio; un rechazo de conexion si (no llego a enviarse).
+                refused = isinstance(getattr(exc, "reason", None), ConnectionRefusedError) or isinstance(
+                    exc, ConnectionRefusedError
+                )
+                uncertain = uncertain or not refused
                 self._circuit.record_failure()
 
-            if attempt < _MAX_RETRIES - 1:
+            if attempt < attempts - 1:
                 wait = _BACKOFF_BASE**attempt
                 logger.warning(
                     "Fabric request fallo (intento %d/%d), reintentando en %.1fs: %s",
@@ -194,7 +238,10 @@ class FabricClient:
                 )
                 time.sleep(wait)
 
-        raise FabricUnavailableError(f"La red Fabric no respondio tras {_MAX_RETRIES} intentos: {last_error}")
+        raise FabricUnavailableError(
+            f"La red Fabric no respondio tras {attempts} intento(s): {last_error}",
+            uncertain=uncertain and not retry,
+        )
 
     @staticmethod
     def _parse_error_body(exc: HTTPError) -> dict[str, Any] | None:
@@ -207,14 +254,3 @@ class FabricClient:
         except Exception as parse_exc:
             logger.debug("Cuerpo de error del puente no parseable: %s", parse_exc)
         return None
-
-
-_client: FabricClient | None = None
-
-
-def get_fabric_client() -> FabricClient:
-    """Retorna el singleton del cliente Fabric."""
-    global _client
-    if _client is None:
-        _client = FabricClient()
-    return _client

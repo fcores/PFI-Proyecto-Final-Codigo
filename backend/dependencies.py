@@ -52,10 +52,11 @@ _prescription_service = PrescriptionService(
     _fabric_prescription_repo,
     _validation_service,
     _dosis_service,
+    patient_service=_patient_service,
 )
 _auth_service = AuthService()
 _audit_service = AuditService(_fabric_prescription_repo)
-_user_service = UserService(_user_repo)
+_user_service = UserService(_user_repo, revoke_sessions=_auth_service.invalidate_user)
 _recomendacion_service = RecomendacionService(_dosis_service)
 
 

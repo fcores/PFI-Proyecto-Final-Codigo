@@ -46,13 +46,16 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FabricUnavailableError)
     async def fabric_unavailable_handler(request: Request, exc: FabricUnavailableError):
         correlation_id = request.headers.get("x-correlation-id", str(uuid.uuid4()))
+        # El detalle tecnico (endpoints de peers, MSP, URL del puente) queda en
+        # el log; al cliente solo le llega un mensaje accionable.
         logger.error("Fabric no disponible [%s]: %s", correlation_id, str(exc))
         return JSONResponse(
             status_code=503,
             content={
                 "type": "fabric_unavailable",
                 "title": "La red blockchain no esta disponible. Intenta nuevamente en unos minutos.",
-                "detail": str(exc),
+                "detail": getattr(exc, "public_message", None)
+                or "La red blockchain no esta disponible. Intenta nuevamente en unos minutos.",
                 "status": 503,
                 "instance": str(request.url.path),
                 "correlation_id": correlation_id,
@@ -62,12 +65,13 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FabricBusinessError)
     async def fabric_business_handler(request: Request, exc: FabricBusinessError):
         correlation_id = request.headers.get("x-correlation-id", str(uuid.uuid4()))
+        logger.warning("Fabric rechazo la operacion [%s]: %s", correlation_id, str(exc))
         return JSONResponse(
             status_code=409,
             content={
                 "type": f"fabric_{exc.error_type}",
                 "title": "La red blockchain rechazo la operacion.",
-                "detail": str(exc),
+                "detail": f"La red blockchain rechazo la operacion (ref. {correlation_id[:8]}).",
                 "status": 409,
                 "instance": str(request.url.path),
                 "correlation_id": correlation_id,
@@ -83,6 +87,7 @@ def install_error_handlers(app: FastAPI) -> None:
             content={
                 "type": exc.error_type,
                 "title": exc.detail,
+                "detail": exc.detail,
                 "status": exc.status_code,
                 "instance": str(request.url.path),
                 "correlation_id": correlation_id,
