@@ -33,6 +33,46 @@ export const ACCION_LABEL = {
   rechazar: "Rechazo",
 };
 
+// Semáforo de plazos de la Res. SSSalud 951/2025 (calculado por el backend).
+export const PLAZO_VARIANT = {
+  en_plazo: "success",
+  por_vencer: "warning",
+  vencido: "error",
+  cumplido: "success",
+  cumplido_fuera_de_plazo: "error",
+};
+
+export const PLAZO_LABEL = {
+  en_plazo: "En plazo",
+  por_vencer: "Por vencer",
+  vencido: "Vencido",
+  cumplido: "Cumplido",
+  cumplido_fuera_de_plazo: "Cumplido fuera de plazo",
+};
+
+/**
+ * Plazo que corresponde mirar: el de respuesta mientras el auditor no actuó,
+ * y el de resolución después.
+ */
+export function plazoVigente(plazos) {
+  if (!plazos) return null;
+  if (plazos.respuesta && !plazos.respuesta.cumplido_en) {
+    return { ...plazos.respuesta, tipo: "Respuesta (5 días corridos)" };
+  }
+  if (plazos.resolucion) {
+    return { ...plazos.resolucion, tipo: "Resolución (30 días hábiles)" };
+  }
+  return null;
+}
+
+export function plazoTexto(plazo) {
+  if (!plazo) return "—";
+  const etiqueta = PLAZO_LABEL[plazo.estado] || plazo.estado;
+  if (plazo.dias_restantes == null) return etiqueta;
+  if (plazo.dias_restantes < 0) return `${etiqueta} (hace ${Math.abs(plazo.dias_restantes)} d)`;
+  return `${etiqueta} (${plazo.dias_restantes} d)`;
+}
+
 export function estadoLabel(estado) {
   return ESTADO_LABEL[estado] || estado || "—";
 }

@@ -81,6 +81,55 @@ class UserRepository:
                 cur.execute(queries["update_user_profile"], (display_name, role, active, user_id))
                 return cur.fetchone() is not None
 
+    def find_credentials(self, username: str) -> dict | None:
+        """Devuelve la cuenta activa con su hash de contraseña, para reautenticar."""
+        try:
+            self._ensure_db()
+            queries = self._queries()
+            columnas = ("id", "username", "display_name", "role", "active", "password_hash", "salt")
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(queries["find_user_credentials"], (username,))
+                    row = cur.fetchone()
+            if row is None:
+                return None
+            return dict(zip(columnas, row))
+        except DomainError:
+            raise
+        except Exception as exc:
+            logger.error("Error al leer las credenciales de %s: %s", username, exc, exc_info=True)
+            raise
+
+    def count_active_by_role(self, role: str) -> int:
+        """Cantidad de cuentas activas con el rol dado."""
+        try:
+            self._ensure_db()
+            queries = self._queries()
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(queries["count_active_by_role"], (role,))
+                    return int(cur.fetchone()[0])
+        except DomainError:
+            raise
+        except Exception as exc:
+            logger.error("Error al contar cuentas con rol %s: %s", role, exc, exc_info=True)
+            raise
+
+    def anonymize(self, user_id: int, display_name: str, password_hash: str, salt: str) -> bool:
+        """Desactiva la cuenta, reemplaza el nombre visible y la credencial (RF-37)."""
+        try:
+            self._ensure_db()
+            queries = self._queries()
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(queries["anonymize_user"], (display_name, password_hash, salt, user_id))
+                    return cur.fetchone() is not None
+        except DomainError:
+            raise
+        except Exception as exc:
+            logger.error("Error al anonimizar la cuenta %s: %s", user_id, exc, exc_info=True)
+            raise
+
     def update_password(self, user_id: int, password_hash: str, salt: str) -> bool:
         """Reemplaza la password de una cuenta. Retorna False si no existe."""
         self._ensure_db()

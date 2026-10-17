@@ -7,6 +7,15 @@ from backend.models.medication import Medication
 logger = logging.getLogger(__name__)
 
 
+def _clave_potencia(medicamento):
+    """Clave de orden: primero los que tienen potencia, de menor a mayor, y luego por id."""
+    try:
+        return (medicamento.potencia_mg is None, medicamento.potencia_mg or 0, medicamento.id)
+    except Exception as exc:
+        logger.error("Error al leer la potencia de un medicamento: %s", exc, exc_info=True)
+        raise
+
+
 class MedicationRepository:
     """Repositorio de medicamentos con soporte PostgreSQL y fallback en memoria."""
 
@@ -137,7 +146,7 @@ class MedicationRepository:
             for med in self._store:
                 if str(med.monodroga).lower() == str(monodroga).lower():
                     filtrados.append(med)
-            filtrados.sort(key=lambda m: (m.potencia_mg is None, m.potencia_mg or 0, m.id))
+            filtrados.sort(key=_clave_potencia)
             return filtrados
         except Exception as exc:
             logger.error(

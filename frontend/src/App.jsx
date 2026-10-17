@@ -13,6 +13,7 @@ import AuditQueuePage from "./pages/AuditQueuePage";
 import AuditCasePage from "./pages/AuditCasePage";
 import UsuariosPage from "./pages/UsuariosPage";
 import SaludPage from "./pages/SaludPage";
+import FinanciadorPanelPage from "./pages/FinanciadorPanelPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { useAuth } from "./auth/AuthContext";
@@ -80,6 +81,9 @@ export default function App() {
           <ProtectedRoute roles={["auditor", "super_admin"]}><AuditCasePage /></ProtectedRoute>
         } />
 
+        <Route path="/financiador/panel" element={
+          <ProtectedRoute roles={["financiador", "super_admin"]}><FinanciadorPanelPage /></ProtectedRoute>
+        } />
         <Route path="/usuarios" element={
           <ProtectedRoute roles={["super_admin"]}><UsuariosPage /></ProtectedRoute>
         } />

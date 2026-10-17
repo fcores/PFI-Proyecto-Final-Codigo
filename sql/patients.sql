@@ -35,3 +35,17 @@ LIMIT 50;
 
 -- name: patient_exists
 SELECT 1 FROM patients WHERE id = %s;
+
+-- name: anonymize_patient
+UPDATE patients SET
+    credential_id = NULL, provider_id = NULL, provider = NULL,
+    first_name = '***', last_name = '***', birth_date = DATE '1900-01-01', gender = '***',
+    treatment = NULL, medications = '[]',
+    hc_filename = NULL, ap_filename = NULL, img_filename = NULL,
+    lab_filename = NULL, receta_filename = NULL, otros_filename = NULL,
+    first_name_enc = NULL, last_name_enc = NULL, birth_date_enc = NULL, gender_enc = NULL,
+    provider_enc = NULL, provider_id_enc = NULL, credential_id_enc = NULL, treatment_enc = NULL,
+    first_name_bidx = NULL, last_name_bidx = NULL, birth_date_bidx = NULL,
+    anonymized_at = NOW()
+WHERE id = %s
+RETURNING id;

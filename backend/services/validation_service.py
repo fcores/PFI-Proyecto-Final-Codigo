@@ -14,12 +14,31 @@ from backend.models.prescription import (
     PrescriptionBase,
     ValidationResult,
 )
+from backend.services.surge import evaluar_surge
 
 logger = logging.getLogger(__name__)
 
 ESTADO_APROBADO = "APROBADO"
 ESTADO_RECHAZADO = "RECHAZADO"
 ESTADO_REVISION = "REVISION"
+
+
+def _clave_ahorro(alternativa):
+    """Clave de orden de una alternativa economica: su ahorro."""
+    try:
+        return alternativa.ahorro
+    except Exception as exc:
+        logger.error("Error al leer el ahorro de una alternativa: %s", exc, exc_info=True)
+        raise
+
+
+def _clave_aporte_absoluto(par):
+    """Clave de orden de un par (feature, aporte): el valor absoluto del aporte."""
+    try:
+        return abs(par[1])
+    except Exception as exc:
+        logger.error("Error al leer el aporte de una feature: %s", exc, exc_info=True)
+        raise
 
 
 class ValidationService:
@@ -135,7 +154,7 @@ class ValidationService:
             if not alternativas:
                 return round(costo_prescrito, 2), [], None, None
 
-            alternativas.sort(key=lambda a: a.ahorro, reverse=True)
+            alternativas.sort(key=_clave_ahorro, reverse=True)
             mejor = alternativas[0]
             motivo = (
                 "Existe una alternativa terapéuticamente equivalente de menor costo: %s (%s) "
@@ -162,7 +181,7 @@ class ValidationService:
             for idx, name in enumerate(feature_names):
                 if idx < len(contrib) - 1:
                     pares.append((name, float(contrib[idx])))
-            pares.sort(key=lambda item: abs(item[1]), reverse=True)
+            pares.sort(key=_clave_aporte_absoluto, reverse=True)
             aportes = []
             for name, valor in pares[:5]:
                 aportes.append(FeatureAporte(feature=name, aporte=round(valor, 4)))
@@ -185,7 +204,69 @@ class ValidationService:
             logger.error("Error al calcular nivel de confianza: %s", exc, exc_info=True)
             raise
 
+    def _costo_tratamiento(self, id_regimen, bsa, peso_kg):
+        """Costo del tratamiento completo: costo por ciclo por los ciclos del esquema estandar."""
+        try:
+            if self._dosis_service is None:
+                return None
+            _costos, costo_ciclo = self._dosis_service.costear_regimen(id_regimen, bsa, peso_kg)
+            if costo_ciclo is None or costo_ciclo <= 0:
+                return None
+            return costo_ciclo * ciclos_estandar(id_regimen)
+        except Exception as exc:
+            logger.error("Error al costear el tratamiento de %s: %s", id_regimen, exc, exc_info=True)
+            raise
+
+    def _ahorro_efectivo(self, data: PrescriptionBase):
+        """Ahorro por haber adoptado una alternativa equivalente de menor costo.
+
+        Solo se reconoce si el regimen actual es terapeuticamente equivalente al
+        original y efectivamente mas barato; en otro caso se ignora, porque el
+        dato viaja al registro inmutable y no debe sobrestimar el beneficio.
+        """
+        try:
+            original = (data.regimen_original or "").strip()
+            if not original or original == data.id_regimen:
+                return None, None
+            if data.id_regimen not in alternativas_equivalentes(original):
+                logger.warning(
+                    "Se informo regimen_original %s, pero %s no es equivalente; se ignora.",
+                    original,
+                    data.id_regimen,
+                )
+                return None, None
+            superficie = self._superficie(data.peso_kg, data.talla_cm)
+            costo_original = self._costo_tratamiento(original, superficie, data.peso_kg)
+            costo_actual = self._costo_tratamiento(data.id_regimen, superficie, data.peso_kg)
+            if costo_original is None or costo_actual is None or costo_actual >= costo_original:
+                logger.warning(
+                    "La alternativa %s no resulta mas economica que %s; no se registra ahorro.",
+                    data.id_regimen,
+                    original,
+                )
+                return None, None
+            return original, round(costo_original - costo_actual, 2)
+        except Exception as exc:
+            logger.error("Error al calcular el ahorro efectivo: %s", exc, exc_info=True)
+            raise
+
     def validate(self, data: PrescriptionBase) -> ValidationResult:
+        """Valida la prescripcion y agrega la marca SURGE y el ahorro efectivo."""
+        try:
+            resultado = self._validar(data)
+            regimen_original, ahorro_efectivo = self._ahorro_efectivo(data)
+            return resultado.model_copy(
+                update={
+                    "surge": evaluar_surge(data),
+                    "regimen_original": regimen_original,
+                    "ahorro_efectivo": ahorro_efectivo,
+                }
+            )
+        except Exception as exc:
+            logger.error("Error en validate: %s", exc, exc_info=True)
+            raise
+
+    def _validar(self, data: PrescriptionBase) -> ValidationResult:
         """Valida la prescripcion con reglas + modelo y doble umbral."""
         try:
             motivos_base = self._chequeos_completitud(data)
@@ -327,5 +408,5 @@ class ValidationService:
                 **economia,
             )
         except Exception as exc:
-            logger.error("Error en validate: %s", exc, exc_info=True)
+            logger.error("Error en _validar: %s", exc, exc_info=True)
             raise

@@ -111,6 +111,28 @@ export default function MlVerdictPanel({ ml = {} }) {
           />
         </section>
       )}
+
+      {ml.ahorro_efectivo != null && (
+        <section className="ml-panel__section">
+          <h3 className="ml-panel__title">
+            Ahorro efectivo: <span className="ml-panel__amount">{formatCurrency(ml.ahorro_efectivo)}</span>
+          </h3>
+          <p className="muted">
+            El prescriptor adoptó la alternativa equivalente de menor costo en lugar de {ml.regimen_original}.
+          </p>
+        </section>
+      )}
+
+      {ml.surge && (
+        <section className="ml-panel__section">
+          <h3 className="ml-panel__title">Recupero ante el SURGE</h3>
+          <p className="muted">
+            {ml.surge.potencialmente_recuperable
+              ? `Potencialmente recuperable (${ml.surge.norma}). A constatar por el auditor: ${(ml.surge.a_constatar || []).join(", ")}.`
+              : `No alcanzado por el SURGE según ${ml.surge.norma}.`}
+          </p>
+        </section>
+      )}
     </div>
   );
 }

@@ -29,6 +29,19 @@ UPDATE users SET password_hash = %s, salt = %s
 WHERE id = %s
 RETURNING id;
 
+-- name: find_user_credentials
+SELECT id, username, display_name, role, active, password_hash, salt
+FROM users
+WHERE username = %s AND active = TRUE;
+
+-- name: count_active_by_role
+SELECT COUNT(*) FROM users WHERE role = %s AND active = TRUE;
+
+-- name: anonymize_user
+UPDATE users SET display_name = %s, active = FALSE, password_hash = %s, salt = %s, anonymized_at = NOW()
+WHERE id = %s
+RETURNING id;
+
 -- name: update_user_password_by_username
 UPDATE users SET password_hash = %s, salt = %s
 WHERE username = %s;

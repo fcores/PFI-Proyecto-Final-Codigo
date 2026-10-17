@@ -105,6 +105,38 @@ class CryptoService:
         plaintext_bytes = aesgcm.decrypt(nonce, ct_and_tag, aad)
         return plaintext_bytes.decode("utf-8")
 
+    def encrypt_secret(self, plaintext: str, context: str) -> str:
+        """Cifra un secreto que no es PHI (p. ej. una clave privada de firma).
+
+        El contexto viaja como AAD: un ciphertext copiado a otro registro no
+        descifra.
+        """
+        try:
+            nonce = os.urandom(_NONCE_BYTES)
+            aesgcm = AESGCM(self._enc_key)
+            ct_and_tag = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), ("secret:" + context).encode("utf-8"))
+            nonce_b64 = base64.b64encode(nonce).decode("ascii")
+            ct_b64 = base64.b64encode(ct_and_tag).decode("ascii")
+            return f"{_FORMAT_VERSION}:{self._key_version}:{nonce_b64}:{ct_b64}"
+        except Exception as exc:
+            logger.error("Error al cifrar un secreto: %s", type(exc).__name__)
+            raise
+
+    def decrypt_secret(self, ciphertext: str, context: str) -> str:
+        """Descifra un secreto cifrado con encrypt_secret para el mismo contexto."""
+        try:
+            parts = ciphertext.split(":")
+            if len(parts) != 4 or parts[0] != _FORMAT_VERSION:
+                raise ValueError("Formato de ciphertext invalido")
+            nonce = base64.b64decode(parts[2])
+            ct_and_tag = base64.b64decode(parts[3])
+            aesgcm = AESGCM(self._enc_key)
+            plaintext_bytes = aesgcm.decrypt(nonce, ct_and_tag, ("secret:" + context).encode("utf-8"))
+            return plaintext_bytes.decode("utf-8")
+        except Exception as exc:
+            logger.error("Error al descifrar un secreto: %s", type(exc).__name__)
+            raise
+
     def blind_index(self, value: str) -> bytes:
         """Genera un indice ciego HMAC-SHA256 para busqueda exacta.
 

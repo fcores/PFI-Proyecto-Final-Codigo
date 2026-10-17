@@ -27,6 +27,7 @@ from backend.error_handlers import DomainError, NotFoundError
 from backend.ml.regimenes import nombre_regimen
 from backend.models.prescription import (
     ClinicalData,
+    FirmaVerificacion,
     Prescription,
     PrescriptionBase,
     PrescriptionList,
@@ -34,26 +35,41 @@ from backend.models.prescription import (
 )
 from backend.repositories.fabric_prescription_repo import FabricPrescriptionRepository
 from backend.security.canonical import build_canonical_payload, verify_chain
+from backend.services.plazos import calcular_plazos
 from backend.services.validation_service import ValidationService
 
 logger = logging.getLogger(__name__)
 
 
 def _asset_to_prescription(asset: dict, tx_id: str | None = None) -> Prescription:
-    """Convierte el asset JSON del chaincode al modelo de dominio."""
-    data = dict(asset)
-    data.pop("docType", None)
-    if tx_id:
-        data["tx_id"] = tx_id
-    return Prescription(**data)
+    """Convierte el asset JSON del chaincode al modelo de dominio.
+
+    Los plazos de la Res. 951/2025 se calculan aca, al leer, porque dependen de
+    la fecha actual y no forman parte del asset.
+    """
+    try:
+        data = dict(asset)
+        data.pop("docType", None)
+        if tx_id:
+            data["tx_id"] = tx_id
+        data["plazos"] = calcular_plazos(data.get("created_at"), data.get("audit_events"))
+        return Prescription(**data)
+    except Exception as exc:
+        logger.error("Error al convertir el asset de Fabric: %s", exc, exc_info=True)
+        raise
 
 
 def _paged_to_list(paged: dict) -> PrescriptionList:
-    return PrescriptionList(
-        prescriptions=[_asset_to_prescription(item) for item in paged["items"]],
-        bookmark=paged["bookmark"] or None,
-        fetched_count=paged["fetched_count"],
-    )
+    """Convierte una pagina de assets de Fabric en la lista de dominio."""
+    try:
+        return PrescriptionList(
+            prescriptions=[_asset_to_prescription(item) for item in paged["items"]],
+            bookmark=paged["bookmark"] or None,
+            fetched_count=paged["fetched_count"],
+        )
+    except Exception as exc:
+        logger.error("Error al convertir la pagina de assets: %s", exc, exc_info=True)
+        raise
 
 
 class PrescriptionService:
@@ -65,11 +81,13 @@ class PrescriptionService:
         validation_service: ValidationService,
         dosis_service=None,
         patient_service=None,
+        signing_service=None,
     ) -> None:
         self._repo = fabric_repo
         self._validation_service = validation_service
         self._dosis_service = dosis_service
         self._patient_service = patient_service
+        self._signing_service = signing_service
 
     def _body_surface_area(self, peso_kg: float, talla_cm: float) -> float:
         """Calcula la superficie corporal con la formula de Mosteller."""
@@ -155,11 +173,19 @@ class PrescriptionService:
                 **data_completa.model_dump(),
             )
             created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-            canonical = build_canonical_payload(
-                clinical.model_dump(),
-                validacion.model_dump(),
-                created_at,
-            )
+            clinical_dict = clinical.model_dump()
+            ml_dict = validacion.model_dump()
+            # RF-35: la firma cubre el contenido sin el bloque `firma`, y el
+            # payload_hash del chaincode cubre el contenido con la firma.
+            if self._signing_service is not None and prescriptor_username:
+                clinical_dict["firma"] = self._signing_service.firmar(
+                    prescriptor_username,
+                    data_completa.matricula,
+                    clinical_dict,
+                    ml_dict,
+                    created_at,
+                )
+            canonical = build_canonical_payload(clinical_dict, ml_dict, created_at)
 
             prescription_id = str(ULID())
             try:
@@ -244,3 +270,19 @@ class PrescriptionService:
             payload_hash=asset.get("payload_hash"),
             current_hash=asset.get("current_hash"),
         )
+
+    def verify_signature(self, prescription_id: str, actor: str = "prepaga") -> FirmaVerificacion:
+        """Verifica la firma electronica del prescriptor (RF-36)."""
+        try:
+            if self._signing_service is None:
+                raise DomainError("La verificacion de firma no esta disponible.", status_code=503)
+            asset = self._repo.get(prescription_id, actor=actor)
+            if asset is None:
+                raise NotFoundError(f"Prescripcion {prescription_id} no encontrada")
+            resultado = self._signing_service.verificar(asset)
+            return FirmaVerificacion(prescription_id=prescription_id, **resultado)
+        except DomainError:
+            raise
+        except Exception as exc:
+            logger.error("Error al verificar la firma de %s: %s", prescription_id, exc, exc_info=True)
+            raise

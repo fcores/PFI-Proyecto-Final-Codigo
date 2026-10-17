@@ -134,6 +134,8 @@ Documentacion interactiva (Swagger) en `http://127.0.0.1:9999/docs`.
 | `DATABASE_URL` | URL de conexion PostgreSQL (ej. `postgresql://user:pass@host:5432/medchain`). Si no se define, el backend usa almacenamiento en memoria |
 | `CORS_ORIGINS` | Origenes permitidos para CORS (separados por coma) |
 | `ML_MODEL_PATH` | Ruta al artefacto LightGBM (`modelo_gbm.joblib`). Si no se define, se usa `ml_models/artefactos/modelo_gbm.joblib` |
+| `RETENCION_RECETAS_ANIOS` | Anios de conservacion de las prescripciones desde el ultimo acto registrado (Ley 26.529, art. 18; minimo 10). Obligatoria para la supresion de pacientes: sin ella el endpoint responde 503 |
+| `FINANCIADOR_MAX_PRESCRIPCIONES` | Tope de prescripciones que el panel del financiador lee de Fabric por consulta (entero positivo). Si falta o es invalida, el panel usa 1000 y lo advierte en el log |
 
 #### Persistencia dual
 
@@ -144,7 +146,7 @@ El backend soporta dos modos de persistencia:
 
 #### Roles y permisos (RBAC)
 
-El sistema soporta cuatro roles con permisos diferenciados:
+El sistema soporta cinco roles con permisos diferenciados:
 
 | Rol | Acceso |
 |-----|--------|
@@ -152,6 +154,9 @@ El sistema soporta cuatro roles con permisos diferenciados:
 | `administrador` (administrativo) | Datos maestros: pacientes, medicamentos, monodrogas |
 | `prescriptor` | Crea prescripciones (ejecuta el motor ML antes de asentarlas en Fabric); lectura de pacientes y catalogos |
 | `auditor` | Cola de auditoria, acciones aprobar/rechazar/revision, trazabilidad |
+| `financiador` | Panel de lectura del financiador: ahorro potencial y efectivo por alternativas de menor costo, errores detectados, expedientes potencialmente recuperables ante el SURGE (Res. SSSalud 731/2023) y gestiones por plazo de la Res. SSSalud 951/2025. Lee de Fabric como `PrepagaMSP` y no ve datos clinicos de detalle. Las cuentas las crea el `super_admin` desde Usuarios |
+
+Cada prescripcion expone ademas, calculados al leer, los plazos de la Res. 951/2025 (5 dias corridos para la primera accion del auditor y 30 dias habiles, de lunes a viernes, para el dictamen), que la cola de auditoria muestra como semaforo. El bloque `ml` asienta la marca de potencial recupero SURGE (adulto con carcinoma colorrectal avanzado o metastasico; el auditor debe constatar ECOG 0-1) y, cuando el prescriptor adopta la alternativa equivalente de menor costo, el ahorro efectivo.
 
 ### Frontend
 
@@ -185,12 +190,19 @@ Todos los endpoints de negocio estan bajo el prefijo `/api`. Los endpoints prote
 | `GET`  | `/api/prescriptions/{id}` | prescriptor, auditor, super_admin | Detalle del asset on-chain |
 | `GET`  | `/api/prescriptions/{id}/history` | prescriptor, auditor, super_admin | Historial de transacciones Fabric (tx_id reales) |
 | `GET`  | `/api/prescriptions/{id}/verify` | prescriptor, auditor, super_admin | Verifica la cadena de hashes (ver docs/HASHING.md) |
+| `GET`  | `/api/prescriptions/{id}/firma/verificacion` | prescriptor, auditor, super_admin | Verifica la firma electronica ECDSA P-256 del prescriptor (valida, invalida o sin firma) |
+| `POST` | `/api/users/me/baja` | cualquiera | Baja voluntaria de la propia cuenta con anonimizacion (requiere la contraseña) |
+| `POST` | `/api/patients/{id}/supresion` | super_admin | Solicitud de supresion de un paciente; se ejecuta al vencer el periodo de retencion |
+| `GET`  | `/api/patients/supresiones/solicitudes` | super_admin | Listado de solicitudes de supresion |
+| `POST` | `/api/patients/supresiones/ejecutar-vencidas` | super_admin | Ejecuta las supresiones cuyo periodo de retencion vencio |
 | `GET`  | `/api/prescriptions/regimenes` | prescriptor, auditor, super_admin | Catalogo de regimenes R00-R13 |
 | `GET`  | `/api/prescriptions/dosis-referencia` | prescriptor, super_admin | Dosis de referencia por regimen |
 | `POST` | `/api/prescriptions/recomendacion` | prescriptor, super_admin | Sugerir regimen segun guias (sin ML) |
 | `GET`  | `/api/audit/queue` | auditor, super_admin | Cola de auditoria (PENDIENTE_AUDITORIA / EN_REVISION) |
 | `GET`  | `/api/audit/{id}` | auditor, super_admin | Detalle para auditar (asset + historial) |
 | `POST` | `/api/audit/{id}/accion` | auditor, super_admin | Accion on-chain: revision, aprobar o rechazar |
+| `GET`  | `/api/financiador/resumen` | financiador, super_admin | Indicadores del panel del financiador (ahorro, errores, SURGE, plazos) |
+| `GET`  | `/api/financiador/expedientes` | financiador, super_admin | Expedientes del panel, filtrables por `surge`, `plazo` y `alternativa` (`alerta` o `adoptada`) |
 | `GET`  | `/api/users` | super_admin | Listar cuentas |
 | `POST` | `/api/users` | super_admin | Crear cuenta con rol |
 | `PUT`  | `/api/users/{id}` | super_admin | Editar nombre, rol y estado |
@@ -301,8 +313,13 @@ Para la guía paso a paso de configuración de la blockchain, ver [`ARQUITECTURA
 ### Tests automatizados
 
 ```bash
-pytest tests/ -q
+pytest tests/ -q --cov
 ```
+
+`--cov` mide la cobertura del backend de emision de recetas (alta, validacion
+hibrida, dosis, firma electronica, cliente Fabric y endpoints de prescripciones),
+con el alcance y el umbral minimo del 85 % definidos en `pyproject.toml`; el CI
+falla si la cobertura cae por debajo.
 
 Corren sin Docker, sin Fabric y sin base de datos: usan un doble del chaincode
 ([`tests/fakes/fake_fabric_gateway.py`](tests/fakes/fake_fabric_gateway.py)) que

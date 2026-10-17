@@ -394,3 +394,37 @@ class PatientRepository:
                 )
             return result
         return list(self._store[offset : offset + limit])
+
+    def anonymize(self, patient_id: int, username: str = "system") -> bool:
+        """Sobrescribe el PHI, los indices ciegos y los tokens de busqueda del paciente (RF-38).
+
+        La fila se conserva: el id es el seudonimo con que la cadena referencia
+        al paciente, y sin PHI deja de vincularse a una persona identificable.
+        """
+        try:
+            if self._db_available():
+                from backend.db import get_db, load_query
+
+                queries = load_query("patients.sql")
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(queries["delete_name_tokens"], (patient_id,))
+                        cur.execute(queries["anonymize_patient"], (patient_id,))
+                        actualizado = cur.fetchone() is not None
+                if actualizado:
+                    self._log_phi_access([patient_id], "anonymize", "all_phi", 0, username)
+                return actualizado
+            for indice, paciente in enumerate(self._store):
+                if paciente.id == patient_id:
+                    self._store[indice] = Patient(
+                        id=patient_id,
+                        first_name="***",
+                        last_name="***",
+                        birth_date="1900-01-01",
+                        gender="***",
+                    )
+                    return True
+            return False
+        except Exception as exc:
+            logger.error("Error al anonimizar el paciente %s: %s", patient_id, exc, exc_info=True)
+            raise

@@ -6,7 +6,14 @@ import DataTable from "../components/DataTable";
 import PanelStat from "../components/PanelStat";
 import StatusChip from "../components/StatusChip";
 import { fetchAuditQueue } from "../api/audit";
-import { ESTADO_VARIANT, ESTADO_LABEL, mlLabel } from "../constants/estadoVariant";
+import {
+  ESTADO_VARIANT,
+  ESTADO_LABEL,
+  PLAZO_VARIANT,
+  mlLabel,
+  plazoTexto,
+  plazoVigente,
+} from "../constants/estadoVariant";
 import { formatDate } from "../utils/formatDate";
 
 const TABLE_COLUMNS = [
@@ -18,6 +25,7 @@ const TABLE_COLUMNS = [
   "Veredicto ML",
   "Confianza",
   "Fecha",
+  "Plazo (Res. 951/2025)",
 ];
 
 const TABS = [
@@ -83,6 +91,7 @@ export default function AuditQueuePage() {
 
   function renderRow(presc) {
     const clinical = presc.clinical || {};
+    const plazo = plazoVigente(presc.plazos);
     return (
       <tr
         key={presc.prescription_id}
@@ -111,6 +120,13 @@ export default function AuditQueuePage() {
         </td>
         <td>{formatConfianza(presc)}</td>
         <td className="cell-nowrap">{formatDate(presc.created_at)}</td>
+        <td className="cell-nowrap" title={plazo ? `${plazo.tipo}: vence ${formatDate(plazo.vence)}` : undefined}>
+          {plazo ? (
+            <StatusChip variant={PLAZO_VARIANT[plazo.estado] || "neutral"} label={plazoTexto(plazo)} />
+          ) : (
+            "—"
+          )}
+        </td>
       </tr>
     );
   }

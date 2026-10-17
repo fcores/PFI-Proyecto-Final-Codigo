@@ -8,6 +8,15 @@ from backend.ml.regimenes import DOSIS_REFERENCIA, FARMACOS_ORALES
 logger = logging.getLogger(__name__)
 
 
+def _clave_potencia_descendente(presentacion):
+    """Clave de orden que ubica primero las presentaciones de mayor potencia."""
+    try:
+        return -presentacion["potencia_mg"]
+    except Exception as exc:
+        logger.error("Error al leer la potencia de una presentacion: %s", exc, exc_info=True)
+        raise
+
+
 def calcular_dosis_mg(farmaco, bsa, peso_kg, regimen_id):
     """Calcula la dosis total en mg segun la base correcta (BSA, peso o fija)."""
     try:
@@ -65,7 +74,7 @@ def resolver_presentaciones(dosis_mg, farmaco, presentaciones):
             if pot not in potencias_vistas or p["precio"] < potencias_vistas[pot]["precio"]:
                 potencias_vistas[pot] = p
 
-        potencias_list = sorted(potencias_vistas.values(), key=lambda x: -x["potencia_mg"])
+        potencias_list = sorted(potencias_vistas.values(), key=_clave_potencia_descendente)
 
         mejor = None
         req = dosis_mg

@@ -1,4 +1,10 @@
-"""Router de gestion de usuarios. Todas las operaciones requieren super_admin."""
+"""Router de gestion de usuarios.
+
+El ABM requiere super_admin; la baja voluntaria (RF-37) la pide cualquier
+usuario autenticado sobre su propia cuenta.
+"""
+
+import logging
 
 from fastapi import APIRouter, Header
 
@@ -11,6 +17,9 @@ from backend.models.auth import (
     UserList,
     UserUpdateRequest,
 )
+from backend.models.suppression import SelfDeletionRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -57,3 +66,20 @@ def reset_password(
     require_role(user, ["super_admin"])
     get_user_service().reset_password(user_id, data)
     return {"ok": True}
+
+
+def baja_propia(
+    data: SelfDeletionRequest,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """Da de baja y anonimiza la cuenta del usuario autenticado (RF-37)."""
+    try:
+        user = require_auth(authorization)
+        get_user_service().baja_propia(user, data.password)
+        return {"ok": True}
+    except Exception as exc:
+        logger.warning("Baja voluntaria no completada: %s", exc)
+        raise
+
+
+router.add_api_route("/me/baja", baja_propia, methods=["POST"])

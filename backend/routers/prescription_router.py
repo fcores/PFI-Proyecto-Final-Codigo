@@ -7,6 +7,8 @@ El actor con el que se lee de Fabric se deriva del rol (prescriptor/auditor
 usan la identidad de su organizacion; el resto lee como la prepaga).
 """
 
+import logging
+
 from fastapi import APIRouter, Header, Query
 from pydantic import BaseModel
 
@@ -21,6 +23,7 @@ from backend.models.auth import UserInfo
 from backend.models.prescription import (
     ESTADOS_PRESCRIPCION,
     DosisFarmaco,
+    FirmaVerificacion,
     Prescription,
     PrescriptionBase,
     PrescriptionList,
@@ -28,6 +31,8 @@ from backend.models.prescription import (
     RecomendacionResponse,
     VerifyResult,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/prescriptions", tags=["prescriptions"])
 
@@ -37,11 +42,17 @@ _ROLES_ESCRITURA = ["prescriptor", "super_admin"]
 
 def _actor_for(user: UserInfo) -> str:
     """Organizacion Fabric con la que firma/lee segun el rol del usuario."""
-    if user.role == "prescriptor":
-        return "prescriptor"
-    if user.role == "auditor":
-        return "auditor"
-    return "prepaga"
+    try:
+        if user.role == "prescriptor":
+            return "prescriptor"
+        if user.role == "auditor":
+            return "auditor"
+        if user.role == "financiador":
+            return "prepaga"
+        return "prepaga"
+    except Exception as exc:
+        logger.error("Error al resolver la organizacion Fabric del usuario: %s", exc, exc_info=True)
+        raise
 
 
 class RegimenInfo(BaseModel):
@@ -187,3 +198,26 @@ def verify_prescription(
     require_role(user, _ROLES_LECTURA)
     svc = get_prescription_service()
     return svc.verify(prescription_id, actor=_actor_for(user))
+
+
+def verify_prescription_signature(
+    prescription_id: str,
+    authorization: str | None = Header(default=None),
+) -> FirmaVerificacion:
+    """Verifica la firma electronica del prescriptor (RF-36)."""
+    try:
+        user = require_auth(authorization)
+        require_role(user, _ROLES_LECTURA)
+        svc = get_prescription_service()
+        return svc.verify_signature(prescription_id, actor=_actor_for(user))
+    except Exception as exc:
+        logger.warning("Verificacion de firma de %s no completada: %s", prescription_id, exc)
+        raise
+
+
+router.add_api_route(
+    "/{prescription_id}/firma/verificacion",
+    verify_prescription_signature,
+    methods=["GET"],
+    response_model=FirmaVerificacion,
+)

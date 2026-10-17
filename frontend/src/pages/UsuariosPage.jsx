@@ -13,7 +13,7 @@ import { formatDate } from "../utils/formatDate";
 
 const TABLE_COLUMNS = ["Usuario", "Nombre", "Rol", "Estado", "Creado", "Acciones"];
 
-const ROLES = ["prescriptor", "auditor", "administrador", "super_admin"].map((value) => ({
+const ROLES = ["prescriptor", "auditor", "financiador", "administrador", "super_admin"].map((value) => ({
   value,
   label: ROLE_LABEL[value],
 }));

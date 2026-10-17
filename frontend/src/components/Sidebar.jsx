@@ -64,6 +64,7 @@ export default function Sidebar() {
   const vePacientes = esSuperAdmin || role === "administrador" || role === "prescriptor";
   const veDatosMaestros = esSuperAdmin || role === "administrador";
   const veAuditorias = esSuperAdmin || role === "auditor";
+  const vePanelFinanciador = esSuperAdmin || role === "financiador";
 
   const prescripcionesSubtypes = [
     ...(creaPrescripciones ? [{ to: "/prescripciones/alta", label: "Alta de Prescripciones" }] : []),
@@ -172,6 +173,18 @@ export default function Sidebar() {
             onToggle={() => setAuditoriasOpen((o) => !o)}
             subtypes={AUDITORIAS_SUBTYPES}
           />
+        )}
+
+        {vePanelFinanciador && (
+          <div className="nav-group">
+            <NavLink
+              to="/financiador/panel"
+              className={({ isActive }) => `nav-group-toggle${isActive ? " active" : ""}`}
+            >
+              <span className="nav-emoji" aria-hidden="true">{"\u{1F4CA}"}</span>
+              <span className="nav-group-label">Panel del financiador</span>
+            </NavLink>
+          </div>
         )}
 
         {esSuperAdmin && (

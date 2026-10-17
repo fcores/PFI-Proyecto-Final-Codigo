@@ -6,7 +6,12 @@ import FormField from "../components/FormField";
 import ReadOnlyField from "../components/ReadOnlyField";
 import SimpleTable from "../components/SimpleTable";
 import StatusChip from "../components/StatusChip";
-import { fetchPrescription, fetchPrescriptionHistory, verifyPrescription } from "../api/prescriptions";
+import {
+  fetchPrescription,
+  fetchPrescriptionHistory,
+  verifyPrescription,
+  verifyPrescriptionSignature,
+} from "../api/prescriptions";
 import { ACCION_LABEL, ESTADO_VARIANT, estadoLabel } from "../constants/estadoVariant";
 import { shortHash } from "../utils/shortHash";
 import { formatDate } from "../utils/formatDate";
@@ -24,6 +29,8 @@ export default function TrazabilidadPage() {
   const [historyError, setHistoryError] = useState(null);
   const [verification, setVerification] = useState(null);
   const [verificationError, setVerificationError] = useState(null);
+  const [signature, setSignature] = useState(null);
+  const [signatureError, setSignatureError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -37,12 +44,15 @@ export default function TrazabilidadPage() {
     setHistoryError(null);
     setVerification(null);
     setVerificationError(null);
+    setSignature(null);
+    setSignatureError(null);
 
     // Si falla la verificación o el historial, el asset igual se muestra.
-    const [presc, hist, verif] = await Promise.allSettled([
+    const [presc, hist, verif, firma] = await Promise.allSettled([
       fetchPrescription(id),
       fetchPrescriptionHistory(id),
       verifyPrescription(id),
+      verifyPrescriptionSignature(id),
     ]);
 
     if (presc.status === "rejected") {
@@ -53,6 +63,8 @@ export default function TrazabilidadPage() {
       else setHistoryError(hist.reason?.message || "No se pudo leer el historial de transacciones.");
       if (verif.status === "fulfilled") setVerification(verif.value);
       else setVerificationError(verif.reason?.message || "No se pudo verificar la cadena de hashes.");
+      if (firma.status === "fulfilled") setSignature(firma.value);
+      else setSignatureError(firma.reason?.message || "No se pudo verificar la firma electrónica.");
     }
     setLoading(false);
   }, []);
@@ -163,6 +175,32 @@ export default function TrazabilidadPage() {
                 ) : (
                   <div className="alert alert--warning" role="status">
                     {verificationError || "Verificación no disponible."}
+                  </div>
+                )}
+              </div>
+
+              <div className="verify-box">
+                <h3 className="ml-panel__title">Firma electrónica del prescriptor</h3>
+                {signature?.estado === "valida" && (
+                  <div className="alert alert--success" role="status">
+                    Firmada por {signature.firmante} (matrícula {signature.matricula || "—"}) el{" "}
+                    {formatDate(signature.firmado_en)}. {signature.algoritmo}, clave{" "}
+                    <code title={signature.huella_clave}>{shortHash(signature.huella_clave)}</code>.
+                  </div>
+                )}
+                {signature?.estado === "invalida" && (
+                  <div className="alert alert--error" role="alert">
+                    <strong>Firma inválida.</strong> {signature.detalle}
+                  </div>
+                )}
+                {signature?.estado === "sin_firma" && (
+                  <div className="alert alert--warning" role="status">
+                    {signature.detalle}
+                  </div>
+                )}
+                {!signature && (
+                  <div className="alert alert--warning" role="status">
+                    {signatureError || "Verificación de firma no disponible."}
                   </div>
                 )}
               </div>

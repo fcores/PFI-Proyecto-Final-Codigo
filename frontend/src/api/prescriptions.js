@@ -26,6 +26,10 @@ export async function verifyPrescription(prescriptionId) {
   return get(`/prescriptions/${prescriptionId}/verify`);
 }
 
+export async function verifyPrescriptionSignature(prescriptionId) {
+  return get(`/prescriptions/${prescriptionId}/firma/verificacion`);
+}
+
 export async function createPrescription(body) {
   return postJson("/prescriptions", body);
 }

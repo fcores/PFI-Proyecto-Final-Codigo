@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { ROLE_LABEL } from "../constants/roles";
 import ChangePasswordDialog from "./ChangePasswordDialog";
+import DeleteAccountDialog from "./DeleteAccountDialog";
 import { useLayout } from "./layoutContext";
 
 function UserMenu() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const ref = useRef(null);
   const displayName = user?.display_name || user?.username || "Usuario";
   const roleLabel = ROLE_LABEL[user?.role] || user?.role || "";
@@ -65,9 +67,21 @@ function UserMenu() {
           >
             Cambiar contraseña
           </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="user-menu__item"
+            onClick={() => {
+              setOpen(false);
+              setDeleteOpen(true);
+            }}
+          >
+            Dar de baja mi cuenta
+          </button>
         </div>
       ) : null}
       <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <DeleteAccountDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </div>
   );
 }

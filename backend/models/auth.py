@@ -7,9 +7,9 @@ from pydantic import BaseModel, Field
 
 # Roles del sistema. Debe mantenerse en espejo con el CHECK chk_users_role de
 # sql/schema.sql y con la matriz de navegacion del frontend (Sidebar.jsx).
-ROLES = ("administrador", "prescriptor", "auditor", "super_admin")
+ROLES = ("administrador", "prescriptor", "auditor", "financiador", "super_admin")
 
-RoleLiteral = Literal["administrador", "prescriptor", "auditor", "super_admin"]
+RoleLiteral = Literal["administrador", "prescriptor", "auditor", "financiador", "super_admin"]
 
 
 class LoginRequest(BaseModel):

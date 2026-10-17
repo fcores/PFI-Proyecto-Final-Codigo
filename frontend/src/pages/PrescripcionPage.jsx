@@ -23,6 +23,16 @@ function bodySurfaceArea(pesoKg, tallaCm) {
 
 const PACIENTE_INICIAL = { estado: "idle", texto: "" };
 
+// El backend informa la mejor alternativa en el mensaje del 422 de RF-34:
+// "... de menor costo (R02, CAPOX, 12.3% mas economica) ...".
+const PATRON_ALTERNATIVA = /de menor costo \(([^,]+), ([^,]+), ([\d.]+)% mas economica\)/;
+
+function parsearAlternativa(mensaje) {
+  const match = PATRON_ALTERNATIVA.exec(mensaje || "");
+  if (!match) return null;
+  return { id: match[1].trim(), nombre: match[2].trim(), pct: Number(match[3]) };
+}
+
 export default function PrescripcionPage() {
   const formRef = useRef(null);
   const resultRef = useRef(null);
@@ -38,6 +48,10 @@ export default function PrescripcionPage() {
   // equivalente de menor costo y el alta fue rechazada por falta de
   // justificacion clinica.
   const [requiereJustificacion, setRequiereJustificacion] = useState(false);
+  // Alternativa informada por el motor y régimen que el prescriptor tenía
+  // elegido antes de adoptarla: permite registrar el ahorro efectivo.
+  const [alternativa, setAlternativa] = useState(null);
+  const [regimenOriginal, setRegimenOriginal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   // Verificación del ID de paciente contra el padrón (el backend vuelve a
@@ -133,7 +147,7 @@ export default function PrescripcionPage() {
     setGuia({ estado: "loading", texto: "Consultando guías clínicas…" });
     try {
       const reco = await recomendarRegimen(body);
-      setIdRegimen(reco.id_regimen);
+      handleCambioRegimen(reco.id_regimen);
       let texto = `Sugerido ${reco.id_regimen} (${reco.nombre_regimen}) por: ${
         (reco.reglas_aplicadas || []).join(", ") || "guías clínicas"
       }.`;
@@ -151,7 +165,26 @@ export default function PrescripcionPage() {
     setDosisRows([]);
     setGuia({ estado: "idle", texto: "" });
     setRequiereJustificacion(false);
+    setAlternativa(null);
+    setRegimenOriginal("");
     setPaciente(PACIENTE_INICIAL);
+  }
+
+  function handleUsarAlternativa() {
+    if (!alternativa) return;
+    setRegimenOriginal(idRegimen);
+    setIdRegimen(alternativa.id);
+    setRequiereJustificacion(false);
+    setAlternativa(null);
+    setSuccess(
+      `Se adoptó la alternativa ${alternativa.id} (${alternativa.nombre}). Revisá las dosis recalculadas y volvé a registrar.`,
+    );
+  }
+
+  function handleCambioRegimen(valor) {
+    setIdRegimen(valor);
+    setRegimenOriginal("");
+    setAlternativa(null);
   }
 
   async function handleSubmit(event) {
@@ -190,6 +223,9 @@ export default function PrescripcionPage() {
     if (justificacionCosto) {
       body.justificacion_costo = justificacionCosto;
     }
+    if (regimenOriginal) {
+      body.regimen_original = regimenOriginal;
+    }
 
     setLoading("Validando y registrando en la blockchain (endoso de las 3 organizaciones)…");
     setResult(null);
@@ -209,6 +245,7 @@ export default function PrescripcionPage() {
       // alternativa equivalente más económica.
       if (err.status === 422 && mensaje.includes("justificacion_costo")) {
         setRequiereJustificacion(true);
+        setAlternativa(parsearAlternativa(mensaje));
         setError(
           "Existe una alternativa terapéuticamente equivalente de menor costo. " +
             "Completá la justificación clínica para registrar el esquema elegido.",
@@ -449,7 +486,7 @@ export default function PrescripcionPage() {
                     name="id_regimen"
                     required
                     value={idRegimen}
-                    onChange={(e) => setIdRegimen(e.target.value)}
+                    onChange={(e) => handleCambioRegimen(e.target.value)}
                   >
                     <option value="" disabled>
                       {regimenesError ? "Catálogo no disponible" : "Seleccionar"}
@@ -554,6 +591,18 @@ export default function PrescripcionPage() {
                     <p className="field-hint">
                       La justificación queda registrada de forma inmutable junto con la prescripción y acompaña al
                       expediente durante la auditoría.
+                    </p>
+                  ) : null}
+                  {alternativa ? (
+                    <div className="form-group--action">
+                      <button type="button" className="btn-secondary" onClick={handleUsarAlternativa}>
+                        Usar alternativa {alternativa.id} ({alternativa.nombre}, {alternativa.pct}% más económica)
+                      </button>
+                    </div>
+                  ) : null}
+                  {regimenOriginal ? (
+                    <p className="field-hint field-hint--ok">
+                      Alternativa adoptada en lugar de {regimenOriginal}: el ahorro queda registrado con la prescripción.
                     </p>
                   ) : null}
                 </FormField>

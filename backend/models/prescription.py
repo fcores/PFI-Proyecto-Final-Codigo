@@ -74,6 +74,18 @@ class ValidationResult(BaseModel):
         False,
         title="Exige justificación económica del prescriptor",
     )
+    regimen_original: str | None = Field(
+        None,
+        title="Régimen elegido antes de adoptar la alternativa económica",
+    )
+    ahorro_efectivo: float | None = Field(
+        None,
+        title="Ahorro por adoptar la alternativa equivalente de menor costo",
+    )
+    surge: dict[str, Any] | None = Field(
+        None,
+        title="Potencial recupero ante el SURGE (Res. SSSalud 731/2023)",
+    )
 
 
 class PrescriptionBase(BaseModel):
@@ -122,6 +134,11 @@ class PrescriptionBase(BaseModel):
         min_length=5,
         max_length=2000,
         title="Justificación clínica de la elección económica",
+    )
+    regimen_original: str | None = Field(
+        None,
+        max_length=10,
+        title="Régimen que el prescriptor reemplazó por la alternativa económica",
     )
 
     @field_validator("id_regimen")
@@ -198,7 +215,23 @@ class ClinicalRecord(BaseModel):
     medico_prescriptor: str | None = None
     matricula: str | None = None
     justificacion_costo: str | None = None
+    regimen_original: str | None = None
     prescriptor_username: str | None = None
+    firma: dict[str, Any] | None = None
+
+
+class FirmaVerificacion(BaseModel):
+    """Resultado de verificar la firma electronica de una prescripcion (RF-36)."""
+
+    prescription_id: str
+    estado: Literal["valida", "invalida", "sin_firma"]
+    algoritmo: str | None = None
+    firmante: str | None = None
+    matricula: str | None = None
+    huella_clave: str | None = None
+    firmado_en: str | None = None
+    clave_registrada: bool | None = None
+    detalle: str
 
 
 class AuditEvent(BaseModel):
@@ -236,6 +269,10 @@ class Prescription(BaseModel):
     current_hash: str = Field(..., title="Último eslabón de la cadena de hashes")
     audit_events: list[AuditEvent] = Field(default_factory=list, title="Eventos de auditoría")
     tx_id: str | None = Field(None, title="TxID de Fabric de la última escritura conocida")
+    plazos: dict[str, Any] | None = Field(
+        None,
+        title="Plazos de la Res. SSSalud 951/2025 (calculados al leer, no se asientan)",
+    )
 
 
 class PrescriptionList(BaseModel):

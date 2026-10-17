@@ -1,9 +1,10 @@
 """Servicio de gestion de usuarios (ABM, solo super_admin)."""
 
 import logging
+import secrets
 from collections.abc import Callable
 
-from backend.error_handlers import ConflictError, NotFoundError
+from backend.error_handlers import ConflictError, DomainError, NotFoundError
 from backend.models.auth import (
     PasswordResetRequest,
     UserAccount,
@@ -13,7 +14,7 @@ from backend.models.auth import (
     UserUpdateRequest,
 )
 from backend.repositories.user_repo import UserRepository
-from backend.security.password import hash_password
+from backend.security.password import hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,16 @@ logger = logging.getLogger(__name__)
 class UserService:
     """ABM de cuentas de usuario y asignacion de roles."""
 
-    def __init__(self, repo: UserRepository, revoke_sessions: Callable[[str], None] | None = None) -> None:
+    def __init__(
+        self,
+        repo: UserRepository,
+        revoke_sessions: Callable[[str], None] | None = None,
+        signing_service=None,
+    ) -> None:
         """revoke_sessions(username) cierra las sesiones abiertas de una cuenta."""
         self._repo = repo
         self._revoke_sessions = revoke_sessions
+        self._signing_service = signing_service
 
     def _revoke(self, username: str) -> None:
         if self._revoke_sessions is not None:
@@ -69,6 +76,34 @@ class UserService:
             self._revoke(target["username"])
         updated = self._repo.find_by_id(user_id)
         return UserAccount(**updated)
+
+    def baja_propia(self, current_user: UserInfo, password: str) -> None:
+        """Baja voluntaria de la propia cuenta con anonimizacion (RF-37).
+
+        El username se conserva como seudonimo porque los asientos on-chain lo
+        referencian; el nombre visible y la credencial se reemplazan, las
+        sesiones se cierran y la clave de firma se revoca.
+        """
+        try:
+            cuenta = self._repo.find_credentials(current_user.username)
+            if cuenta is None:
+                raise NotFoundError("Usuario no encontrado.")
+            if not verify_password(password, cuenta["password_hash"], cuenta["salt"]):
+                raise DomainError("La contraseña no es correcta.", status_code=400, error_type="validation_error")
+            if cuenta["role"] == "super_admin" and self._repo.count_active_by_role("super_admin") <= 1:
+                raise ConflictError("No se puede dar de baja al último administrador general activo.")
+
+            hash_inutilizable, salt = hash_password(secrets.token_urlsafe(48))
+            self._repo.anonymize(cuenta["id"], "Usuario dado de baja #%d" % cuenta["id"], hash_inutilizable, salt)
+            self._revoke(cuenta["username"])
+            if self._signing_service is not None:
+                self._signing_service.revocar(cuenta["username"])
+            logger.info("Cuenta '%s' dada de baja por su titular y anonimizada.", cuenta["username"])
+        except DomainError:
+            raise
+        except Exception as exc:
+            logger.error("Error en la baja voluntaria de %s: %s", current_user.username, exc, exc_info=True)
+            raise
 
     def reset_password(self, user_id: int, data: PasswordResetRequest) -> None:
         """Reemplaza la password de una cuenta (Argon2id)."""

@@ -10,6 +10,7 @@ from backend.ml.model_loader import cargar_modelo, modelo_disponible
 from backend.routers import (
     audit_router,
     auth_router,
+    financiador_router,
     health_router,
     medication_router,
     monodrug_router,
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     api.include_router(prescription_router)
     api.include_router(auth_router)
     api.include_router(audit_router)
+    api.include_router(financiador_router)
     api.include_router(user_router)
     api.include_router(health_router)
     app.include_router(api)

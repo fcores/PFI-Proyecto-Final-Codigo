@@ -69,7 +69,8 @@ cat > /tmp/task-def.json <<TASKDEF
       "environment": [
         {"name": "ENVIRONMENT", "value": "production"},
         {"name": "FABRIC_GATEWAY_URL", "value": "${FABRIC_GATEWAY_URL}"},
-        {"name": "ENCRYPTION_SECRET_ARN", "value": "${ENCRYPTION_SECRET_ARN}"}
+        {"name": "ENCRYPTION_SECRET_ARN", "value": "${ENCRYPTION_SECRET_ARN}"},
+        {"name": "RETENCION_RECETAS_ANIOS", "value": "10"}
       ],
       "secrets": [
         {"name": "AUTH_USERNAME",     "valueFrom": "${SECRET_ARN}:AUTH_USERNAME::"},
