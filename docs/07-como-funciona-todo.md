@@ -86,7 +86,7 @@ mostrarte una prescripción distinta de la que está en el ledger.
                        └───┬────────┬──┘             │
                            │        │                │
                     ┌──────▼──┐     │                │
-                    │   RDS   │     │ 8081           │
+                    │   RDS   │     │ HTTPS 8443     │
                     │Postgres │     │                │
                     └─────────┘     │                │
    ══════════════════════════════   │ ═══════════    │
@@ -99,7 +99,7 @@ mostrarte una prescripción distinta de la que está en el ledger.
                               │  EC2  i-0331b3fbeaadee294│
                               │  172.31.89.189  t3.large │
                               │  ┌────────────────────┐  │
-                              │  │ fabric-gateway:8081│  │
+                              │  │ fabric-gateway:8443│  │
                               │  ├────────────────────┤  │
                               │  │ orderer + 3 peers  │  │
                               │  │ + 3 CouchDB + cli  │  │
@@ -140,14 +140,16 @@ Está en la VPC por defecto, separada de la VPC de la aplicación.
 **VPC peering** — Como el backend y la blockchain viven en VPCs distintas, hace
 falta un túnel privado entre ambas. Sin esto, el tráfico tendría que salir a
 internet. Con el peering, ECS llega a la EC2 por su IP privada
-(`172.31.89.189:8081`) y el puerto 8081 solo acepta conexiones desde
-`10.0.0.0/16`.
+(`https://172.31.89.189:8443`) y el puerto 8443 solo acepta conexiones desde
+`10.0.0.0/16`. El peering resuelve el alcance; la confidencialidad la da TLS:
+el gateway presenta un certificado de la CA propia del proyecto y el backend
+solo confía en esa CA.
 
 ### 3.3 Puertos dentro de la EC2
 
 | Componente | Puerto | Para qué |
 |---|---|---|
-| `fabric-gateway` | 8081 | **Único puerto que el backend usa** |
+| `fabric-gateway` | 8443 (HTTPS) | **Único puerto que el backend usa** |
 | `orderer.medchain.com` | 7050 | Ordena las transacciones en bloques |
 | `peer0.prescriptor` | 7051 | Peer del centro prescriptor |
 | `peer0.auditoria` | 9051 | Peer de la auditoría médica |

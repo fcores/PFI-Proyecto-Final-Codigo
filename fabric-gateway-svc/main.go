@@ -16,10 +16,10 @@
 // constante contra GATEWAY_AUTH_TOKEN). /health queda libre.
 //
 // Transporte: HTTPS en TLS_LISTEN_ADDR (certificado de una CA propia del
-// proyecto, ver fabric/scripts/gateway-tls.sh) y, opcionalmente, HTTP plano en
-// LISTEN_ADDR. LISTEN_ADDR=off apaga el HTTP; sin definir vale ":8081" para no
-// romper un despliegue que todavia no tenga certificados. Los dos listeners
-// comparten handlers, token y conexiones a los peers.
+// proyecto, ver fabric/scripts/gateway-tls.sh). El HTTP plano esta apagado por
+// defecto (LISTEN_ADDR=off); definir LISTEN_ADDR (p. ej. ":8081") lo habilita,
+// solo para desarrollo local. Los dos listeners comparten handlers, token y
+// conexiones a los peers.
 //
 // Corre en la misma red Docker que los peers (local y en la EC2); sus puertos
 // solo deben ser accesibles desde la red de la aplicacion.
@@ -46,7 +46,7 @@ import (
 // ──────────────────────────── Configuración ─────────────────────────────────
 
 var (
-	listenAddr    = envOrDefault("LISTEN_ADDR", ":8081")
+	listenAddr    = envOrDefault("LISTEN_ADDR", "off")
 	tlsListenAddr = os.Getenv("TLS_LISTEN_ADDR")
 	tlsCertPath   = os.Getenv("TLS_CERT_PATH")
 	tlsKeyPath    = os.Getenv("TLS_KEY_PATH")

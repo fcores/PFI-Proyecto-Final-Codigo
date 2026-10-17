@@ -8,7 +8,7 @@ source "${SCRIPT_DIR}/.env.deploy"
 
 # Las prescripciones viven exclusivamente en Fabric: el backend exige estas
 # variables en production (fail-fast). FABRIC_GATEWAY_URL apunta al puente en
-# la EC2 (IP privada, puerto 8081); GATEWAY_AUTH_TOKEN debe existir como clave
+# la EC2 (https, IP privada, puerto 8443); GATEWAY_AUTH_TOKEN debe existir como clave
 # dentro del secreto ${SECRET_ARN} y coincidir con fabric/network/.env de la EC2.
 : "${FABRIC_GATEWAY_URL:?Definir FABRIC_GATEWAY_URL en .env.deploy (ej: https://172.31.x.x:8443)}"
 

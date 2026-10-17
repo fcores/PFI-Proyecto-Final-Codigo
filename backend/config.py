@@ -72,7 +72,12 @@ class Settings(BaseSettings):
                 "GATEWAY_AUTH_TOKEN es obligatorio en ENVIRONMENT=production "
                 "(autenticacion del puente fabric-gateway-svc)."
             )
-        if self.fabric_gateway_url.lower().startswith("https://") and not self.fabric_gateway_ca_pem:
+        if not self.fabric_gateway_url.lower().startswith("https://"):
+            raise RuntimeError(
+                "FABRIC_GATEWAY_URL debe ser https:// en ENVIRONMENT=production: el tramo "
+                "hacia el puente lleva datos de salud y no puede viajar en claro."
+            )
+        if not self.fabric_gateway_ca_pem:
             raise RuntimeError(
                 "FABRIC_GATEWAY_CA_PEM es obligatoria cuando FABRIC_GATEWAY_URL es https: "
                 "el certificado del puente lo emite la CA propia del proyecto."

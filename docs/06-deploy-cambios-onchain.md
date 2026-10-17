@@ -352,7 +352,7 @@ cp network/.env.example network/.env
 ./network.sh createChannel   # une orderer y los 3 peers a mychannel
 ./network.sh deployCC        # instala/aprueba/commitea con la política AND
 
-curl -s localhost:8081/health | jq   # las 3 orgs deben responder "ok"
+curl -s --cacert fabric/network/gateway-tls/ca.crt https://localhost:8443/health | jq   # las 3 orgs deben responder "ok"
 ```
 
 Sin acceso SSH a mano, el estado se puede inspeccionar por SSM (el agente está
@@ -361,7 +361,7 @@ Sin acceso SSH a mano, el estado se puede inspeccionar por SSM (el agente está
 ```bash
 aws ssm send-command --instance-ids i-0331b3fbeaadee294 \
   --document-name AWS-RunShellScript --region us-east-1 \
-  --parameters 'commands=["docker ps","curl -s localhost:8081/health"]'
+  --parameters 'commands=["docker ps","curl -s --cacert /home/ubuntu/PFI-Proyecto-Final/fabric/network/gateway-tls/ca.crt https://localhost:8443/health"]'
 ```
 
 **Índices de CouchDB**: el chaincode incluye
@@ -547,7 +547,7 @@ curl -s https://vl5nsf5jt5.execute-api.us-east-1.amazonaws.com/ | jq
 #    codigo pre-refactor (y si da 503, revisar 4.7 antes que Fabric).
 
 # 2. Gateway y peers (desde la EC2, o por SSM)
-curl -s localhost:8081/health | jq '.orgs'
+curl -s --cacert fabric/network/gateway-tls/ca.crt https://localhost:8443/health | jq '.orgs'
 #    esperado: prescriptor / auditor / prepaga en "ok"
 ```
 
@@ -592,7 +592,7 @@ rechazada por control de acceso de MSP.
 | Con endorsement `AND` de 3 orgs, un peer caído bloquea **todas** las escrituras | Limitación aceptada y documentada; visible en la pantalla de Salud y en `/health` |
 | Alta síncrona: la latencia percibida sube (~2–4 s) | `BatchTimeout` bajado a 1s; la UI muestra "Registrando en blockchain…" |
 | Todo Fabric corre en una sola EC2 (SPOF) | Aceptado para la tesis; el pipeline falla ruidosamente si la red no responde |
-| Gateway en HTTP plano | **Resuelto (17/10/2026)**: el backend llama por `https://…:8443` y valida contra la CA del proyecto (sección 11). El 8081 HTTP sigue abierto hasta el endurecimiento de 11.5 |
+| Gateway en HTTP plano | **Resuelto (17/10/2026)**: el backend llama por `https://…:8443` y valida contra la CA del proyecto (sección 11). El HTTP 8081 se apagó y su regla se revocó (11.5) |
 | Tramo API Gateway → tarea en HTTP y puerto 8000 abierto a Internet | **Resuelto (17/10/2026)**: SG autorreferenciado e integración con `tlsConfig` (sección 11) |
 | Migración 007 irreversible | Snapshot previo de RDS (obligatorio, 4.5) |
 | t3.large al límite de memoria | Plan B: t3.xlarge |
@@ -614,12 +614,12 @@ Recursos que hoy sostienen el sistema, con los IDs reales.
 | VPC de Fabric | `vpc-09fcdbfb17d5cae13` (default, 172.31.0.0/16) | La EC2 vive acá |
 | **VPC peering** | `pcx-040412e3bff5c43a4` | Rutas en `rtb-06535a6a07f86d8af` y `rtb-059dd8261a2ca0f17` |
 | EC2 de Fabric | `i-0331b3fbeaadee294` (`t3.large`, IP privada `172.31.89.189`) | IP pública **dinámica**: resolverla con `describe-instances` |
-| SG de Fabric | `sg-0c6d00bf321b64291` | 22 (mundo), 8081 y 8443 (`10.0.0.0/16`) |
+| SG de Fabric | `sg-0c6d00bf321b64291` | 22 (mundo) y 8443 (`10.0.0.0/16`) |
 | SG del backend | `sg-08518301fe0009809` | 8000 **solo desde sí mismo** (lo comparte el VPC Link) |
 | Cluster / servicio ECS | `medchain-cluster` / `medchain-backend-svc` | Task definition `medchain-backend:7` (TLS en los dos tramos) |
 | Cloud Map (en uso) | `srv-ty4v27ve53xropsy` (`medchain-backend-srv`) | Registros **SRV**: aporta `AWS_INSTANCE_PORT` |
 | Cloud Map (obsoletos) | `srv-lmoij4mfyg2tbvu2`, `srv-ndgsq7branjc4pek` | Sin uso; se pueden borrar |
-| API Gateway | `vl5nsf5jt5` + VPC Link `q6olhm` | Integración **`ma16yyi`** (HTTPS, `ServerNameToVerify=api-interno.medchain-pfi.com`). `41deb2p` (HTTP) queda sin rutas, solo para rollback |
+| API Gateway | `vl5nsf5jt5` + VPC Link `q6olhm` | Integración **`ma16yyi`** (HTTPS, `ServerNameToVerify=api-interno.medchain-pfi.com`). La integración HTTP original (`41deb2p`) se borró |
 | CloudFront / S3 | `E3UXMQZNKANQDB` / `medchain-frontend-…-an` | Frontend. Alias `app.medchain-pfi.com` (ACM, TLS 1.2 mínimo) |
 | Dominio | `medchain-pfi.com` (Route 53, zona `Z07647561HFTOSR51FM9`) | Renovación automática anual |
 | Secreto TLS | `medchain/backend-tls` | `FABRIC_GATEWAY_CA_PEM`, `TLS_CERT_PEM`, `TLS_KEY_PEM` |
@@ -716,20 +716,21 @@ servidor de 2 años. Hay que reemitirlo en dos casos:
 `network.sh up` llama al script si falta el certificado. Sin certificado el
 gateway no arranca.
 
-### 11.5 Endurecimiento pendiente
+### 11.5 Endurecimiento (aplicado el 17/10/2026)
 
-Durante el período de rollback quedan habilitados dos caminos viejos. Ninguno
-de los dos está en uso:
+Ya no queda ningún camino en claro:
 
-- El HTTP 8081 del gateway. Para apagarlo: `GATEWAY_LISTEN_ADDR=off` en
-  `fabric/network/.env`, quitar `8081:8081` del compose, revocar el 8081 en
-  `sg-0c6d00bf321b64291` y pasar el smoke test de `deploy.yml` a
-  `https://localhost:8443` con `--cacert`.
-- La integración `41deb2p` (HTTP), sin rutas. Borrarla al cerrar el período de
-  rollback.
-
-Además conviene que `config.py` rechace `http://` en `FABRIC_GATEWAY_URL` en
-producción.
+- El gateway sirve **solo HTTPS**: `LISTEN_ADDR` vale `off` por defecto y el
+  compose ya no publica el 8081. Para desarrollo local se puede habilitar HTTP
+  con `GATEWAY_LISTEN_ADDR=:8081` en `fabric/network/.env` (y publicando el
+  puerto), nunca en la EC2.
+- La regla del 8081 se revocó en `sg-0c6d00bf321b64291`.
+- El smoke test de `deploy.yml` consulta `https://localhost:8443/health` con
+  `--cacert`.
+- `config.py` rechaza en producción una `FABRIC_GATEWAY_URL` que no sea
+  `https://`.
+- La integración HTTP `41deb2p` se borró. Para un rollback hay que recrearla
+  (ver el plan).
 
 El plan completo y el rollback paso a paso están en
 `deploy/rollback/PLAN-TLS-Y-ROLLBACK.md` (local, gitignored).

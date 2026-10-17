@@ -28,7 +28,7 @@ prepaga (financiador).
 │   :5984               │  │   :7984               │  │   :9984               │
 └───────────────────────┘  └───────────────────────┘  └───────────────────────┘
 
-        fabric-gateway (:8081) — puente HTTP del backend, una identidad por org
+        fabric-gateway (:8443) — puente HTTPS del backend, una identidad por org
 ```
 
 | Componente  | MSP ID         | Rol                                                       |
@@ -85,4 +85,4 @@ autodetecta la secuencia para los redeploys.
 | couchdb.prescriptor             | 5984   |
 | couchdb.auditoria               | 7984   |
 | couchdb.prepaga                 | 9984   |
-| fabric-gateway (puente backend) | 8081   |
+| fabric-gateway (puente backend) | 8443 (HTTPS) |

@@ -390,9 +390,11 @@ La aplicacion esta desplegada y **operativa** en:
 | **Conectividad** | VPC peering | `pcx-040412e3bff5c43a4` | Une `medchain-vpc` (10.0/16) con la VPC de la EC2 (172.31/16) |
 | **Secretos** | Secrets Manager | `medchain/*` | auth, base, clave de cifrado, PAT de GitHub |
 
-El backend llega al gateway de Fabric por la **IP privada** `172.31.89.189:8081`
-a traves del peering: ese puerto solo acepta trafico desde `10.0.0.0/16` y el
-trafico nunca sale a internet.
+El backend llega al gateway de Fabric por **HTTPS** a la **IP privada**
+`172.31.89.189:8443` a traves del peering: ese puerto solo acepta trafico desde
+`10.0.0.0/16`, el trafico nunca sale a internet y el backend valida el
+certificado del gateway contra la CA propia del proyecto. El resto de los
+saltos tambien van cifrados (ver `docs/06-deploy-cambios-onchain.md`, seccion 11).
 
 > Inventario completo con todos los IDs en
 > [docs/06 §9](docs/06-deploy-cambios-onchain.md).
@@ -483,7 +485,7 @@ aws ec2 wait instance-running --instance-ids i-0331b3fbeaadee294 --region us-eas
 #    contenedores quedan apagados al bootear
 aws ssm send-command --instance-ids i-0331b3fbeaadee294 \
   --document-name AWS-RunShellScript --region us-east-1 --timeout-seconds 600 \
-  --parameters 'commands=["sudo -u ubuntu -H bash -lc \"cd ~/PFI-Proyecto-Final/fabric && ./network.sh up\"","sleep 20","curl -sf http://localhost:8081/health"]'
+  --parameters 'commands=["sudo -u ubuntu -H bash -lc \"cd ~/PFI-Proyecto-Final/fabric && ./network.sh up\"","sleep 20","curl -sf --cacert /home/ubuntu/PFI-Proyecto-Final/fabric/network/gateway-tls/ca.crt https://localhost:8443/health"]'
 
 # 4. ECS al final, cuando el gateway ya responde
 aws ecs update-service --cluster medchain-cluster --service medchain-backend-svc \

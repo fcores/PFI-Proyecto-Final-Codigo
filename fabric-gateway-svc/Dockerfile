@@ -14,5 +14,5 @@ FROM alpine:3.20
 RUN adduser -D -u 10001 gateway
 USER gateway
 COPY --from=build /out/fabric-gateway-svc /usr/local/bin/fabric-gateway-svc
-EXPOSE 8081
+EXPOSE 8443
 ENTRYPOINT ["fabric-gateway-svc"]

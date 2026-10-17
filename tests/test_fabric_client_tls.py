@@ -172,6 +172,12 @@ def test_produccion_con_https_y_ca_arranca():
     _settings_produccion(fabric_gateway_ca_pem="pem").validate_production_requirements()
 
 
-def test_produccion_con_http_sigue_admitida():
-    """Retrocompatibilidad: una task definition sin TLS sigue arrancando."""
-    _settings_produccion(fabric_gateway_url="http://172.31.89.189:8081").validate_production_requirements()
+def test_produccion_rechaza_http():
+    with pytest.raises(RuntimeError, match="https"):
+        _settings_produccion(
+            fabric_gateway_url="http://172.31.89.189:8081", fabric_gateway_ca_pem="pem"
+        ).validate_production_requirements()
+
+
+def test_local_admite_http():
+    Settings(environment="local", fabric_gateway_url="http://localhost:8081").validate_production_requirements()

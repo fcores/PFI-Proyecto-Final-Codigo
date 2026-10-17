@@ -55,7 +55,7 @@ func configurar(t *testing.T, httpAddr, tlsAddr, cert, key string) {
 	})
 }
 
-func TestSoloHTTPPorDefecto(t *testing.T) {
+func TestSoloHTTP(t *testing.T) {
 	configurar(t, ":8081", "", "", "")
 	servers, err := buildServers(http.NewServeMux())
 	if err != nil || len(servers) != 1 || servers[0].tls {
