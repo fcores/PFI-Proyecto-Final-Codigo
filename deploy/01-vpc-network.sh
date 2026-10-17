@@ -58,8 +58,14 @@ SG_ECS=$(aws ec2 create-security-group \
   --vpc-id "${VPC_ID}" \
   --query 'GroupId' --output text --region "${AWS_REGION}")
 
-aws ec2 authorize-security-group-ingress --group-id "${SG_ECS}" \
-  --protocol tcp --port "${CONTAINER_PORT}" --cidr "0.0.0.0/0" --region "${AWS_REGION}"
+# Entrada al puerto de la app SOLO desde el propio SG: el VPC Link de API
+# Gateway (05-api-gateway.sh) se crea con este mismo SG, asi que la regla
+# autorreferenciada admite exactamente sus ENIs y nada mas. Nunca 0.0.0.0/0:
+# las tareas tienen IP publica (assignPublicIp=ENABLED, para salir a ECR,
+# Secrets Manager y CloudWatch sin NAT) y una regla abierta las expone a
+# Internet salteando CloudFront y API Gateway.
+aws ec2 authorize-security-group-ingress --group-id "${SG_ECS}" --region "${AWS_REGION}" \
+  --ip-permissions "IpProtocol=tcp,FromPort=${CONTAINER_PORT},ToPort=${CONTAINER_PORT},UserIdGroupPairs=[{GroupId=${SG_ECS},Description='Solo desde el VPC Link de API Gateway'}]"
 
 aws ec2 authorize-security-group-egress --group-id "${SG_ECS}" \
   --protocol "-1" --cidr "0.0.0.0/0" --region "${AWS_REGION}" 2>/dev/null || true
