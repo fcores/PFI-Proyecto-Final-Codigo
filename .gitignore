@@ -223,6 +223,8 @@ fabric/network/system-genesis-block/
 **/msp/keystore/
 **/*_sk
 **/priv_sk
+# CA y certificado TLS del puente (fabric/scripts/gateway-tls.sh)
+fabric/network/gateway-tls/
 
 # Chaincode empaquetado
 *.tar.gz
@@ -235,3 +237,6 @@ fabric/network/log.txt
 
 # Deploy state (IDs de recursos AWS generados por los scripts)
 deploy/.env.deploy
+
+# Snapshots de estado AWS para rollback (contienen IDs de la cuenta)
+deploy/rollback/

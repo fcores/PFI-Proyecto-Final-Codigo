@@ -46,7 +46,7 @@ def _urlopen_que(respuestas):
     pendientes = list(respuestas)
     llamadas = []
 
-    def _falso(req, timeout=None):
+    def _falso(req, timeout=None, context=None):
         """Simula urlopen."""
         llamadas.append(req.full_url)
         siguiente = pendientes.pop(0)

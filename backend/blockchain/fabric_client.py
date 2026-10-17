@@ -11,6 +11,10 @@ este cliente es sincrono y distingue dos familias de errores:
   control de acceso por MSP, transicion de estado invalida, "ya existe"...).
   NO se reintentan, NO abren el circuit breaker y se mapean a 4xx.
 
+Transporte: si FABRIC_GATEWAY_URL es https, el certificado del puente se valida
+contra la CA del proyecto (FABRIC_GATEWAY_CA_PEM, ver
+fabric/scripts/gateway-tls.sh) y no contra el almacen del sistema.
+
 Cada request lleva:
 - X-Gateway-Token: auth compartida con el puente (GATEWAY_AUTH_TOKEN).
 - actor: "prescriptor" | "auditor" | "prepaga" — el puente firma la transaccion
@@ -19,6 +23,7 @@ Cada request lleva:
 
 import json
 import logging
+import ssl
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -102,13 +107,32 @@ class CircuitBreaker:
         return False
 
 
+def _build_ssl_context(base_url: str | None, ca_pem: str | None) -> ssl.SSLContext | None:
+    """Contexto TLS para el puente, o None si la URL es http.
+
+    Con CA configurada, solo se confia en ella (cadata reemplaza al almacen del
+    sistema): un certificado publico valido para otra identidad no alcanza.
+    """
+    if not base_url or not base_url.lower().startswith("https://"):
+        return None
+    if ca_pem:
+        return ssl.create_default_context(cadata=ca_pem)
+    return ssl.create_default_context()
+
+
 class FabricClient:
     """Cliente del puente fabric-gateway-svc."""
 
-    def __init__(self, base_url: str | None = None, auth_token: str | None = None) -> None:
+    def __init__(
+        self,
+        base_url: str | None = None,
+        auth_token: str | None = None,
+        ca_pem: str | None = None,
+    ) -> None:
         settings = get_settings()
         self._base_url = base_url or settings.fabric_gateway_url
         self._auth_token = auth_token or settings.gateway_auth_token
+        self._ssl_context = _build_ssl_context(self._base_url, ca_pem or settings.fabric_gateway_ca_pem)
         self._circuit = CircuitBreaker()
 
     @property
@@ -146,7 +170,7 @@ class FabricClient:
             return None
         try:
             req = Request(f"{self._base_url}/health", method="GET")
-            with urlopen(req, timeout=2) as resp:
+            with urlopen(req, timeout=2, context=self._ssl_context) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception:
             return None
@@ -188,7 +212,7 @@ class FabricClient:
                     },
                     method="POST",
                 )
-                with urlopen(req, timeout=timeout) as resp:
+                with urlopen(req, timeout=timeout, context=self._ssl_context) as resp:
                     result = json.loads(resp.read().decode("utf-8"))
                 self._circuit.record_success()
                 return result

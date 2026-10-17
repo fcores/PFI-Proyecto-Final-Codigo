@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # en produccion.
     fabric_gateway_url: str | None = None
     gateway_auth_token: str | None = None
+    # CA (PEM) contra la que se valida el certificado del puente cuando la URL
+    # es https. Es la CA propia de fabric/scripts/gateway-tls.sh.
+    fabric_gateway_ca_pem: str | None = None
 
     @field_validator("environment")
     @classmethod
@@ -68,6 +71,11 @@ class Settings(BaseSettings):
             raise RuntimeError(
                 "GATEWAY_AUTH_TOKEN es obligatorio en ENVIRONMENT=production "
                 "(autenticacion del puente fabric-gateway-svc)."
+            )
+        if self.fabric_gateway_url.lower().startswith("https://") and not self.fabric_gateway_ca_pem:
+            raise RuntimeError(
+                "FABRIC_GATEWAY_CA_PEM es obligatoria cuando FABRIC_GATEWAY_URL es https: "
+                "el certificado del puente lo emite la CA propia del proyecto."
             )
 
 

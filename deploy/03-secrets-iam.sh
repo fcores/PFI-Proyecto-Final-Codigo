@@ -56,6 +56,16 @@ else
   echo "       Volve a correr 03-secrets-iam.sh DESPUES de 07-rds.sh,"
   echo "       o la task ECS no va a poder resolver DATABASE_URL."
 fi
+# Secreto TLS (FABRIC_GATEWAY_CA_PEM y, con dominio, TLS_CERT_PEM/TLS_KEY_PEM):
+# tambien lo resuelve el execution role al arrancar la task.
+TLS_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "${TLS_SECRET_NAME}" \
+  --region "${AWS_REGION}" --query 'ARN' --output text 2>/dev/null || echo "")
+if [ -n "${TLS_SECRET_ARN}" ]; then
+  SECRET_RESOURCES="${SECRET_RESOURCES}, \"${TLS_SECRET_ARN}\""
+else
+  echo "AVISO: no existe ${TLS_SECRET_NAME}; crearlo con la CA del puente"
+  echo "       (fabric/network/gateway-tls/ca.crt) y re-ejecutar este script."
+fi
 
 cat > /tmp/secrets-policy.json <<SECRETS
 {
@@ -113,6 +123,7 @@ fi
 
 cat >> "${SCRIPT_DIR}/.env.deploy" <<EOF
 SECRET_ARN=${SECRET_ARN}
+TLS_SECRET_ARN=${TLS_SECRET_ARN}
 EXEC_ROLE_ARN=${EXEC_ROLE_ARN}
 TASK_ROLE_ARN=${TASK_ROLE_ARN}
 EOF

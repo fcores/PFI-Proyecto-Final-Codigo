@@ -81,6 +81,11 @@ networkUp() {
     infoln "Artefactos ya presentes — se omite generación."
   fi
   grantGatewayAccessToIdentities
+  # El gateway no arranca sin su certificado TLS. El script es idempotente:
+  # conserva la CA y el certificado existentes.
+  if [ ! -f "${NETWORK_DIR}/gateway-tls/server.crt" ]; then
+    "${SCRIPTS}/gateway-tls.sh"
+  fi
   infoln "Levantando contenedores..."
   dockerCompose up -d
   successln "Red levantada. Contenedores:"

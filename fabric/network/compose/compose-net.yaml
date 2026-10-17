@@ -273,7 +273,13 @@ services:
     labels:
       service: hyperledger-fabric
     environment:
-      - LISTEN_ADDR=:8081
+      # HTTP plano en LISTEN_ADDR (LISTEN_ADDR=off lo apaga) y HTTPS en
+      # TLS_LISTEN_ADDR con el certificado de fabric/scripts/gateway-tls.sh.
+      # Si el certificado falta, el gateway no arranca: correr el script antes.
+      - LISTEN_ADDR=${GATEWAY_LISTEN_ADDR:-:8081}
+      - TLS_LISTEN_ADDR=:8443
+      - TLS_CERT_PATH=/tls/server.crt
+      - TLS_KEY_PATH=/tls/server.key
       - CHANNEL_NAME=mychannel
       - CHAINCODE_NAME=prescriptions
       - GATEWAY_AUTH_TOKEN=${GATEWAY_AUTH_TOKEN}
@@ -294,8 +300,10 @@ services:
       - PREPAGA_TLS_CERT_PATH=/organizations/peerOrganizations/prepaga.medchain.com/peers/peer0.prepaga.medchain.com/tls/ca.crt
     volumes:
       - ../organizations:/organizations:ro
+      - ../gateway-tls:/tls:ro
     ports:
       - "8081:8081"
+      - "8443:8443"
     depends_on:
       - peer0.prescriptor.medchain.com
       - peer0.auditoria.medchain.com

@@ -15,12 +15,19 @@
 // Autenticacion de entrada: header X-Gateway-Token (comparacion en tiempo
 // constante contra GATEWAY_AUTH_TOKEN). /health queda libre.
 //
-// Corre en la misma red Docker que los peers (local y en la EC2); el puerto
-// 8081 solo debe ser accesible desde el SG del backend.
+// Transporte: HTTPS en TLS_LISTEN_ADDR (certificado de una CA propia del
+// proyecto, ver fabric/scripts/gateway-tls.sh) y, opcionalmente, HTTP plano en
+// LISTEN_ADDR. LISTEN_ADDR=off apaga el HTTP; sin definir vale ":8081" para no
+// romper un despliegue que todavia no tenga certificados. Los dos listeners
+// comparten handlers, token y conexiones a los peers.
+//
+// Corre en la misma red Docker que los peers (local y en la EC2); sus puertos
+// solo deben ser accesibles desde la red de la aplicacion.
 package main
 
 import (
 	"crypto/subtle"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,6 +47,9 @@ import (
 
 var (
 	listenAddr    = envOrDefault("LISTEN_ADDR", ":8081")
+	tlsListenAddr = os.Getenv("TLS_LISTEN_ADDR")
+	tlsCertPath   = os.Getenv("TLS_CERT_PATH")
+	tlsKeyPath    = os.Getenv("TLS_KEY_PATH")
 	channelName   = envOrDefault("CHANNEL_NAME", "mychannel")
 	chaincodeName = envOrDefault("CHAINCODE_NAME", "prescriptions")
 	gatewayToken  = os.Getenv("GATEWAY_AUTH_TOKEN")
@@ -237,21 +247,76 @@ func main() {
 		log.Printf("Conectado: actor=%s msp=%s peer=%s", cfg.Actor, cfg.MSPID, cfg.PeerEndpoint)
 	}
 
-	log.Printf("fabric-gateway-svc escuchando en %s (channel=%s, chaincode=%s)", listenAddr, channelName, chaincodeName)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/invoke", requireToken(invokeHandler))
+	mux.HandleFunc("/query", requireToken(queryHandler))
 
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/invoke", requireToken(invokeHandler))
-	http.HandleFunc("/query", requireToken(queryHandler))
-
-	server := &http.Server{
-		Addr:         listenAddr,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 90 * time.Second,
+	servers, err := buildServers(mux)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Error al iniciar servidor: %v", err)
+	// Si cualquiera de los listeners cae, el proceso termina: un gateway que
+	// sirve a medias es peor que uno caido que Docker reinicia.
+	errc := make(chan error, len(servers))
+	for _, s := range servers {
+		go func(s *listener) { errc <- s.serve() }(s)
 	}
+	log.Fatalf("Error en el servidor: %v", <-errc)
+}
+
+// listener es un http.Server con su modo de transporte.
+type listener struct {
+	srv *http.Server
+	tls bool
+}
+
+func (l *listener) serve() error {
+	if l.tls {
+		log.Printf("fabric-gateway-svc escuchando HTTPS en %s (channel=%s, chaincode=%s)", l.srv.Addr, channelName, chaincodeName)
+		return l.srv.ListenAndServeTLS(tlsCertPath, tlsKeyPath)
+	}
+	log.Printf("fabric-gateway-svc escuchando HTTP en %s (channel=%s, chaincode=%s)", l.srv.Addr, channelName, chaincodeName)
+	return l.srv.ListenAndServe()
+}
+
+// buildServers arma los listeners segun la configuracion. Falla si no queda
+// ninguno o si se pidio HTTPS sin certificado legible: mejor no arrancar que
+// arrancar sin el cifrado que se configuro.
+func buildServers(handler http.Handler) ([]*listener, error) {
+	var servers []*listener
+	newServer := func(addr string) *http.Server {
+		return &http.Server{
+			Addr:         addr,
+			Handler:      handler,
+			ReadTimeout:  30 * time.Second,
+			WriteTimeout: 90 * time.Second,
+		}
+	}
+
+	if listenAddr != "off" {
+		servers = append(servers, &listener{srv: newServer(listenAddr)})
+	}
+
+	if tlsListenAddr != "" {
+		if tlsCertPath == "" || tlsKeyPath == "" {
+			return nil, errors.New("TLS_LISTEN_ADDR requiere TLS_CERT_PATH y TLS_KEY_PATH")
+		}
+		// Se carga una vez aca solo para fallar al arrancar si el par es invalido;
+		// ListenAndServeTLS lo vuelve a leer.
+		if _, err := tls.LoadX509KeyPair(tlsCertPath, tlsKeyPath); err != nil {
+			return nil, fmt.Errorf("certificado TLS del gateway invalido: %w", err)
+		}
+		srv := newServer(tlsListenAddr)
+		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		servers = append(servers, &listener{srv: srv, tls: true})
+	}
+
+	if len(servers) == 0 {
+		return nil, errors.New("sin listeners: LISTEN_ADDR=off y TLS_LISTEN_ADDR vacia")
+	}
+	return servers, nil
 }
 
 // requireToken exige el header X-Gateway-Token (comparacion en tiempo constante).
