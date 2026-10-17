@@ -71,7 +71,18 @@ API_ID=$(aws apigatewayv2 create-api \
 echo "API ID: ${API_ID}"
 
 echo "=== Creando integracion VPC Link -> Cloud Map ==="
+# Con dominio, la integracion habla HTTPS con la tarea y valida su certificado
+# (emitido por Let's Encrypt para API_TLS_HOSTNAME; un HTTP API no acepta CAs
+# privadas ni autofirmados). Sin dominio queda en HTTP dentro de la VPC.
+TLS_ARGS=()
+if [ -n "${API_TLS_HOSTNAME:-}" ]; then
+  TLS_ARGS=(--tls-config "ServerNameToVerify=${API_TLS_HOSTNAME}")
+  echo "Integracion HTTPS, verificando ${API_TLS_HOSTNAME}"
+else
+  echo "AVISO: DOMAIN vacio -> integracion en HTTP (tramo sin cifrar dentro de la VPC)"
+fi
 INTEGRATION_ID=$(aws apigatewayv2 create-integration \
+  "${TLS_ARGS[@]}" \
   --api-id "${API_ID}" \
   --integration-type HTTP_PROXY \
   --integration-method ANY \

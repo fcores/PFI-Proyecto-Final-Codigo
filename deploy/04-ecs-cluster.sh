@@ -10,7 +10,28 @@ source "${SCRIPT_DIR}/.env.deploy"
 # variables en production (fail-fast). FABRIC_GATEWAY_URL apunta al puente en
 # la EC2 (IP privada, puerto 8081); GATEWAY_AUTH_TOKEN debe existir como clave
 # dentro del secreto ${SECRET_ARN} y coincidir con fabric/network/.env de la EC2.
-: "${FABRIC_GATEWAY_URL:?Definir FABRIC_GATEWAY_URL en .env.deploy (ej: http://172.31.x.x:8081)}"
+: "${FABRIC_GATEWAY_URL:?Definir FABRIC_GATEWAY_URL en .env.deploy (ej: https://172.31.x.x:8443)}"
+
+# TLS hacia el puente: con https el backend exige la CA del proyecto, que vive
+# en el secreto ${TLS_SECRET_NAME} (clave FABRIC_GATEWAY_CA_PEM).
+# BACKEND_TLS=true agrega ademas el certificado y la clave que sirve uvicorn
+# (TLS_CERT_PEM/TLS_KEY_PEM): activarlo SOLO despues de la primera emision de
+# renew-backend-cert.yml, porque si las claves no existen en el secreto la task
+# no arranca. Ver docs/06-deploy-cambios-onchain.md, seccion de TLS.
+EXTRA_SECRETS=""
+case "${FABRIC_GATEWAY_URL}" in
+  https://*)
+    : "${TLS_SECRET_ARN:?FABRIC_GATEWAY_URL es https: definir TLS_SECRET_ARN (lo escribe 03-secrets-iam.sh)}"
+    EXTRA_SECRETS=",
+        {\"name\": \"FABRIC_GATEWAY_CA_PEM\", \"valueFrom\": \"${TLS_SECRET_ARN}:FABRIC_GATEWAY_CA_PEM::\"}"
+    ;;
+esac
+if [ "${BACKEND_TLS:-false}" = "true" ]; then
+  : "${TLS_SECRET_ARN:?BACKEND_TLS=true requiere TLS_SECRET_ARN}"
+  EXTRA_SECRETS="${EXTRA_SECRETS},
+        {\"name\": \"TLS_CERT_PEM\", \"valueFrom\": \"${TLS_SECRET_ARN}:TLS_CERT_PEM::\"},
+        {\"name\": \"TLS_KEY_PEM\", \"valueFrom\": \"${TLS_SECRET_ARN}:TLS_KEY_PEM::\"}"
+fi
 
 # DB_SECRET_ARN lo agrega 07-rds.sh a .env.deploy; sin el, DATABASE_URL no se
 # resuelve y la task no arranca. Se valida aca para fallar con un mensaje util
@@ -77,7 +98,7 @@ cat > /tmp/task-def.json <<TASKDEF
         {"name": "AUTH_PASSWORD",     "valueFrom": "${SECRET_ARN}:AUTH_PASSWORD::"},
         {"name": "AUTH_DISPLAY_NAME", "valueFrom": "${SECRET_ARN}:AUTH_DISPLAY_NAME::"},
         {"name": "DATABASE_URL",     "valueFrom": "${DB_SECRET_ARN}:DATABASE_URL::"},
-        {"name": "GATEWAY_AUTH_TOKEN", "valueFrom": "${SECRET_ARN}:GATEWAY_AUTH_TOKEN::"}
+        {"name": "GATEWAY_AUTH_TOKEN", "valueFrom": "${SECRET_ARN}:GATEWAY_AUTH_TOKEN::"}${EXTRA_SECRETS}
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
@@ -88,7 +109,7 @@ cat > /tmp/task-def.json <<TASKDEF
         }
       },
       "healthCheck": {
-        "command": ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""],
+        "command": ["CMD-SHELL", "python -m backend.healthcheck"],
         "interval": 30,
         "timeout": 10,
         "retries": 3,

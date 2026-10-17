@@ -14,13 +14,14 @@ COPY backend/ backend/
 COPY ml_models/artefactos/ ml_models/artefactos/
 COPY alembic.ini .
 COPY alembic/ alembic/
+COPY docker-entrypoint.sh .
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=60s \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"
+# http o https segun como haya arrancado uvicorn (ver docker-entrypoint.sh)
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
+    CMD python -m backend.healthcheck
 
-# El bootstrap aplica sql/schema.sql y luego 'alembic upgrade head'. Si falla,
-# el contenedor sale != 0 a proposito: preferimos un crash loop visible antes
-# que una app sirviendo trafico contra un esquema roto.
-CMD ["sh", "-c", "python -m backend.db_bootstrap && exec uvicorn backend.main:app --host 0.0.0.0 --port 8000"]
+# Bootstrap de la base y uvicorn, con TLS si la task definition inyecta el
+# certificado. Detalle en docker-entrypoint.sh.
+CMD ["sh", "/app/docker-entrypoint.sh"]

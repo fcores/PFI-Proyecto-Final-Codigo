@@ -33,6 +33,16 @@ export S3_BUCKET="${PROJECT}-frontend-$(aws sts get-caller-identity --query Acco
 
 # Secrets Manager
 export SECRET_NAME="${PROJECT}/auth-credentials"
+# TLS de los tramos internos: CA del puente Fabric (FABRIC_GATEWAY_CA_PEM) y
+# certificado + clave que sirve uvicorn (TLS_CERT_PEM, TLS_KEY_PEM).
+export TLS_SECRET_NAME="${PROJECT}/backend-tls"
+
+# Dominio propio (zona publica en Route 53). Vacio = sin TLS hacia la tarea y
+# sin alias en CloudFront. API_TLS_HOSTNAME no necesita registro DNS: solo da
+# nombre al certificado que API Gateway verifica (tlsConfig.serverNameToVerify).
+export DOMAIN="${DOMAIN:-}"
+export API_TLS_HOSTNAME="${DOMAIN:+api-interno.${DOMAIN}}"
+export APP_HOSTNAME="${DOMAIN:+app.${DOMAIN}}"
 
 # Auth credentials (se suben a Secrets Manager, NO al contenedor directamente)
 export AUTH_USERNAME="admin"

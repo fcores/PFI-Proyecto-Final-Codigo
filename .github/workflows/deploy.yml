@@ -32,6 +32,7 @@ on:
       - "alembic/**"
       - "alembic.ini"
       - "Dockerfile"
+      - "docker-entrypoint.sh"
       - "requirements.txt"
 
 permissions:

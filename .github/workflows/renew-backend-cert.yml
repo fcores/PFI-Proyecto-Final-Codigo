@@ -1,0 +1,139 @@
+name: Renovar certificado TLS del backend
+
+# Certificado que sirve uvicorn en el tramo API Gateway -> tarea. API Gateway
+# (HTTP API) solo acepta certificados de una CA publica y lo valida contra
+# tlsConfig.serverNameToVerify, por eso lo emite Let's Encrypt para
+# api-interno.<DOMINIO> con desafio DNS-01 en Route 53. El nombre no necesita
+# registro A: nadie lo resuelve, solo identifica al certificado.
+#
+# Corre todas las semanas y renueva cuando faltan menos de 30 dias. El
+# certificado y la clave quedan en el secreto medchain/backend-tls
+# (TLS_CERT_PEM, TLS_KEY_PEM), conservando las demas claves del secreto
+# (FABRIC_GATEWAY_CA_PEM). Si la task definition vigente ya los consume, fuerza
+# un redeploy para que el contenedor los tome.
+#
+# Requiere la variable de repositorio DOMAIN y, en el usuario IAM del CI:
+#   route53:ListHostedZones, route53:GetChange,
+#   route53:ChangeResourceRecordSets (sobre la zona del dominio),
+#   secretsmanager:GetSecretValue + PutSecretValue (sobre medchain/backend-tls).
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Emitir aunque el certificado vigente no este por vencer"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TLS_SECRET_NAME: medchain/backend-tls
+  ECS_CLUSTER: medchain-cluster
+  ECS_SERVICE: medchain-backend-svc
+  RENEW_BEFORE_DAYS: "30"
+
+concurrency:
+  group: renew-backend-cert
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    name: Renovar si hace falta
+    runs-on: ubuntu-latest
+    if: ${{ vars.DOMAIN != '' }}
+    env:
+      HOSTNAME_TLS: api-interno.${{ vars.DOMAIN }}
+    steps:
+      - name: Credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Decidir si renovar
+        id: check
+        env:
+          FORCE: ${{ inputs.force || 'false' }}
+        run: |
+          set -euo pipefail
+          WORK="${RUNNER_TEMP}/tls"; mkdir -p "$WORK"; chmod 700 "$WORK"
+          aws secretsmanager get-secret-value --secret-id "$TLS_SECRET_NAME" \
+            --query SecretString --output text > "$WORK/secret.json"
+          python3 - "$WORK/secret.json" "$WORK/current.pem" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1]))
+          open(sys.argv[2], "w").write(data.get("TLS_CERT_PEM", ""))
+          PY
+          if [ "$FORCE" = "true" ]; then
+            echo "Emision forzada."; echo "renew=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ ! -s "$WORK/current.pem" ]; then
+            echo "No hay certificado en el secreto: primera emision."
+            echo "renew=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          openssl x509 -in "$WORK/current.pem" -noout -subject -enddate
+          if openssl x509 -in "$WORK/current.pem" -noout -checkend $(( RENEW_BEFORE_DAYS * 86400 )); then
+            echo "Vigente por mas de ${RENEW_BEFORE_DAYS} dias: no hace falta renovar."
+            echo "renew=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Vence en menos de ${RENEW_BEFORE_DAYS} dias: se renueva."
+            echo "renew=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Emitir con Let's Encrypt (DNS-01 en Route 53)
+        if: steps.check.outputs.renew == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet "certbot>=3" "certbot-dns-route53>=3"
+          LE="${RUNNER_TEMP}/le"
+          # RSA a proposito: API Gateway confia en ISRG Root X1 (RSA) y no en
+          # ISRG Root X2 (ECDSA).
+          certbot certonly --non-interactive --agree-tos --register-unsafely-without-email \
+            --dns-route53 --key-type rsa --rsa-key-size 2048 \
+            --config-dir "$LE/config" --work-dir "$LE/work" --logs-dir "$LE/logs" \
+            -d "$HOSTNAME_TLS"
+
+      - name: Guardar en Secrets Manager
+        if: steps.check.outputs.renew == 'true'
+        run: |
+          set -euo pipefail
+          WORK="${RUNNER_TEMP}/tls"
+          LIVE="${RUNNER_TEMP}/le/config/live/${HOSTNAME_TLS}"
+          python3 - "$WORK/secret.json" "$LIVE/fullchain.pem" "$LIVE/privkey.pem" "$WORK/new.json" <<'PY'
+          import json, sys
+          secret_path, chain_path, key_path, out_path = sys.argv[1:5]
+          data = json.load(open(secret_path))
+          data["TLS_CERT_PEM"] = open(chain_path).read()
+          data["TLS_KEY_PEM"] = open(key_path).read()
+          json.dump(data, open(out_path, "w"))
+          PY
+          aws secretsmanager put-secret-value --secret-id "$TLS_SECRET_NAME" \
+            --secret-string "file://$WORK/new.json" --query VersionId --output text
+          openssl x509 -in "$LIVE/fullchain.pem" -noout -subject -issuer -enddate
+
+      - name: Redesplegar si la task definition usa el certificado
+        if: steps.check.outputs.renew == 'true'
+        run: |
+          set -euo pipefail
+          TD=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+            --query 'services[0].taskDefinition' --output text)
+          USES=$(aws ecs describe-task-definition --task-definition "$TD" \
+            --query "length(taskDefinition.containerDefinitions[0].secrets[?name=='TLS_CERT_PEM'])" --output text)
+          if [ "$USES" = "1" ]; then
+            aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
+              --force-new-deployment --query 'service.deployments[0].id' --output text
+            aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+            echo "Redeploy completo con el certificado nuevo."
+          else
+            echo "La task definition $TD todavia no consume TLS_CERT_PEM: no se redespliega."
+          fi
+
+      - name: Limpiar material sensible
+        if: always()
+        run: rm -rf "${RUNNER_TEMP}/tls" "${RUNNER_TEMP}/le"
