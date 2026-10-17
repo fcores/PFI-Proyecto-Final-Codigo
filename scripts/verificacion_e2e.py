@@ -121,6 +121,8 @@ def main() -> int:
         "msi": "MSS", "ras": "wild_type", "braf_v600e": "wild_type",
         "linea_tratamiento": "adyuvancia", "id_regimen": "R01",
         "medico_prescriptor": "Dr. Verificacion E2E", "matricula": "MN-00000",
+        # R01 tiene una alternativa equivalente mas barata: el alta exige justificarla.
+        "justificacion_costo": "Verificacion end-to-end automatizada del circuito.",
     }
     _, presc = pedir("/api/prescriptions", tokens["prescriptor"], "POST", nueva)
     pid = presc.get("prescription_id", "")
