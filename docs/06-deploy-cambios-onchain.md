@@ -592,7 +592,8 @@ rechazada por control de acceso de MSP.
 | Con endorsement `AND` de 3 orgs, un peer caído bloquea **todas** las escrituras | Limitación aceptada y documentada; visible en la pantalla de Salud y en `/health` |
 | Alta síncrona: la latencia percibida sube (~2–4 s) | `BatchTimeout` bajado a 1s; la UI muestra "Registrando en blockchain…" |
 | Todo Fabric corre en una sola EC2 (SPOF) | Aceptado para la tesis; el pipeline falla ruidosamente si la red no responde |
-| Gateway en HTTP plano | Resuelto por el peering de 4.2 (tráfico privado); TLS queda pendiente |
+| Gateway en HTTP plano | **Resuelto (17/10/2026)**: el backend llama por `https://…:8443` y valida contra la CA del proyecto (sección 11). El 8081 HTTP sigue abierto hasta el endurecimiento de 11.5 |
+| Tramo API Gateway → tarea en HTTP y puerto 8000 abierto a Internet | **Resuelto (17/10/2026)**: SG autorreferenciado e integración con `tlsConfig` (sección 11) |
 | Migración 007 irreversible | Snapshot previo de RDS (obligatorio, 4.5) |
 | t3.large al límite de memoria | Plan B: t3.xlarge |
 | Sesiones: `auth_tokens` en RDS ya soporta múltiples réplicas | Se puede subir `desiredCount` sin romper el login |
@@ -613,12 +614,15 @@ Recursos que hoy sostienen el sistema, con los IDs reales.
 | VPC de Fabric | `vpc-09fcdbfb17d5cae13` (default, 172.31.0.0/16) | La EC2 vive acá |
 | **VPC peering** | `pcx-040412e3bff5c43a4` | Rutas en `rtb-06535a6a07f86d8af` y `rtb-059dd8261a2ca0f17` |
 | EC2 de Fabric | `i-0331b3fbeaadee294` (`t3.large`, IP privada `172.31.89.189`) | IP pública **dinámica**: resolverla con `describe-instances` |
-| SG de Fabric | `sg-0c6d00bf321b64291` | Solo 22 (mundo) y 8081 (`10.0.0.0/16`) |
-| Cluster / servicio ECS | `medchain-cluster` / `medchain-backend-svc` | Task definition `medchain-backend:5` |
+| SG de Fabric | `sg-0c6d00bf321b64291` | 22 (mundo), 8081 y 8443 (`10.0.0.0/16`) |
+| SG del backend | `sg-08518301fe0009809` | 8000 **solo desde sí mismo** (lo comparte el VPC Link) |
+| Cluster / servicio ECS | `medchain-cluster` / `medchain-backend-svc` | Task definition `medchain-backend:7` (TLS en los dos tramos) |
 | Cloud Map (en uso) | `srv-ty4v27ve53xropsy` (`medchain-backend-srv`) | Registros **SRV**: aporta `AWS_INSTANCE_PORT` |
 | Cloud Map (obsoletos) | `srv-lmoij4mfyg2tbvu2`, `srv-ndgsq7branjc4pek` | Sin uso; se pueden borrar |
-| API Gateway | `vl5nsf5jt5` + VPC Link `q6olhm` | Integración `41deb2p` |
-| CloudFront / S3 | `E3UXMQZNKANQDB` / `medchain-frontend-…-an` | Frontend |
+| API Gateway | `vl5nsf5jt5` + VPC Link `q6olhm` | Integración **`ma16yyi`** (HTTPS, `ServerNameToVerify=api-interno.medchain-pfi.com`). `41deb2p` (HTTP) queda sin rutas, solo para rollback |
+| CloudFront / S3 | `E3UXMQZNKANQDB` / `medchain-frontend-…-an` | Frontend. Alias `app.medchain-pfi.com` (ACM, TLS 1.2 mínimo) |
+| Dominio | `medchain-pfi.com` (Route 53, zona `Z07647561HFTOSR51FM9`) | Renovación automática anual |
+| Secreto TLS | `medchain/backend-tls` | `FABRIC_GATEWAY_CA_PEM`, `TLS_CERT_PEM`, `TLS_KEY_PEM` |
 | RDS | `medchain-db` (PostgreSQL 16) | Alembic en `007` |
 | Snapshot de rollback | `medchain-pre-007-20260818` | Previo a la 007 |
 | Secretos | `medchain/auth-credentials`, `/database-credentials`, `/encryption-key`, `/github-token` | |
@@ -647,3 +651,85 @@ helper) y se dejó Go accesible en el `PATH` de root vía symlinks en
 - Uso de los scripts de red: [03-uso.md](03-uso.md)
 - Setup de la EC2: [04-aws-ec2-setup.md](04-aws-ec2-setup.md)
 - Plan de implementación original: `~/.claude/plans/como-experto-en-ingenieria-curried-valley.md`
+
+---
+
+## 11. TLS en los tramos internos (17/10/2026)
+
+Cierra la observación de que los datos de salud y las credenciales de sesión
+viajaban en claro entre API Gateway y la tarea, y entre la tarea y el puente
+Fabric, con el 8000 abierto a Internet.
+
+### 11.1 Saltos y quién valida cada certificado
+
+| Salto | Transporte | Certificado | Lo valida |
+|---|---|---|---|
+| Navegador → CloudFront | HTTPS 443, TLS ≥ 1.2 | ACM, `app.medchain-pfi.com` | El navegador |
+| CloudFront → API Gateway | HTTPS 443 | AWS (`*.execute-api`) | CloudFront |
+| API Gateway → VPC Link → tarea | **HTTPS 8000** | Let's Encrypt, `api-interno.medchain-pfi.com` | API Gateway (`tlsConfig.ServerNameToVerify`) |
+| Tarea → RDS | TLS 5432 | RDS | psycopg2 (`verify-full`) |
+| Tarea → puente Fabric | **HTTPS 8443** | CA propia del proyecto, SAN `IP:172.31.89.189` | `FabricClient`, solo contra `FABRIC_GATEWAY_CA_PEM` |
+| Puente → peers | gRPC sobre TLS | TLS CA de cada org (cryptogen) | Fabric Gateway SDK |
+
+**Por qué dos clases de certificado.** Un HTTP API de API Gateway solo cifra
+hacia una integración privada si el backend presenta un certificado de una CA
+**pública**: la opción que acepta CAs privadas (`insecureSkipVerification`)
+existe solo en REST APIs. De ahí el dominio y Let's Encrypt. El tramo hacia el
+puente no tiene esa restricción porque el cliente es nuestro, así que usa una CA
+propia que no depende de terceros.
+
+**RSA a propósito.** API Gateway confía en ISRG Root X1 (RSA) y no en ISRG Root
+X2. La cadena emitida es hoja → YR1 → Root YR, con Root YR firmada por ISRG
+Root X1. Un certificado ECDSA no validaría.
+
+### 11.2 Exposición del puerto 8000
+
+`sg-08518301fe0009809` admite el 8000 **solo desde sí mismo**. Funciona porque
+el VPC Link `q6olhm` se creó con ese mismo SG. La tarea sigue teniendo IP
+pública (`assignPublicIp=ENABLED`), que necesita para salir a ECR, Secrets
+Manager y CloudWatch sin NAT, pero ninguna regla admite tráfico entrante desde
+Internet. Verificado: el acceso directo a la IP pública da timeout.
+
+### 11.3 Renovación del certificado del backend
+
+`.github/workflows/renew-backend-cert.yml` corre los lunes, también cuando
+cambia su propio archivo y a mano (`workflow_dispatch` con `force`). Renueva si
+faltan menos de 30 días: hace el desafío DNS-01 en Route 53, guarda
+`TLS_CERT_PEM`/`TLS_KEY_PEM` en `medchain/backend-tls` **sin pisar** las otras
+claves del secreto y fuerza un redeploy si la task definition los consume.
+
+Si el workflow deja de correr, el certificado vence a los 90 días y API Gateway
+empieza a responder 503 en todas las rutas. Para diagnosticarlo, mirar
+`openssl x509 -enddate` del certificado guardado en el secreto.
+
+### 11.4 Certificado del puente Fabric
+
+`fabric/scripts/gateway-tls.sh` genera en `fabric/network/gateway-tls/`
+(gitignored, fuera de `organizations/`) una CA de 10 años y un certificado de
+servidor de 2 años. Hay que reemitirlo en dos casos:
+
+- **Vencimiento** (10/2028): `./fabric/scripts/gateway-tls.sh --renew` en la
+  EC2 y reiniciar el gateway. La CA no cambia, así que el backend no se toca.
+- **Cambio de IP privada de la EC2**: el mismo `--renew`, más actualizar
+  `FABRIC_GATEWAY_URL` en una nueva revisión de la task definition.
+
+`network.sh up` llama al script si falta el certificado. Sin certificado el
+gateway no arranca.
+
+### 11.5 Endurecimiento pendiente
+
+Durante el período de rollback quedan habilitados dos caminos viejos. Ninguno
+de los dos está en uso:
+
+- El HTTP 8081 del gateway. Para apagarlo: `GATEWAY_LISTEN_ADDR=off` en
+  `fabric/network/.env`, quitar `8081:8081` del compose, revocar el 8081 en
+  `sg-0c6d00bf321b64291` y pasar el smoke test de `deploy.yml` a
+  `https://localhost:8443` con `--cacert`.
+- La integración `41deb2p` (HTTP), sin rutas. Borrarla al cerrar el período de
+  rollback.
+
+Además conviene que `config.py` rechace `http://` en `FABRIC_GATEWAY_URL` en
+producción.
+
+El plan completo y el rollback paso a paso están en
+`deploy/rollback/PLAN-TLS-Y-ROLLBACK.md` (local, gitignored).
