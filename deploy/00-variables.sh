@@ -40,7 +40,7 @@ export TLS_SECRET_NAME="${PROJECT}/backend-tls"
 # Dominio propio (zona publica en Route 53). Vacio = sin TLS hacia la tarea y
 # sin alias en CloudFront. API_TLS_HOSTNAME no necesita registro DNS: solo da
 # nombre al certificado que API Gateway verifica (tlsConfig.serverNameToVerify).
-export DOMAIN="${DOMAIN:-}"
+export DOMAIN="${DOMAIN:-medchain-pfi.com}"
 export API_TLS_HOSTNAME="${DOMAIN:+api-interno.${DOMAIN}}"
 export APP_HOSTNAME="${DOMAIN:+app.${DOMAIN}}"
 

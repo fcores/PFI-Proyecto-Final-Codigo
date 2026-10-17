@@ -12,12 +12,17 @@ name: Renovar certificado TLS del backend
 # (FABRIC_GATEWAY_CA_PEM). Si la task definition vigente ya los consume, fuerza
 # un redeploy para que el contenedor los tome.
 #
-# Requiere la variable de repositorio DOMAIN y, en el usuario IAM del CI:
+# El usuario IAM del CI necesita:
 #   route53:ListHostedZones, route53:GetChange,
 #   route53:ChangeResourceRecordSets (sobre la zona del dominio),
 #   secretsmanager:GetSecretValue + PutSecretValue (sobre medchain/backend-tls).
 
 on:
+  # Un cambio en este archivo dispara una corrida (p. ej. la primera emision
+  # al configurar el dominio). Solo emite si hace falta o si se fuerza.
+  push:
+    branches: [desarrollo]
+    paths: [".github/workflows/renew-backend-cert.yml"]
   schedule:
     - cron: "17 6 * * 1"
   workflow_dispatch:
@@ -32,6 +37,9 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  # Debe coincidir con DOMAIN/API_TLS_HOSTNAME de deploy/00-variables.sh y con
+  # el ServerNameToVerify de la integracion de API Gateway.
+  HOSTNAME_TLS: api-interno.medchain-pfi.com
   TLS_SECRET_NAME: medchain/backend-tls
   ECS_CLUSTER: medchain-cluster
   ECS_SERVICE: medchain-backend-svc
@@ -45,9 +53,6 @@ jobs:
   renew:
     name: Renovar si hace falta
     runs-on: ubuntu-latest
-    if: ${{ vars.DOMAIN != '' }}
-    env:
-      HOSTNAME_TLS: api-interno.${{ vars.DOMAIN }}
     steps:
       - name: Credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
