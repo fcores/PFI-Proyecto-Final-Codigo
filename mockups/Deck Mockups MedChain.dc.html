@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body { margin:0; font-family:"Inter","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; color:#1e293b; }
+a { color:#0f766e; }
+a:hover { color:#0d9488; }
+</style>
+</helmet>
+<x-import component-from-global-scope="deck-stage" from="./deck-stage.js" width="1920" height="1080" hint-size="100%,100%">
+<section data-label="Portada" data-speaker-notes="Mockups de las 12 pantallas del frontend de MedChain AI, construidos desde la rama desarrollo." style="width:1920px;height:1080px;box-sizing:border-box;background:linear-gradient(155deg,#0d9488 0%,#0f766e 55%,#0b5d57 100%);font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:96px 110px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:62px;width:310px;align-self:flex-start;display:block">
+<div style="display:flex;flex-direction:column;gap:30px;max-width:1300px">
+<span style="font-size:22px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.72)">Mockups de frontend</span>
+<h1 style="margin:0;font-size:104px;font-weight:700;letter-spacing:-.045em;line-height:1.02">Las 12 pantallas,<br>con la jerarquía revisada</h1>
+<p style="margin:0;max-width:1080px;font-size:28px;line-height:1.55;color:rgba(255,255,255,.85);text-wrap:pretty">Mismo sistema visual del repositorio, densidad compacta, encabezados de sección más livianos y columnas de resumen donde antes todo caía en una sola pila. Datos neutros a propósito.</p>
+</div>
+<div style="display:flex;gap:56px;font-size:20px;color:rgba(255,255,255,.7)">
+<span>12 pantallas</span><span>6 estados</span><span>3 roles</span><span>3 tratamientos de IA</span>
+</div>
+</section>
+
+<section data-label="Login" data-speaker-notes="Split brand / formulario · LoginPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">01</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Login</h2>
+<span style="font-size:21px;color:#64748b">Split brand / formulario · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">LoginPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:880px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:grid;grid-template-columns:1.05fr 1fr;background:#fff">
+<aside style="display:flex;flex-direction:column;justify-content:space-between;gap:32px;padding:48px;color:#fff;background:radial-gradient(700px 340px at 120% -10%,rgba(255,255,255,.16),transparent 60%),radial-gradient(600px 380px at -10% 120%,rgba(0,210,180,.35),transparent 55%),linear-gradient(155deg,#0d9488 0%,#0f766e 60%,#0b5d57 100%)">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:40px;width:200px;align-self:flex-start;display:block">
+<div style="max-width:460px;display:flex;flex-direction:column;gap:18px">
+<h2 style="margin:0;font-size:34px;font-weight:700;line-height:1.18;letter-spacing:-.03em">Plataforma para la gestión de prescripciones</h2>
+<p style="margin:0;font-size:15.5px;line-height:1.65;color:rgba(255,255,255,.88)">Auditoría de prescripciones de alta complejidad, con validación asistida y trazabilidad inmutable en blockchain.</p>
+<ul style="list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:10px">
+<li style="display:flex;align-items:center;gap:12px;padding:13px 16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:12px;font-size:14px"><span style="width:6px;height:6px;border-radius:50%;background:#00d2b4;flex:0 0 6px"></span>Prescripciones oncológicas de alta complejidad</li>
+<li style="display:flex;align-items:center;gap:12px;padding:13px 16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:12px;font-size:14px"><span style="width:6px;height:6px;border-radius:50%;background:#00d2b4;flex:0 0 6px"></span>Validación y auditoría de concordancia</li>
+<li style="display:flex;align-items:center;gap:12px;padding:13px 16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:12px;font-size:14px"><span style="width:6px;height:6px;border-radius:50%;background:#00d2b4;flex:0 0 6px"></span>Trazabilidad inmutable en blockchain</li>
+</ul>
+</div>
+<span style="font-size:12px;color:rgba(255,255,255,.72)">Salud, Tecnología e Inteligencia Artificial</span>
+</aside>
+<section style="display:flex;align-items:center;justify-content:center;padding:44px">
+<div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0d9488">Bienvenido</span>
+<h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-.03em">Iniciar sesión</h1>
+<p style="margin:0;font-size:13.5px;color:#64748b">Ingresá tus credenciales para acceder a la plataforma.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:12.5px;font-weight:600;color:#334155">Usuario</span>
+<div style="height:44px;border:1px solid #cfd9e4;border-radius:10px;background:#fcfcfd;display:flex;align-items:center;padding:0 14px;font-size:14px;color:#a8b2c0">Ingresá tu usuario</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:12.5px;font-weight:600;color:#334155">Contraseña</span>
+<div style="height:44px;border:1px solid #cfd9e4;border-radius:10px;background:#fcfcfd;display:flex;align-items:center;padding:0 14px;font-size:14px;color:#a8b2c0">••••••••</div>
+</div>
+<div style="height:46px;border-radius:11px;background:linear-gradient(180deg,#0d9488 0%,#0f766e 100%);box-shadow:0 10px 24px rgba(13,148,136,.24);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:600">Ingresar</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;color:#8d96a4;font-size:11px;letter-spacing:.08em;text-transform:uppercase">
+<span style="flex:1;height:1px;background:#e2e8ef"></span>Acceso seguro<span style="flex:1;height:1px;background:#e2e8ef"></span>
+</div>
+<div style="display:flex;gap:12px;padding:14px 16px;background:#f0fdf9;border:1px solid #d5e5e2;border-radius:12px">
+<span style="width:6px;height:6px;border-radius:50%;background:#0d9488;margin-top:6px;flex:0 0 6px"></span>
+<p style="margin:0;font-size:12.5px;line-height:1.55;color:#64748b">Tu sesión se protege con un token temporal. Al finalizar, cerrá sesión desde el menú lateral.</p>
+</div>
+<p style="margin:0;text-align:center;font-size:11.5px;color:#8d96a4">Copyright © 2025 MedChain AI — Salud, Tecnología e IA</p>
+</div>
+</section>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Alta de prescripción" data-speaker-notes="Formulario dividido en 4 bloques + rail de resumen fijo · PrescripcionPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">02</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Alta de prescripción</h2>
+<span style="font-size:21px;color:#64748b">Formulario dividido en 4 bloques + rail de resumen fijo · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">PrescripcionPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(0.883);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:1020px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Prescripciones</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Alta de Prescripciones</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Historial de Prescripciones</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Pacientes</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Medicamentos</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Monodrogas</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Auditorías</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">U</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Usuario</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">administrador</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Prescripciones</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Alta de prescripción de alta complejidad</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Registro oncológico con validación híbrida reglas + ML y trazabilidad en blockchain.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:grid;grid-template-columns:minmax(0,1.6fr) 340px;gap:18px;align-items:start;overflow:hidden">
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:18px 20px 20px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid #eef2f7">
+<div style="display:flex;flex-direction:column;gap:3px">
+<h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Datos clínicos y prescripción</h2>
+<p style="margin:0;font-size:12.5px;color:#64748b">Completá los atributos, elegí el régimen y validá con el motor híbrido.</p>
+</div>
+<span style="padding:6px 11px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:11px;font-weight:700;white-space:nowrap">Cáncer de colon</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Paciente</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">ID Paciente <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#334155">000</div></div>
+<div style="grid-column:span 2;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Edad <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#334155">00</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Sexo <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Diagnóstico (CIE-10) <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#334155">C00.0</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Peso (kg) <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#334155">00,0</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Talla (cm) <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#334155">000</div></div>
+<div style="grid-column:span 6;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Superficie corporal (m²) — calculado</span><div style="height:36px;border:1px dashed #cfdae6;border-radius:7px;background:#f6f9fc;display:flex;align-items:center;gap:8px;padding:0 11px;font-size:13px;color:#64748b"><span style="font-family:'IBM Plex Mono',monospace;font-weight:500;color:#0f766e">0,00 m²</span><span style="font-size:11.5px">Mosteller</span></div></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Estadificación TNM</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px">
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Localización del tumor <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Tipo histológico <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Ej.: Adenocarcinoma</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Estadio <span style="color:#dc2626">*</span></span><div style="display:flex;gap:6px">
+<span style="flex:1;height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#64748b">I</span>
+<span style="flex:1;height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#64748b">II</span>
+<span style="flex:1;height:36px;border:1.5px solid #0d9488;border-radius:7px;background:rgba(13,148,136,.08);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:#0f766e">III</span>
+<span style="flex:1;height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#64748b">IV</span>
+</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">T (tumor primario) <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">N (ganglios) <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">M (metástasis) <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#b6c0cd">▾</span></div></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Biomarcadores</span><span style="flex:1;height:1px;background:#eef2f7"></span><span style="font-size:11px;color:#94a3b8">No se imputa wild type si no fue evaluado</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">MSI</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">No evaluado<span style="color:#b6c0cd">▾</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">RAS</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">No evaluado<span style="color:#b6c0cd">▾</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">BRAF V600E</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">No evaluado<span style="color:#b6c0cd">▾</span></div></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Régimen y dosificación</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Línea de tratamiento <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Régimen <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#334155"><span style="font-family:'IBM Plex Mono',monospace">REG-000</span><span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Acción</span><div style="height:36px;border:1px solid #cfd9e4;border-radius:7px;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#334155">Sugerir según guías</div></div>
+<div style="grid-column:span 8;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Médico prescriptor <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Nombre y apellido</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Matrícula <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">MN 00000</div></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:2px;padding-top:14px;border-top:1px solid #eef2f7">
+<span style="font-size:12.5px;color:#94a3b8">Los campos con <span style="color:#dc2626">*</span> son obligatorios</span>
+<div style="display:flex;gap:9px">
+<div style="min-width:96px;height:40px;padding:0 18px;border-radius:10px;border:1px solid #cfd9e4;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#334155">Cancelar</div>
+<div style="min-width:150px;height:40px;padding:0 18px;border-radius:10px;background:linear-gradient(180deg,#0d9488,#0f766e);box-shadow:0 8px 20px rgba(13,148,136,.24);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff">Validar y registrar</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Resumen del caso</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div style="padding:11px 12px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14)"><div style="font-size:20px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">0,00</div><div style="margin-top:5px;font-size:11px;font-weight:600;color:#64748b">Superficie m²</div></div>
+<div style="padding:11px 12px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14)"><div style="font-size:20px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">0</div><div style="margin-top:5px;font-size:11px;font-weight:600;color:#64748b">Fármacos</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Sugerencia de guías</span>
+<div style="padding:11px 12px;border-radius:10px;border:1px dashed #cfdae6;background:#f8fbfd;font-size:12.5px;line-height:1.55;color:#64748b">Régimen <span style="font-family:'IBM Plex Mono',monospace;color:#0f766e;font-weight:500">REG-000</span> sugerido por reglas clínicas. Costo estimado <span style="font-family:'IBM Plex Mono',monospace">$000.000,00</span>.</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Dosis por fármaco</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="display:grid;grid-template-columns:1fr 92px;gap:8px;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8"><span>Monodroga</span><span style="text-align:right">Dosis (mg)</span></div>
+<div style="display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center"><span style="font-size:12.5px;color:#334155">Monodroga A</span><div style="height:32px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:12.5px;font-family:'IBM Plex Mono',monospace;color:#334155">000,0</div></div>
+<div style="display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center"><span style="font-size:12.5px;color:#334155">Monodroga B</span><div style="height:32px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:12.5px;font-family:'IBM Plex Mono',monospace;color:#334155">000,0</div></div>
+<div style="display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center"><span style="font-size:12.5px;color:#334155">Monodroga C</span><div style="height:32px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:12.5px;font-family:'IBM Plex Mono',monospace;color:#334155">000,0</div></div>
+</div>
+<div style="display:flex;justify-content:space-between;padding-top:9px;border-top:1px solid #eef2f7;font-size:12.5px"><span style="color:#64748b">Costo estimado</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:500;color:#334155">$000.000,00</span></div>
+</div>
+
+<div style="background:#0f172a;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;color:#fff">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00d2b4">Al registrar</span><span style="flex:1;height:1px;background:rgba(255,255,255,.14)"></span></div>
+<p style="margin:0;font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.72)">La prescripción se valida con reglas + ML y se encadena en el ledger. El bloque queda visible en Trazabilidad con su hash SHA-256.</p>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Historial de prescripciones" data-speaker-notes="Filtros en barra única, métricas a la derecha, tabla densa · HistorialPrescripcionesPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">03</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Historial de prescripciones</h2>
+<span style="font-size:21px;color:#64748b">Filtros en barra única, métricas a la derecha, tabla densa · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">HistorialPrescripcionesPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:900px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Prescripciones</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Alta de Prescripciones</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Historial de Prescripciones</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Pacientes</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Medicamentos</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Monodrogas</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Auditorías</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">U</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Usuario</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">administrador</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Prescripciones</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Historial de prescripciones</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Resultado de validación y transacción en blockchain de cada registro.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:flex;flex-direction:column;gap:14px;min-height:0">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0">
+
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+<div style="display:flex;flex-direction:column;gap:3px">
+<h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Prescripciones registradas</h2>
+<p style="margin:0;font-size:12.5px;color:#64748b">Buscá por código, paciente, diagnóstico o régimen.</p>
+</div>
+<div style="display:flex;gap:8px">
+<div style="padding:9px 14px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14);text-align:right"><div style="font-size:19px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">00</div><div style="margin-top:4px;font-size:10.5px;font-weight:600;color:#64748b">resultados</div></div>
+<div style="padding:9px 14px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14);text-align:right"><div style="font-size:19px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">00</div><div style="margin-top:4px;font-size:10.5px;font-weight:600;color:#64748b">en revisión</div></div>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:#f7fafc;border:1px solid #e6ecf3">
+<div style="flex:1;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 11px;font-size:13px;color:#94a3b8"><span style="width:11px;height:11px;border:1.5px solid #b6c0cd;border-radius:50%"></span>Código, paciente, diagnóstico…</div>
+<div style="width:170px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">Todos los estados<span style="color:#b6c0cd">▾</span></div>
+<div style="height:34px;padding:0 14px;border:1px solid #cfd9e4;border-radius:7px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Limpiar</div>
+</div>
+
+<div style="flex:1;border:1px solid #e6ecf3;border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column;min-height:0">
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;gap:0;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184">
+<span style="padding:10px 14px">Código</span><span style="padding:10px 14px">Paciente</span><span style="padding:10px 14px">Diagnóstico</span><span style="padding:10px 14px">Estadio</span><span style="padding:10px 14px">Régimen</span><span style="padding:10px 14px">Dosis mg/m²</span><span style="padding:10px 14px">Estado</span><span style="padding:10px 14px">Confianza</span><span style="padding:10px 14px">Hash (tx)</span>
+</div>
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000001</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">III</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">APROBADO</span></span><span style="padding:11px 14px"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:44px;height:5px;border-radius:999px;background:#e6ecf3;overflow:hidden;display:inline-block"><span style="display:block;width:78%;height:100%;background:linear-gradient(90deg,#0d9488,#14b8a6)"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#64748b">00%</span></span></span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#64748b">0x0000…0000</span>
+</div>
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000002</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">II</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:11px;font-weight:700">REVISION</span></span><span style="padding:11px 14px"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:44px;height:5px;border-radius:999px;background:#e6ecf3;overflow:hidden;display:inline-block"><span style="display:block;width:48%;height:100%;background:linear-gradient(90deg,#d97706,#f59e0b)"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#64748b">00%</span></span></span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#64748b">0x0000…0000</span>
+</div>
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000003</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">IV</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(220,38,38,.1);color:#991b1b;font-size:11px;font-weight:700">RECHAZADO</span></span><span style="padding:11px 14px"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:44px;height:5px;border-radius:999px;background:#e6ecf3;overflow:hidden;display:inline-block"><span style="display:block;width:22%;height:100%;background:linear-gradient(90deg,#b91c1c,#ef4444)"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#64748b">00%</span></span></span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#64748b">0x0000…0000</span>
+</div>
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000004</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">III</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">APROBADO</span></span><span style="padding:11px 14px"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:44px;height:5px;border-radius:999px;background:#e6ecf3;overflow:hidden;display:inline-block"><span style="display:block;width:85%;height:100%;background:linear-gradient(90deg,#0d9488,#14b8a6)"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#64748b">00%</span></span></span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#64748b">0x0000…0000</span>
+</div>
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000005</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">I</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:11px;font-weight:700">REVISION</span></span><span style="padding:11px 14px"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:44px;height:5px;border-radius:999px;background:#e6ecf3;overflow:hidden;display:inline-block"><span style="display:block;width:55%;height:100%;background:linear-gradient(90deg,#d97706,#f59e0b)"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#64748b">00%</span></span></span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#64748b">0x0000…0000</span>
+</div>
+<div style="display:grid;grid-template-columns:120px 90px 100px 80px 120px 110px 130px 150px 1fr;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000006</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">II</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">APROBADO</span></span><span style="padding:11px 14px"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:44px;height:5px;border-radius:999px;background:#e6ecf3;overflow:hidden;display:inline-block"><span style="display:block;width:91%;height:100%;background:linear-gradient(90deg,#0d9488,#14b8a6)"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#64748b">00%</span></span></span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#64748b">0x0000…0000</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Cola de auditoría" data-speaker-notes="Prioridad por confianza del modelo; fila completa clickeable · AuditQueuePage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">04</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Cola de auditoría</h2>
+<span style="font-size:21px;color:#64748b">Prioridad por confianza del modelo; fila completa clickeable · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">AuditQueuePage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:900px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Auditor</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Auditorías</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Cola de Auditoría</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Trazabilidad</div>
+</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">A</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Auditor</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">auditor</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Auditoría</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Cola de auditoría</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Prescripciones pendientes de dictamen por el equipo auditor.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:flex;flex-direction:column;gap:14px;min-height:0">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Total en cola</span><span style="font-size:26px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace;color:#1e293b">00</span></div><span style="width:34px;height:34px;border-radius:10px;background:#f1f5f9"></span></div>
+<div style="background:#fff;border:1px solid rgba(245,158,11,.28);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#92400e">Pendientes</span><span style="font-size:26px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace;color:#92400e">00</span></div><span style="width:34px;height:34px;border-radius:10px;background:rgba(245,158,11,.12)"></span></div>
+<div style="background:#fff;border:1px solid rgba(13,148,136,.22);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#0f766e">Revisados</span><span style="font-size:26px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace;color:#0f766e">00</span></div><span style="width:34px;height:34px;border-radius:10px;background:rgba(13,148,136,.1)"></span></div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0">
+<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:#f7fafc;border:1px solid #e6ecf3">
+<div style="flex:1;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 11px;font-size:13px;color:#94a3b8"><span style="width:11px;height:11px;border:1.5px solid #b6c0cd;border-radius:50%"></span>Paciente o código de prescripción…</div>
+<div style="width:160px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">Todos<span style="color:#b6c0cd">▾</span></div>
+<div style="height:34px;padding:0 14px;border:1px solid #cfd9e4;border-radius:7px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Limpiar filtros</div>
+</div>
+
+<div style="flex:1;border:1px solid #e6ecf3;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+<div style="display:grid;grid-template-columns:80px 130px 90px 100px 80px 120px 140px 1fr 44px;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184">
+<span style="padding:10px 14px">ID caso</span><span style="padding:10px 14px">Prescripción</span><span style="padding:10px 14px">Paciente</span><span style="padding:10px 14px">Diagnóstico</span><span style="padding:10px 14px">Estadio</span><span style="padding:10px 14px">Esquema</span><span style="padding:10px 14px">Validación</span><span style="padding:10px 14px">Fecha</span><span style="padding:10px 14px"></span>
+</div>
+<div style="display:grid;grid-template-columns:80px 130px 90px 100px 80px 120px 140px 1fr 44px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;border-left:3px solid #f59e0b">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000001</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">III</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:11px;font-weight:700">REVISION</span></span><span style="padding:11px 14px;color:#64748b">00/00/0000 00:00</span><span style="padding:11px 14px;color:#b6c0cd">›</span>
+</div>
+<div style="display:grid;grid-template-columns:80px 130px 90px 100px 80px 120px 140px 1fr 44px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff;border-left:3px solid #f59e0b">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000002</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">II</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(100,116,139,.12);color:#475569;font-size:11px;font-weight:700">pendiente</span></span><span style="padding:11px 14px;color:#64748b">00/00/0000 00:00</span><span style="padding:11px 14px;color:#b6c0cd">›</span>
+</div>
+<div style="display:grid;grid-template-columns:80px 130px 90px 100px 80px 120px 140px 1fr 44px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;border-left:3px solid #14b86a">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000003</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">I</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">APROBADO</span></span><span style="padding:11px 14px;color:#64748b">00/00/0000 00:00</span><span style="padding:11px 14px;color:#b6c0cd">›</span>
+</div>
+<div style="display:grid;grid-template-columns:80px 130px 90px 100px 80px 120px 140px 1fr 44px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff;border-left:3px solid #dc2626">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000004</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">IV</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(220,38,38,.1);color:#991b1b;font-size:11px;font-weight:700">RECHAZADO</span></span><span style="padding:11px 14px;color:#64748b">00/00/0000 00:00</span><span style="padding:11px 14px;color:#b6c0cd">›</span>
+</div>
+<div style="display:grid;grid-template-columns:80px 130px 90px 100px 80px 120px 140px 1fr 44px;font-size:12.5px;color:#334155;align-items:center;border-left:3px solid #f59e0b">
+<span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">PR-000005</span><span style="padding:11px 14px">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">C00.0</span><span style="padding:11px 14px">III</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:11px;font-weight:700">REVISION</span></span><span style="padding:11px 14px;color:#64748b">00/00/0000 00:00</span><span style="padding:11px 14px;color:#b6c0cd">›</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Caso de auditoría" data-speaker-notes="Evidencia a la izquierda, decisión a la derecha · AuditCasePage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">05</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Caso de auditoría</h2>
+<span style="font-size:21px;color:#64748b">Evidencia a la izquierda, decisión a la derecha · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">AuditCasePage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(0.938);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:960px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Auditor</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Auditorías</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Cola de Auditoría</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Trazabilidad</div>
+</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">A</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Auditor</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">auditor</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Auditoría · Caso 000</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Prescripción <span style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:#0f766e">PR-000001</span></h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Paciente #000 · Estadio III · Régimen REG-000</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<span style="display:inline-flex;padding:7px 13px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:11.5px;font-weight:700">PENDIENTE DE DICTAMEN</span>
+<div style="height:32px;padding:0 13px;border:1px solid #cfd9e4;border-radius:8px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Volver a la cola</div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start;min-height:0">
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Datos de la prescripción</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#eef2f7;border:1px solid #eef2f7;border-radius:10px;overflow:hidden">
+<div style="background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:3px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Paciente</span><span style="font-size:13.5px;color:#1e293b;font-family:'IBM Plex Mono',monospace">000</span></div>
+<div style="background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:3px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Diagnóstico</span><span style="font-size:13.5px;color:#1e293b;font-family:'IBM Plex Mono',monospace">C00.0</span></div>
+<div style="background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:3px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Estadio</span><span style="font-size:13.5px;color:#1e293b">III</span></div>
+<div style="background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:3px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Esquema</span><span style="font-size:13.5px;color:#1e293b;font-family:'IBM Plex Mono',monospace">REG-000</span></div>
+<div style="background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:3px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Dosis mg/m²</span><span style="font-size:13.5px;color:#1e293b;font-family:'IBM Plex Mono',monospace">000</span></div>
+<div style="background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:3px"><span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Superficie m²</span><span style="font-size:13.5px;color:#1e293b;font-family:'IBM Plex Mono',monospace">0,00</span></div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Validación automática</span><span style="flex:1;height:1px;background:#eef2f7"></span><span style="font-size:11px;color:#94a3b8;font-family:'IBM Plex Mono',monospace">reglas + ML · v0.0.0</span></div>
+<div style="display:flex;align-items:center;gap:10px">
+<span style="display:inline-flex;padding:6px 12px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:11.5px;font-weight:700">REVISION</span>
+<span style="font-size:12.5px;color:#64748b">Origen: <span style="color:#334155;font-weight:500">modelo</span></span>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="position:relative;height:11px;border-radius:999px;background:#f1f5f9;border:1px solid #e6ecf3;overflow:hidden">
+<div style="width:52%;height:100%;border-radius:999px;background:linear-gradient(90deg,#d97706,#f59e0b)"></div>
+<span style="position:absolute;top:0;bottom:0;left:35%;width:2px;background:rgba(15,23,42,.3)"></span>
+<span style="position:absolute;top:0;bottom:0;left:65%;width:2px;background:rgba(15,23,42,.5)"></span>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b"><span>P(concordante) · zona gris entre umbrales</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:500;color:#334155">00,0%</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:10px;background:#f8fafc;border:1px solid #eef2f7">
+<span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Motivos</span>
+<span style="font-size:12.5px;line-height:1.6;color:#475569">— Motivo de validación registrado por el motor.</span>
+<span style="font-size:12.5px;line-height:1.6;color:#475569">— Motivo de validación registrado por el motor.</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Aportes principales</span>
+<div style="display:flex;align-items:center;gap:10px"><span style="width:150px;font-size:12.5px;color:#475569;font-family:'IBM Plex Mono',monospace">feature_a</span><span style="flex:1;height:6px;border-radius:999px;background:#f1f5f9;overflow:hidden"><span style="display:block;width:72%;height:100%;background:#0d9488"></span></span><span style="width:52px;text-align:right;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#64748b">+0,00</span></div>
+<div style="display:flex;align-items:center;gap:10px"><span style="width:150px;font-size:12.5px;color:#475569;font-family:'IBM Plex Mono',monospace">feature_b</span><span style="flex:1;height:6px;border-radius:999px;background:#f1f5f9;overflow:hidden"><span style="display:block;width:48%;height:100%;background:#0d9488"></span></span><span style="width:52px;text-align:right;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#64748b">+0,00</span></div>
+<div style="display:flex;align-items:center;gap:10px"><span style="width:150px;font-size:12.5px;color:#475569;font-family:'IBM Plex Mono',monospace">feature_c</span><span style="flex:1;height:6px;border-radius:999px;background:#f1f5f9;overflow:hidden"><span style="display:block;width:30%;height:100%;background:#dc2626"></span></span><span style="width:52px;text-align:right;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#64748b">−0,00</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;padding-top:11px;border-top:1px solid #eef2f7;font-size:12.5px"><span style="color:#64748b">Costo estimado del régimen</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:500;color:#334155">$000.000,00</span></div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border:1px solid rgba(13,148,136,.24);border-radius:14px;box-shadow:0 10px 24px rgba(13,148,136,.08);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Dictamen del auditor</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Resultado</span>
+<div style="display:flex;gap:9px">
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:9px;border:1.5px solid #0d9488;background:rgba(13,148,136,.06)"><span style="width:13px;height:13px;border-radius:50%;border:4px solid #0d9488"></span><span style="font-size:11.5px;font-weight:700;color:#0b8f54">APROBADO</span></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:9px;border:1px solid #e2e8ef;background:#fcfcfd"><span style="width:13px;height:13px;border-radius:50%;border:1.5px solid #cbd5e1"></span><span style="font-size:11.5px;font-weight:700;color:#991b1b">RECHAZADO</span></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:9px;border:1px solid #e2e8ef;background:#fcfcfd"><span style="width:13px;height:13px;border-radius:50%;border:1.5px solid #cbd5e1"></span><span style="font-size:11.5px;font-weight:700;color:#92400e">PEND. DOCS</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Justificación <span style="color:#dc2626">*</span></span>
+<div style="min-height:96px;border:1px solid #d8e0ea;border-radius:8px;background:#fbfcfe;padding:11px;font-size:13px;line-height:1.55;color:#94a3b8">Detallá los motivos del dictamen…</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:11px;border-top:1px solid #eef2f7">
+<span style="font-size:12px;color:#94a3b8">Queda registrado en el ledger</span>
+<div style="height:40px;padding:0 20px;border-radius:10px;background:linear-gradient(180deg,#0d9488,#0f766e);box-shadow:0 8px 20px rgba(13,148,136,.24);display:flex;align-items:center;font-size:13px;font-weight:600;color:#fff">Registrar dictamen</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Correcciones</span><span style="flex:1;height:1px;background:#eef2f7"></span><span style="height:28px;padding:0 11px;border:1px solid #cfd9e4;border-radius:7px;background:#fff;display:flex;align-items:center;font-size:12px;font-weight:600;color:#334155">+ Agregar</span></div>
+<div style="border:1px solid #e6ecf3;border-radius:10px;overflow:hidden">
+<div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1.4fr 1fr;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184">
+<span style="padding:9px 11px">Campo</span><span style="padding:9px 11px">Anterior</span><span style="padding:9px 11px">Nuevo</span><span style="padding:9px 11px">Justificación</span><span style="padding:9px 11px">Fecha</span>
+</div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1.4fr 1fr;border-bottom:1px solid #f0f4f8;font-size:12px;color:#334155;align-items:center">
+<span style="padding:10px 11px;font-family:'IBM Plex Mono',monospace">id_regimen</span><span style="padding:10px 11px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">REG-000</span><span style="padding:10px 11px;font-family:'IBM Plex Mono',monospace">REG-000</span><span style="padding:10px 11px;color:#64748b">Motivo de la corrección</span><span style="padding:10px 11px;color:#64748b">00/00/0000</span>
+</div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1.4fr 1fr;font-size:12px;color:#334155;align-items:center;background:#fbfdff">
+<span style="padding:10px 11px;font-family:'IBM Plex Mono',monospace">dosis_mg_m2</span><span style="padding:10px 11px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">000</span><span style="padding:10px 11px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:10px 11px;color:#64748b">Motivo de la corrección</span><span style="padding:10px 11px;color:#64748b">00/00/0000</span>
+</div>
+</div>
+</div>
+
+<div style="background:#0f172a;border-radius:14px;padding:15px 18px;display:flex;flex-direction:column;gap:9px;color:#fff">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00d2b4">Bloque en el ledger</span><span style="flex:1;height:1px;background:rgba(255,255,255,.14)"></span></div>
+<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:rgba(255,255,255,.6)">Hash</span><span style="font-family:'IBM Plex Mono',monospace">0x0000…0000</span></div>
+<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:rgba(255,255,255,.6)">Hash anterior</span><span style="font-family:'IBM Plex Mono',monospace">0x0000…0000</span></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Alta de pacientes" data-speaker-notes="Alta individual y carga masiva como pares, no apiladas · PacientesPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">06</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Alta de pacientes</h2>
+<span style="font-size:21px;color:#64748b">Alta individual y carga masiva como pares, no apiladas · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">PacientesPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:900px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Prescriptor</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Pacientes</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Alta de Pacientes</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Historial de Pacientes</div>
+</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">P</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Prescriptor</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">prescriptor</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Pacientes</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Alta de pacientes</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Alta clínica y documentación de respaldo en una sola vista.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:grid;grid-template-columns:minmax(0,1.55fr) 360px;gap:18px;align-items:start;min-height:0">
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:18px 20px;display:flex;flex-direction:column;gap:15px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:13px;border-bottom:1px solid #eef2f7">
+<div style="display:flex;flex-direction:column;gap:3px">
+<h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Datos principales</h2>
+<p style="margin:0;font-size:12.5px;color:#64748b">Datos administrativos y clínicos del paciente.</p>
+</div>
+<span style="padding:6px 11px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:11px;font-weight:700;white-space:nowrap">Formulario guiado</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px">
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">ID Credencial</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">—</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">ID Prestador</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">—</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Prestador</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar…<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Nombre <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Nombre</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Apellido <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Apellido</div></div>
+<div style="grid-column:span 2;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Nacimiento <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">00/00/0000</div></div>
+<div style="grid-column:span 2;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Género <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">—<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 6;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Diagnóstico</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Ej.: diagnóstico principal</div></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin-top:2px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Documentación</span><span style="flex:1;height:1px;background:#eef2f7"></span><span style="font-size:11px;color:#94a3b8">0 de 6 adjuntos</span></div>
+<div style="border:1px solid #e6ecf3;border-radius:10px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:#f7fafc;border-bottom:1px solid #e6ecf3;font-size:13px;font-weight:600;color:#334155">Historia clínica<span style="font-size:11.5px;font-weight:500;color:#94a3b8">Sin adjuntos ▾</span></div>
+<div style="display:flex;gap:12px;padding:13px 14px;border-bottom:1px solid #e6ecf3;background:#fff">
+<div style="flex:1;min-height:64px;border:1px solid #d8e0ea;border-radius:8px;background:#fbfcfe;padding:10px;font-size:12.5px;color:#94a3b8">Detalle de la historia clínica…</div>
+<div style="width:150px;border:1.5px dashed #cfdae6;border-radius:8px;background:#f8fbfd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0891b2">Adjuntar archivo</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #e6ecf3;font-size:13px;color:#475569">Anatomía patológica<span style="font-size:11.5px;color:#94a3b8">›</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #e6ecf3;font-size:13px;color:#475569">Estudios por imágenes<span style="font-size:11.5px;color:#94a3b8">›</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #e6ecf3;font-size:13px;color:#475569">Laboratorios<span style="font-size:11.5px;color:#94a3b8">›</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #e6ecf3;font-size:13px;color:#475569">Receta<span style="font-size:11.5px;color:#94a3b8">›</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;font-size:13px;color:#475569">Otros<span style="font-size:11.5px;color:#94a3b8">›</span></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:14px;border-top:1px solid #eef2f7">
+<span style="font-size:12.5px;color:#94a3b8">Los campos con <span style="color:#dc2626">*</span> son obligatorios</span>
+<div style="display:flex;gap:9px">
+<div style="min-width:96px;height:40px;padding:0 18px;border-radius:10px;border:1px solid #cfd9e4;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#334155">Cancelar</div>
+<div style="min-width:120px;height:40px;padding:0 18px;border-radius:10px;background:linear-gradient(180deg,#0d9488,#0f766e);box-shadow:0 8px 20px rgba(13,148,136,.24);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff">Agregar paciente</div>
+</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="display:flex;flex-direction:column;gap:3px"><h3 style="margin:0;font-size:15px;font-weight:700;letter-spacing:-.02em">Importar desde Excel</h3><p style="margin:0;font-size:12.5px;line-height:1.5;color:#64748b">Cargá múltiples pacientes en una sola operación.</p></div>
+<span style="padding:5px 10px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:10.5px;font-weight:700;white-space:nowrap">.xlsx</span>
+</div>
+<div style="min-height:130px;border:1.5px dashed #cfdae6;border-radius:11px;background:linear-gradient(180deg,#fbfcfe,#f6f9fd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:18px">
+<div style="height:36px;padding:0 16px;border-radius:8px;background:#0891b2;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Seleccionar archivo</div>
+<span style="font-size:11.5px;color:#94a3b8;text-align:center">o arrastrá el .xlsx con encabezados en la primera fila</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px;padding:11px 12px;border-radius:9px;background:#f8fafc;border:1px solid #eef2f7">
+<span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Columnas esperadas</span>
+<span style="font-size:11.5px;line-height:1.6;font-family:'IBM Plex Mono',monospace;color:#64748b">credential_id · provider_id · provider · first_name · last_name · birth_date · gender · treatment</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:11px;border-top:1px solid #eef2f7">
+<span style="font-size:12px;color:#94a3b8">Ningún archivo</span>
+<div style="height:36px;padding:0 16px;border-radius:9px;background:linear-gradient(180deg,#0d9488,#0f766e);display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Importar</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Historial de pacientes" data-speaker-notes="HistorialPacientesPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">07</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Historial de pacientes</h2>
+<span style="font-size:21px;color:#64748b"><span style="font-family:'IBM Plex Mono',monospace;font-size:19px">HistorialPacientesPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:820px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Prescriptor</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Pacientes</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Alta de Pacientes</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Historial de Pacientes</div>
+</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">P</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Prescriptor</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">prescriptor</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Pacientes</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Historial de pacientes</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Consultá el historial operativo y filtrá por paciente o prestador.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:flex;flex-direction:column;min-height:0">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+<div style="display:flex;flex-direction:column;gap:3px"><h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Pacientes cargados</h2><p style="margin:0;font-size:12.5px;color:#64748b">Filtrá por nombre, diagnóstico o prestador.</p></div>
+<div style="padding:9px 14px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14);text-align:right"><div style="font-size:19px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">00</div><div style="margin-top:4px;font-size:10.5px;font-weight:600;color:#64748b">resultados</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:#f7fafc;border:1px solid #e6ecf3">
+<div style="flex:1;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 11px;font-size:13px;color:#94a3b8"><span style="width:11px;height:11px;border:1.5px solid #b6c0cd;border-radius:50%"></span>Nombre, apellido, ID o diagnóstico…</div>
+<div style="width:180px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">Todos los prestadores<span style="color:#b6c0cd">▾</span></div>
+<div style="height:34px;padding:0 14px;border:1px solid #cfd9e4;border-radius:7px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Limpiar</div>
+</div>
+<div style="flex:1;border:1px solid #e6ecf3;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+<div style="display:grid;grid-template-columns:80px 1.3fr 1.2fr 1.2fr 120px 120px;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184">
+<span style="padding:10px 14px">ID</span><span style="padding:10px 14px">Paciente</span><span style="padding:10px 14px">Diagnóstico</span><span style="padding:10px 14px">Prestador</span><span style="padding:10px 14px">Género</span><span style="padding:10px 14px">Estado</span>
+</div>
+<div style="display:grid;grid-template-columns:80px 1.3fr 1.2fr 1.2fr 120px 120px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px">Apellido, Nombre</span><span style="padding:11px 14px;color:#64748b">Diagnóstico</span><span style="padding:11px 14px;color:#64748b">Prestador</span><span style="padding:11px 14px;color:#64748b">—</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">Activo</span></span></div>
+<div style="display:grid;grid-template-columns:80px 1.3fr 1.2fr 1.2fr 120px 120px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px">Apellido, Nombre</span><span style="padding:11px 14px;color:#64748b">Diagnóstico</span><span style="padding:11px 14px;color:#64748b">Prestador</span><span style="padding:11px 14px;color:#64748b">—</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">Activo</span></span></div>
+<div style="display:grid;grid-template-columns:80px 1.3fr 1.2fr 1.2fr 120px 120px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px">Apellido, Nombre</span><span style="padding:11px 14px;color:#64748b">Diagnóstico</span><span style="padding:11px 14px;color:#64748b">Prestador</span><span style="padding:11px 14px;color:#64748b">—</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">Activo</span></span></div>
+<div style="display:grid;grid-template-columns:80px 1.3fr 1.2fr 1.2fr 120px 120px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px">Apellido, Nombre</span><span style="padding:11px 14px;color:#64748b">Diagnóstico</span><span style="padding:11px 14px;color:#64748b">Prestador</span><span style="padding:11px 14px;color:#64748b">—</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">Activo</span></span></div>
+<div style="display:grid;grid-template-columns:80px 1.3fr 1.2fr 1.2fr 120px 120px;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px">Apellido, Nombre</span><span style="padding:11px 14px;color:#64748b">Diagnóstico</span><span style="padding:11px 14px;color:#64748b">Prestador</span><span style="padding:11px 14px;color:#64748b">—</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">Activo</span></span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Alta de medicamentos" data-speaker-notes="Identificación / logística / comercial como grupos separados · AltaMedicamentosPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">08</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Alta de medicamentos</h2>
+<span style="font-size:21px;color:#64748b">Identificación / logística / comercial como grupos separados · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">AltaMedicamentosPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:860px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Pacientes</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Medicamentos</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Alta de Medicamentos</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Historial de Medicamentos</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Monodrogas</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Auditorías</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">U</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Usuario</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">administrador</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Medicamentos</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Alta de medicamentos</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Presentaciones del catálogo vinculadas a una monodroga. El código MED-XXXX se genera solo.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:grid;grid-template-columns:minmax(0,1.55fr) 360px;gap:18px;align-items:start;min-height:0">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:18px 20px;display:flex;flex-direction:column;gap:15px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:13px;border-bottom:1px solid #eef2f7">
+<div style="display:flex;flex-direction:column;gap:3px"><h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Datos del medicamento</h2><p style="margin:0;font-size:12.5px;color:#64748b">Atributos del maestro de materiales.</p></div>
+<span style="padding:6px 11px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;white-space:nowrap">MED-0000</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Identificación</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px">
+<div style="grid-column:span 12;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Texto largo de material <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Ej.: presentación completa del material</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Código EAN/UPC <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0000000000000</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Nro troquel alfabeta <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0000000</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Monodroga <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar…<span style="color:#b6c0cd">▾</span></div></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Presentación y logística</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px">
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Tamaño / dimensión <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Ej.: 000 MG INY.F.A. X 1</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Laboratorio <span style="color:#dc2626">*</span></span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Laboratorio</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Cadena de frío <span style="color:#dc2626">*</span></span><div style="display:flex;gap:6px"><span style="flex:1;height:36px;border:1.5px solid #0d9488;border-radius:7px;background:rgba(13,148,136,.08);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:#0f766e">Seco</span><span style="flex:1;height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#64748b">Frío</span></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Valor de potencia</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">000</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Código de potencia</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">MG</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Vía de administración</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar…<span style="color:#b6c0cd">▾</span></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Precio de venta</span><div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">$0.000,00</div></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:auto;padding-top:14px;border-top:1px solid #eef2f7">
+<span style="font-size:12.5px;color:#94a3b8">Los campos con <span style="color:#dc2626">*</span> son obligatorios</span>
+<div style="display:flex;gap:9px">
+<div style="min-width:96px;height:40px;padding:0 18px;border-radius:10px;border:1px solid #cfd9e4;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#334155">Cancelar</div>
+<div style="min-width:120px;height:40px;padding:0 18px;border-radius:10px;background:linear-gradient(180deg,#0d9488,#0f766e);box-shadow:0 8px 20px rgba(13,148,136,.24);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff">Agregar</div>
+</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="display:flex;flex-direction:column;gap:3px"><h3 style="margin:0;font-size:15px;font-weight:700;letter-spacing:-.02em">Importar desde Excel</h3><p style="margin:0;font-size:12.5px;line-height:1.5;color:#64748b">Si la monodroga no existe, se crea automáticamente.</p></div>
+<span style="padding:5px 10px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:10.5px;font-weight:700">.xlsx</span>
+</div>
+<div style="min-height:120px;border:1.5px dashed #cfdae6;border-radius:11px;background:linear-gradient(180deg,#fbfcfe,#f6f9fd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:18px">
+<div style="height:36px;padding:0 16px;border-radius:8px;background:#0891b2;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Seleccionar archivo</div>
+<span style="font-size:11.5px;color:#94a3b8;text-align:center">o arrastrá el .xlsx del catálogo</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:9px;border:1px solid rgba(211,47,47,.16);background:rgba(211,47,47,.04)">
+<span style="font-size:11.5px;font-weight:700;color:#8f1d1d">Filas con error</span>
+<span style="font-size:11.5px;line-height:1.6;color:#6f2a2a">Fila 00 — mensaje de validación</span>
+<span style="font-size:11.5px;line-height:1.6;color:#6f2a2a">Fila 00 — mensaje de validación</span>
+<span style="font-size:11px;color:#94a3b8">Se muestran los primeros 5 errores de 00.</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:11px;border-top:1px solid #eef2f7">
+<span style="font-size:12px;color:#94a3b8">archivo.xlsx</span>
+<div style="height:36px;padding:0 16px;border-radius:9px;background:linear-gradient(180deg,#0d9488,#0f766e);display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Importar</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Historial de medicamentos" data-speaker-notes="12 columnas: scroll horizontal con primera columna fija · HistorialMedicamentosPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">09</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Historial de medicamentos</h2>
+<span style="font-size:21px;color:#64748b">12 columnas: scroll horizontal con primera columna fija · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">HistorialMedicamentosPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:820px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Pacientes</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Medicamentos</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Alta de Medicamentos</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Historial de Medicamentos</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Monodrogas</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Auditorías</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">U</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Usuario</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">administrador</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Medicamentos</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Historial de medicamentos</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Maestro de materiales con filtros por código, monodroga y conservación.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:flex;flex-direction:column;min-height:0">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+<div style="display:flex;flex-direction:column;gap:3px"><h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Medicamentos cargados</h2><p style="margin:0;font-size:12.5px;color:#64748b">Buscá por descripción, EAN, código, monodroga o laboratorio.</p></div>
+<div style="padding:9px 14px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14);text-align:right"><div style="font-size:19px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">00</div><div style="margin-top:4px;font-size:10.5px;font-weight:600;color:#64748b">resultados</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:#f7fafc;border:1px solid #e6ecf3">
+<div style="flex:1;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 11px;font-size:13px;color:#94a3b8"><span style="width:11px;height:11px;border:1.5px solid #b6c0cd;border-radius:50%"></span>Descripción, EAN, laboratorio…</div>
+<div style="width:130px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#64748b">Conservación<span style="color:#b6c0cd">▾</span></div>
+<div style="width:120px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">MED-0000</div>
+<div style="width:130px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#94a3b8">Monodroga…</div>
+<div style="height:34px;padding:0 14px;border:1px solid #cfd9e4;border-radius:7px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Limpiar</div>
+</div>
+<div style="flex:1;border:1px solid #e6ecf3;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+<div style="display:grid;grid-template-columns:110px 1.5fr 130px 100px 110px 1.1fr 1fr 110px 90px 110px;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184">
+<span style="padding:10px 12px">Código</span><span style="padding:10px 12px">Descripción</span><span style="padding:10px 12px">EAN</span><span style="padding:10px 12px">Troquel</span><span style="padding:10px 12px">Conservación</span><span style="padding:10px 12px">Laboratorio</span><span style="padding:10px 12px">Monodroga</span><span style="padding:10px 12px">Potencia</span><span style="padding:10px 12px">Precio</span><span style="padding:10px 12px">Vía</span>
+</div>
+<div style="display:grid;grid-template-columns:110px 1.5fr 130px 100px 110px 1.1fr 1fr 110px 90px 110px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">MED-0001</span><span style="padding:11px 12px;color:#475569">Descripción del material</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000000000</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000</span><span style="padding:11px 12px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(100,116,139,.1);color:#475569;font-size:10.5px;font-weight:700">Seco</span></span><span style="padding:11px 12px;color:#64748b">Laboratorio</span><span style="padding:11px 12px;color:#64748b">Monodroga</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">000 MG</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">0.000</span><span style="padding:11px 12px;color:#64748b">ORAL</span></div>
+<div style="display:grid;grid-template-columns:110px 1.5fr 130px 100px 110px 1.1fr 1fr 110px 90px 110px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">MED-0002</span><span style="padding:11px 12px;color:#475569">Descripción del material</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000000000</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000</span><span style="padding:11px 12px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(8,145,178,.1);color:#155e75;font-size:10.5px;font-weight:700">Frío</span></span><span style="padding:11px 12px;color:#64748b">Laboratorio</span><span style="padding:11px 12px;color:#64748b">Monodroga</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">000 MG</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">0.000</span><span style="padding:11px 12px;color:#64748b">INY. IV</span></div>
+<div style="display:grid;grid-template-columns:110px 1.5fr 130px 100px 110px 1.1fr 1fr 110px 90px 110px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">MED-0003</span><span style="padding:11px 12px;color:#475569">Descripción del material</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000000000</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000</span><span style="padding:11px 12px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(100,116,139,.1);color:#475569;font-size:10.5px;font-weight:700">Seco</span></span><span style="padding:11px 12px;color:#64748b">Laboratorio</span><span style="padding:11px 12px;color:#64748b">Monodroga</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">000 MG</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">0.000</span><span style="padding:11px 12px;color:#64748b">INY.</span></div>
+<div style="display:grid;grid-template-columns:110px 1.5fr 130px 100px 110px 1.1fr 1fr 110px 90px 110px;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">MED-0004</span><span style="padding:11px 12px;color:#475569">Descripción del material</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000000000</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace;color:#64748b">0000000</span><span style="padding:11px 12px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(8,145,178,.1);color:#155e75;font-size:10.5px;font-weight:700">Frío</span></span><span style="padding:11px 12px;color:#64748b">Laboratorio</span><span style="padding:11px 12px;color:#64748b">Monodroga</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">000 MG</span><span style="padding:11px 12px;font-family:'IBM Plex Mono',monospace">0.000</span><span style="padding:11px 12px;color:#64748b">ORAL</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Alta de monodrogas" data-speaker-notes="Un solo campo: formulario angosto en vez de ancho completo · MonodrogasPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">10</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Alta de monodrogas</h2>
+<span style="font-size:21px;color:#64748b">Un solo campo: formulario angosto en vez de ancho completo · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">MonodrogasPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:760px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Pacientes</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Medicamentos</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Monodrogas</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Alta de Monodrogas</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Historial de Monodrogas</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Auditorías</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">U</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Usuario</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">administrador</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Monodrogas</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Alta de monodrogas</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Maestro farmacológico. El código MONO-XXXX se genera automáticamente.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start;min-height:0">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:18px 20px;display:flex;flex-direction:column;gap:15px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:13px;border-bottom:1px solid #eef2f7">
+<div style="display:flex;flex-direction:column;gap:3px"><h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Datos de la monodroga</h2><p style="margin:0;font-size:12.5px;color:#64748b">Ingresá el nombre de la droga.</p></div>
+<span style="padding:6px 11px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace">MONO-0000</span>
+</div>
+<div style="max-width:520px;display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Descripción (nombre de la droga) <span style="color:#dc2626">*</span></span>
+<div style="height:40px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;padding:0 12px;font-size:13.5px;color:#94a3b8">Ej.: nombre de la monodroga</div>
+<span style="font-size:11.5px;color:#94a3b8">El código se asigna al guardar y no puede editarse.</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:auto;padding-top:14px;border-top:1px solid #eef2f7">
+<span style="font-size:12.5px;color:#94a3b8">Los campos con <span style="color:#dc2626">*</span> son obligatorios</span>
+<div style="display:flex;gap:9px">
+<div style="min-width:96px;height:40px;padding:0 18px;border-radius:10px;border:1px solid #cfd9e4;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#334155">Cancelar</div>
+<div style="min-width:120px;height:40px;padding:0 18px;border-radius:10px;background:linear-gradient(180deg,#0d9488,#0f766e);box-shadow:0 8px 20px rgba(13,148,136,.24);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff">Agregar</div>
+</div>
+</div>
+</div>
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="display:flex;flex-direction:column;gap:3px"><h3 style="margin:0;font-size:15px;font-weight:700;letter-spacing:-.02em">Importar desde Excel</h3><p style="margin:0;font-size:12.5px;line-height:1.5;color:#64748b">Una columna: <span style="font-family:'IBM Plex Mono',monospace">descripcion</span>.</p></div>
+<span style="padding:5px 10px;border-radius:999px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16);color:#0f766e;font-size:10.5px;font-weight:700">.xlsx</span>
+</div>
+<div style="min-height:120px;border:1.5px dashed #cfdae6;border-radius:11px;background:linear-gradient(180deg,#fbfcfe,#f6f9fd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:18px">
+<div style="height:36px;padding:0 16px;border-radius:8px;background:#0891b2;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Seleccionar archivo</div>
+<span style="font-size:11.5px;color:#94a3b8">o arrastrá el .xlsx</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:11px;border-top:1px solid #eef2f7">
+<span style="font-size:12px;color:#0b8f54;font-weight:500">Importación finalizada: 00 ok · 00 con error</span>
+<div style="height:36px;padding:0 16px;border-radius:9px;background:linear-gradient(180deg,#0d9488,#0f766e);display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Importar</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Historial de monodrogas" data-speaker-notes="HistorialMonodrogasPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">11</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Historial de monodrogas</h2>
+<span style="font-size:21px;color:#64748b"><span style="font-family:'IBM Plex Mono',monospace;font-size:19px">HistorialMonodrogasPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:760px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Pacientes</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Medicamentos</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Monodrogas</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Alta de Monodrogas</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Historial de Monodrogas</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Auditorías</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">U</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Usuario</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">administrador</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Monodrogas</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Historial de monodrogas</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Consultá el maestro y filtrá por descripción o código.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8ef;font-size:12px;font-weight:600;color:#64748b"><span style="width:7px;height:7px;border-radius:50%;background:#14b86a;box-shadow:0 0 0 3px rgba(20,184,106,.12)"></span>Online</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#f0fdf9;border:1px solid #e2e8ef"></div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:flex;flex-direction:column;min-height:0">
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+<div style="display:flex;flex-direction:column;gap:3px"><h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Monodrogas cargadas</h2><p style="margin:0;font-size:12.5px;color:#64748b">Buscá por descripción o por código autogenerado.</p></div>
+<div style="padding:9px 14px;border-radius:10px;background:linear-gradient(180deg,#f0fdfa,#fff);border:1px solid rgba(13,148,136,.14);text-align:right"><div style="font-size:19px;font-weight:700;line-height:1;color:#0f766e;font-family:'IBM Plex Mono',monospace">00</div><div style="margin-top:4px;font-size:10.5px;font-weight:600;color:#64748b">resultados</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:#f7fafc;border:1px solid #e6ecf3">
+<div style="flex:1;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 11px;font-size:13px;color:#94a3b8"><span style="width:11px;height:11px;border:1.5px solid #b6c0cd;border-radius:50%"></span>Descripción o código…</div>
+<div style="width:150px;height:34px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;display:flex;align-items:center;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">MONO-0000</div>
+<div style="height:34px;padding:0 14px;border:1px solid #cfd9e4;border-radius:7px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Limpiar</div>
+</div>
+<div style="flex:1;border:1px solid #e6ecf3;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+<div style="display:grid;grid-template-columns:90px 150px 1fr;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184"><span style="padding:10px 14px">ID</span><span style="padding:10px 14px">Código</span><span style="padding:10px 14px">Descripción</span></div>
+<div style="display:grid;grid-template-columns:90px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">MONO-0001</span><span style="padding:11px 14px;color:#475569">Descripción de la monodroga</span></div>
+<div style="display:grid;grid-template-columns:90px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">MONO-0002</span><span style="padding:11px 14px;color:#475569">Descripción de la monodroga</span></div>
+<div style="display:grid;grid-template-columns:90px 150px 1fr;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">MONO-0003</span><span style="padding:11px 14px;color:#475569">Descripción de la monodroga</span></div>
+<div style="display:grid;grid-template-columns:90px 150px 1fr;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace">000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">MONO-0004</span><span style="padding:11px 14px;color:#475569">Descripción de la monodroga</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Trazabilidad en blockchain" data-speaker-notes="Estado de integridad primero, cadena encadenada visualmente · TrazabilidadPage.jsx" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0f172a;padding:8px 15px;border-radius:9px">12</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Trazabilidad en blockchain</h2>
+<span style="font-size:21px;color:#64748b">Estado de integridad primero, cadena encadenada visualmente · <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">TrazabilidadPage.jsx</span></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1440px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="width:1440px;height:840px;border-radius:18px;overflow:hidden;border:1px solid #d3dbe4;box-shadow:0 30px 60px rgba(15,23,42,.12);display:flex;background:#fff">
+
+<div style="width:228px;flex:0 0 228px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block">
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Auditor</span></div>
+</div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.76)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35)"></span>Prescripciones</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4"><span style="width:5px;height:5px;border-radius:50%;background:#00d2b4"></span>Auditorías</div>
+<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 20px">
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;color:rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.14)">Cola de Auditoría</div>
+<div style="padding:6px 12px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;color:#fff;background:rgba(0,210,180,.1);border-left:2px solid #00d2b4">Trazabilidad</div>
+</div>
+</nav>
+<div style="padding:12px 10px;border-top:1px solid rgba(255,255,255,.13);display:flex;align-items:center;gap:9px">
+<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 30px">A</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:12.5px;font-weight:600">Auditor</span><span style="font-size:10.5px;color:rgba(255,255,255,.5)">auditor</span></div>
+<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.7)">⎋</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#f0fdfa 0%,#f0f9ff 100%)">
+<header style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:14px 24px;background:rgba(255,255,255,.92);border-bottom:1px solid #e2e8ef">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#0f766e">Auditorías</span>
+<h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.035em;color:#1e293b">Trazabilidad en blockchain</h1>
+<p style="margin:0;max-width:720px;font-size:12.5px;line-height:1.5;color:#64748b">Registro inmutable del circuito. Cada operación se encadena por hash SHA-256.</p>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+<div style="height:32px;padding:0 13px;border:1px solid #cfd9e4;border-radius:8px;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Actualizar</div>
+</div>
+</header>
+
+<div style="flex:1;padding:18px 24px 26px;display:flex;flex-direction:column;gap:14px;min-height:0">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border-radius:14px;background:#0f172a;color:#fff">
+<div style="display:flex;align-items:center;gap:14px">
+<span style="width:38px;height:38px;border-radius:11px;background:rgba(0,210,180,.16);display:flex;align-items:center;justify-content:center"><span style="width:11px;height:11px;border-radius:50%;background:#00d2b4"></span></span>
+<div style="display:flex;flex-direction:column;gap:2px">
+<span style="font-size:15px;font-weight:700;letter-spacing:-.02em">Cadena íntegra</span>
+<span style="font-size:12px;color:rgba(255,255,255,.6)">Hashes recomputados sobre todos los bloques del ledger.</span>
+</div>
+</div>
+<div style="display:flex;gap:22px;text-align:right">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace;color:#00d2b4">00</span><span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,.55)">bloques</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace">00</span><span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,.55)">prescripciones</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace">00</span><span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,.55)">dictámenes</span></div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8ef;border-radius:14px;box-shadow:0 10px 24px rgba(15,23,42,.05);padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+<div style="display:flex;flex-direction:column;gap:3px"><h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">Bloques registrados</h2><p style="margin:0;font-size:12.5px;color:#64748b">Bloque 0 = génesis. Cada operación agrega un bloque enlazado al anterior.</p></div>
+</div>
+<div style="flex:1;border:1px solid #e6ecf3;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+<div style="display:grid;grid-template-columns:60px 140px 160px 1fr 150px 150px;background:linear-gradient(180deg,#fbfcfe,#f3f6fb);border-bottom:1px solid #e6ecf3;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#667184"><span style="padding:10px 14px">#</span><span style="padding:10px 14px">Tipo</span><span style="padding:10px 14px">Fecha</span><span style="padding:10px 14px">Contenido</span><span style="padding:10px 14px">Hash</span><span style="padding:10px 14px">Hash anterior</span></div>
+<div style="display:grid;grid-template-columns:60px 140px 160px 1fr 150px 150px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e;font-weight:500">0</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(100,116,139,.1);color:#475569;font-size:10.5px;font-weight:700">genesis</span></span><span style="padding:11px 14px;color:#64748b;font-family:'IBM Plex Mono',monospace">00/00/0000 00:00</span><span style="padding:11px 14px;color:#64748b">—</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">0x0000…0000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#b6c0cd">—</span></div>
+<div style="display:grid;grid-template-columns:60px 140px 160px 1fr 150px 150px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e;font-weight:500">1</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(13,148,136,.1);color:#0f766e;font-size:10.5px;font-weight:700">prescription</span></span><span style="padding:11px 14px;color:#64748b;font-family:'IBM Plex Mono',monospace">00/00/0000 00:00</span><span style="padding:11px 14px;color:#64748b">code: PR-000001 · estado: APROBADO</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">0x0000…0000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0x0000…0000</span></div>
+<div style="display:grid;grid-template-columns:60px 140px 160px 1fr 150px 150px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e;font-weight:500">2</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(8,145,178,.1);color:#155e75;font-size:10.5px;font-weight:700">dictamen</span></span><span style="padding:11px 14px;color:#64748b;font-family:'IBM Plex Mono',monospace">00/00/0000 00:00</span><span style="padding:11px 14px;color:#64748b">caso: 000 · resultado: APROBADO</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">0x0000…0000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0x0000…0000</span></div>
+<div style="display:grid;grid-template-columns:60px 140px 160px 1fr 150px 150px;border-bottom:1px solid #f0f4f8;font-size:12.5px;color:#334155;align-items:center;background:#fbfdff"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e;font-weight:500">3</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(13,148,136,.1);color:#0f766e;font-size:10.5px;font-weight:700">prescription</span></span><span style="padding:11px 14px;color:#64748b;font-family:'IBM Plex Mono',monospace">00/00/0000 00:00</span><span style="padding:11px 14px;color:#64748b">code: PR-000002 · estado: REVISION</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">0x0000…0000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0x0000…0000</span></div>
+<div style="display:grid;grid-template-columns:60px 140px 160px 1fr 150px 150px;font-size:12.5px;color:#334155;align-items:center"><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e;font-weight:500">4</span><span style="padding:11px 14px"><span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;font-size:10.5px;font-weight:700">correccion</span></span><span style="padding:11px 14px;color:#64748b;font-family:'IBM Plex Mono',monospace">00/00/0000 00:00</span><span style="padding:11px 14px;color:#64748b">campo: id_regimen</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#0f766e">0x0000…0000</span><span style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0x0000…0000</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Estados — Prescripción y Caso de auditoría" data-speaker-notes="Las dos pantallas críticas, en sus cinco estados" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0d9488;padding:8px 15px;border-radius:9px">E</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Estados — Prescripción y Caso de auditoría</h2>
+<span style="font-size:21px;color:#64748b">Las dos pantallas críticas, en sus cinco estados</span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1412px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:repeat(3,460px);gap:16px">
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Vacío — sin régimen elegido</span>
+<div style="height:250px;border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Dosis por fármaco</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="flex:1;border:1.5px dashed #dbe3ec;border-radius:11px;background:#fbfcfe;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:20px;text-align:center">
+<span style="width:30px;height:30px;border-radius:9px;background:#eef3f8"></span>
+<span style="font-size:13px;font-weight:600;color:#475569">Todavía no hay dosis para calcular</span>
+<span style="font-size:12px;line-height:1.55;color:#94a3b8;max-width:280px">Elegí un régimen y cargá peso y talla; las dosis de referencia se completan solas.</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Cargando — validando</span>
+<div style="height:250px;border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Resultado de la validación</span><span style="flex:1;height:1px;background:#eef2f7"></span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="height:13px;width:60%;border-radius:5px;background:#eef3f8"></div>
+<div style="height:11px;width:88%;border-radius:5px;background:#f2f6fa"></div>
+<div style="height:11px;width:74%;border-radius:5px;background:#f2f6fa"></div>
+<div style="height:11px;border-radius:999px;background:#f1f5f9;overflow:hidden;margin-top:4px"><div style="width:42%;height:100%;background:linear-gradient(90deg,#cbd5e1,#e2e8f0)"></div></div>
+<div style="height:11px;width:52%;border-radius:5px;background:#f2f6fa"></div>
+</div>
+<div style="margin-top:auto;display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:9px;background:#f0fdfa;border:1px solid rgba(13,148,136,.16)">
+<span style="width:14px;height:14px;border-radius:50%;border:2px solid #0d9488;border-right-color:transparent"></span>
+<span style="font-size:12.5px;font-weight:600;color:#0f766e">Validando y registrando prescripción…</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Error — validación del formulario</span>
+<div style="height:250px;border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px;padding:12px;border-radius:10px;border:1px solid rgba(220,38,38,.28);background:rgba(220,38,38,.05)">
+<span style="width:6px;height:6px;border-radius:50%;background:#dc2626;margin-top:6px;flex:0 0 6px"></span>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12.5px;font-weight:700;color:#991b1b">No se pudo registrar la prescripción</span><span style="font-size:12px;line-height:1.55;color:#8f4444">Revisá los 2 campos marcados abajo.</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#991b1b">Estadio <span>*</span></span><div style="height:36px;border:1.5px solid #dc2626;border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#94a3b8">Seleccionar<span style="color:#dc2626">▾</span></div><span style="font-size:11px;color:#dc2626">Campo obligatorio</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#991b1b">Peso (kg) <span>*</span></span><div style="height:36px;border:1.5px solid #dc2626;border-radius:7px;background:#fff;display:flex;align-items:center;padding:0 11px;font-size:13px;color:#334155">0</div><span style="font-size:11px;color:#dc2626">Debe ser mayor a 0</span></div>
+</div>
+<div style="margin-top:auto;display:flex;justify-content:flex-end;gap:9px"><div style="height:36px;padding:0 16px;border-radius:9px;border:1px solid #cfd9e4;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Cancelar</div><div style="height:36px;padding:0 16px;border-radius:9px;background:#cbd5e1;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#fff">Validar y registrar</div></div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Éxito — registrada en el ledger</span>
+<div style="height:250px;border:1px solid rgba(13,148,136,.28);border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(13,148,136,.1);padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:11px">
+<span style="width:32px;height:32px;border-radius:10px;background:rgba(20,184,106,.12);display:flex;align-items:center;justify-content:center"><span style="width:9px;height:9px;border-radius:50%;background:#14b86a"></span></span>
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700;letter-spacing:-.02em">Prescripción <span style="font-family:'IBM Plex Mono',monospace;color:#0f766e">PR-000001</span> registrada</span><span style="font-size:12px;color:#64748b">Superficie 0,00 m² · Régimen REG-000</span></div>
+</div>
+<div style="display:flex;gap:8px"><span style="display:inline-flex;padding:5px 11px;border-radius:999px;background:rgba(20,184,106,.12);color:#0b8f54;font-size:11px;font-weight:700">APROBADO</span><span style="display:inline-flex;padding:5px 11px;border-radius:999px;background:rgba(100,116,139,.1);color:#475569;font-size:11px;font-weight:700">reglas + ML</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="height:9px;border-radius:999px;background:#f1f5f9;overflow:hidden"><div style="width:88%;height:100%;background:linear-gradient(90deg,#0d9488,#14b8a6)"></div></div><div style="display:flex;justify-content:space-between;font-size:11.5px;color:#64748b"><span>P(concordante)</span><span style="font-family:'IBM Plex Mono',monospace;color:#334155">00,0%</span></div></div>
+<div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:9px;background:#0f172a;color:#fff"><span style="font-size:11.5px;color:rgba(255,255,255,.6)">Hash del bloque</span><span style="font-size:12px;font-family:'IBM Plex Mono',monospace">0x0000…0000</span></div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Sin permisos — rol sin acceso</span>
+<div style="height:250px;border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;padding:26px;text-align:center">
+<span style="width:38px;height:38px;border-radius:11px;background:#f1f5f9;display:flex;align-items:center;justify-content:center"><span style="width:14px;height:11px;border:2px solid #94a3b8;border-radius:3px"></span></span>
+<span style="font-size:15px;font-weight:700;letter-spacing:-.02em">Acceso denegado</span>
+<span style="font-size:12.5px;line-height:1.6;color:#64748b;max-width:300px">Tu rol <span style="font-family:'IBM Plex Mono',monospace;color:#334155">prescriptor</span> no tiene permisos sobre la cola de auditoría. Pedí acceso al administrador.</span>
+<div style="height:34px;padding:0 15px;border-radius:9px;border:1px solid #cfd9e4;background:#fff;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#334155">Volver a prescripciones</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Vacío — cola de auditoría sin casos</span>
+<div style="height:250px;border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+<div style="padding:9px 11px;border-radius:9px;border:1px solid #eef2f7;background:#fbfcfe"><div style="font-size:16px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0</div><div style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:3px">total</div></div>
+<div style="padding:9px 11px;border-radius:9px;border:1px solid #eef2f7;background:#fbfcfe"><div style="font-size:16px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0</div><div style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:3px">pendientes</div></div>
+<div style="padding:9px 11px;border-radius:9px;border:1px solid #eef2f7;background:#fbfcfe"><div style="font-size:16px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#94a3b8">0</div><div style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:3px">revisados</div></div>
+</div>
+<div style="flex:1;border:1px solid #eef2f7;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;text-align:center">
+<span style="font-size:13px;font-weight:600;color:#475569">No hay casos que coincidan con los filtros</span>
+<span style="font-size:12px;line-height:1.55;color:#94a3b8;max-width:290px">Probá limpiar el estado o buscar por otro código de prescripción.</span>
+<div style="height:32px;padding:0 14px;border-radius:8px;border:1px solid #cfd9e4;background:#fff;display:flex;align-items:center;font-size:12px;font-weight:600;color:#334155;margin-top:2px">Limpiar filtros</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Variantes por rol" data-speaker-notes="La navegación se recorta según ProtectedRoute; el rol activo se muestra bajo la marca" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0d9488;padding:8px 15px;border-radius:9px">R</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Variantes por rol</h2>
+<span style="font-size:21px;color:#64748b">La navegación se recorta según <span style="font-family:'IBM Plex Mono',monospace;font-size:19px">ProtectedRoute</span>; el rol activo se muestra bajo la marca</span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:932px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:repeat(3,300px);gap:16px">
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Administrador</span><sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}"><span style="padding:3px 8px;border-radius:999px;background:rgba(13,148,136,.12);color:#0f766e;font-size:10px;font-weight:700">Activo</span></sc-if></div>
+<div style="height:400px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column;box-shadow:0 12px 28px rgba(15,23,42,.16)">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px"><img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Administrador</span></div></div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:3px">
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Prescripciones</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Pacientes</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Medicamentos</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Monodrogas</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Auditorías</div>
+</nav>
+<div style="padding:11px 14px;border-top:1px solid rgba(255,255,255,.13);font-size:11px;color:rgba(255,255,255,.45)">Acceso total · 5 secciones</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Prescriptor</span><sc-if value="{{ isPrescriptor }}" hint-placeholder-val="{{ true }}"><span style="padding:3px 8px;border-radius:999px;background:rgba(13,148,136,.12);color:#0f766e;font-size:10px;font-weight:700">Activo</span></sc-if></div>
+<div style="height:400px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column;box-shadow:0 12px 28px rgba(15,23,42,.16)">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px"><img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Prescriptor</span></div></div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:3px">
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Prescripciones</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Pacientes</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:rgba(255,255,255,.24);text-decoration:line-through">Medicamentos</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:rgba(255,255,255,.24);text-decoration:line-through">Monodrogas</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:rgba(255,255,255,.24);text-decoration:line-through">Auditorías</div>
+</nav>
+<div style="padding:11px 14px;border-top:1px solid rgba(255,255,255,.13);font-size:11px;color:rgba(255,255,255,.45)">Prescribe y da de alta pacientes</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">Auditor</span><sc-if value="{{ isAuditor }}" hint-placeholder-val="{{ true }}"><span style="padding:3px 8px;border-radius:999px;background:rgba(13,148,136,.12);color:#0f766e;font-size:10px;font-weight:700">Activo</span></sc-if></div>
+<div style="height:400px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);color:#fff;display:flex;flex-direction:column;box-shadow:0 12px 28px rgba(15,23,42,.16)">
+<div style="padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.13);display:flex;flex-direction:column;align-items:flex-start;gap:9px"><img src="frontend/public/medchain-logo.svg" alt="MedChain AI" style="height:22px;width:auto;display:block"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.48)">Auditor</span></div></div>
+<nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:3px">
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,.78)">Prescripciones</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:rgba(255,255,255,.24);text-decoration:line-through">Pacientes</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:rgba(255,255,255,.24);text-decoration:line-through">Medicamentos</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:rgba(255,255,255,.24);text-decoration:line-through">Monodrogas</div>
+<div style="padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;color:#fff;background:rgba(0,210,180,.12);box-shadow:inset 3px 0 0 #00d2b4">Auditorías</div>
+</nav>
+<div style="padding:11px 14px;border-top:1px solid rgba(255,255,255,.13);font-size:11px;color:rgba(255,255,255,.45)">Dictamina y verifica el ledger</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<section data-label="Tres tratamientos para la recomendación de IA" data-speaker-notes="Elegí uno en Tweaks; el badge marca el activo" style="width:1920px;height:1080px;box-sizing:border-box;background:#e9edf2;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1e293b;display:flex;flex-direction:column;gap:26px;padding:46px 62px">
+<div style="display:flex;align-items:baseline;gap:18px;flex:0 0 auto">
+<span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:#fff;background:#0d9488;padding:8px 15px;border-radius:9px">IA</span>
+<h2 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.03em">Tres tratamientos para la recomendación de IA</h2>
+<span style="font-size:21px;color:#64748b">Elegí uno en Tweaks; el badge marca el activo</span>
+</div>
+<div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center">
+<div style="width:1412px;transform:scale(1.000);transform-origin:center center;display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:repeat(3,460px);gap:16px;align-items:start">
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">A · Panel dedicado</span><sc-if value="{{ mlPanel }}" hint-placeholder-val="{{ true }}"><span style="padding:3px 8px;border-radius:999px;background:rgba(13,148,136,.12);color:#0f766e;font-size:10px;font-weight:700">Activo</span></sc-if></div>
+<div style="border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0f766e">Recomendación del modelo</span><span style="flex:1;height:1px;background:#eef2f7"></span><span style="font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#94a3b8">v0.0.0</span></div>
+<div style="display:flex;align-items:flex-end;gap:14px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:38px;font-weight:700;line-height:1;letter-spacing:-.04em;font-family:'IBM Plex Mono',monospace;color:#0f766e">00%</span><span style="font-size:11px;font-weight:600;color:#64748b">P(concordante)</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-bottom:4px">
+<div style="position:relative;height:10px;border-radius:999px;background:#f1f5f9;border:1px solid #e6ecf3;overflow:hidden"><div style="width:78%;height:100%;background:linear-gradient(90deg,#0d9488,#14b8a6)"></div><span style="position:absolute;top:0;bottom:0;left:35%;width:2px;background:rgba(15,23,42,.3)"></span><span style="position:absolute;top:0;bottom:0;left:65%;width:2px;background:rgba(15,23,42,.5)"></span></div>
+<div style="display:flex;justify-content:space-between;font-size:10.5px;color:#94a3b8"><span>bajo 0,35</span><span>alto 0,65</span></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px;padding:12px;border-radius:10px;background:#f8fafc;border:1px solid #eef2f7">
+<span style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8">Por qué</span>
+<div style="display:flex;align-items:center;gap:9px"><span style="width:96px;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#475569">feature_a</span><span style="flex:1;height:5px;border-radius:999px;background:#e8eef4;overflow:hidden"><span style="display:block;width:72%;height:100%;background:#0d9488"></span></span><span style="width:44px;text-align:right;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#64748b">+0,00</span></div>
+<div style="display:flex;align-items:center;gap:9px"><span style="width:96px;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#475569">feature_b</span><span style="flex:1;height:5px;border-radius:999px;background:#e8eef4;overflow:hidden"><span style="display:block;width:44%;height:100%;background:#0d9488"></span></span><span style="width:44px;text-align:right;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#64748b">+0,00</span></div>
+<div style="display:flex;align-items:center;gap:9px"><span style="width:96px;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:#475569">feature_c</span><span style="flex:1;height:5px;border-radius:999px;background:#e8eef4;overflow:hidden"><span style="display:block;width:26%;height:100%;background:#dc2626"></span></span><span style="width:44px;text-align:right;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#64748b">−0,00</span></div>
+</div>
+<span style="font-size:11.5px;line-height:1.55;color:#94a3b8">Más contexto para el auditor; ocupa una tarjeta propia.</span>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">B · Sugerencia inline</span><sc-if value="{{ mlInline }}" hint-placeholder-val="{{ true }}"><span style="padding:3px 8px;border-radius:999px;background:rgba(13,148,136,.12);color:#0f766e;font-size:10px;font-weight:700">Activo</span></sc-if></div>
+<div style="border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Régimen <span style="color:#dc2626">*</span></span>
+<div style="height:36px;border:1.5px solid #0d9488;border-radius:7px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;color:#334155"><span style="font-family:'IBM Plex Mono',monospace">REG-000</span><span style="color:#0d9488">▾</span></div>
+<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border-radius:8px;background:rgba(13,148,136,.06);border:1px solid rgba(13,148,136,.16)">
+<span style="width:6px;height:6px;border-radius:50%;background:#0d9488;margin-top:5px;flex:0 0 6px"></span>
+<span style="font-size:11.5px;line-height:1.5;color:#0f766e">Sugerido por el modelo · <span style="font-family:'IBM Plex Mono',monospace">00%</span> de concordancia. <span style="text-decoration:underline">Ver por qué</span></span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Dosis (mg) — Monodroga A</span>
+<div style="height:36px;border:1px solid #d8e0ea;border-radius:7px;background:#fbfcfe;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#334155">000,0<span style="font-size:10.5px;font-family:Inter,sans-serif;color:#0f766e;font-weight:600">sugerido 000,0</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Dosis (mg) — Monodroga B</span>
+<div style="height:36px;border:1.5px solid #f59e0b;border-radius:7px;background:#fffdf7;display:flex;align-items:center;justify-content:space-between;padding:0 11px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:#334155">000,0<span style="font-size:10.5px;font-family:Inter,sans-serif;color:#92400e;font-weight:600">fuera de rango</span></div>
+</div>
+<span style="font-size:11.5px;line-height:1.55;color:#94a3b8">Cero pantalla extra; la señal aparece donde se decide.</span>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7b8798">C · ConfidenceBar actual</span><sc-if value="{{ mlActual }}" hint-placeholder-val="{{ true }}"><span style="padding:3px 8px;border-radius:999px;background:rgba(13,148,136,.12);color:#0f766e;font-size:10px;font-weight:700">Activo</span></sc-if></div>
+<div style="border:1px solid #d3dbe4;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.07);padding:18px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Confianza</span>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="position:relative;height:12px;border-radius:999px;background:#fcfcfd;border:1px solid #d1dde5;overflow:hidden"><div style="width:78%;height:100%;background:linear-gradient(90deg,#0d9488,#14b8a6)"></div><span style="position:absolute;top:0;bottom:0;left:35%;width:2px;background:rgba(15,23,42,.35)"></span><span style="position:absolute;top:0;bottom:0;left:65%;width:2px;background:rgba(15,23,42,.55)"></span></div>
+<div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b"><span>Nivel: alto</span><strong style="color:#334155">00,0%</strong></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Motivos</span>
+<span style="font-size:12.5px;line-height:1.6;color:#64748b">— Motivo de validación registrado por el motor.</span>
+<span style="font-size:12.5px;line-height:1.6;color:#64748b">— Motivo de validación registrado por el motor.</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7b8798">Aportes principales</span>
+<span style="font-size:12.5px;line-height:1.6;color:#64748b">feature_a: +0,00</span>
+<span style="font-size:12.5px;line-height:1.6;color:#64748b">feature_b: +0,00</span>
+<span style="font-size:12.5px;line-height:1.6;color:#64748b">feature_c: −0,00</span>
+</div>
+<span style="font-size:11.5px;line-height:1.55;color:#94a3b8">Lo que ya existe hoy: correcto, pero todo pesa igual.</span>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mlTreatment&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;inline&quot;,&quot;actual&quot;],&quot;default&quot;:&quot;panel&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Recomendación de IA&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;administrador&quot;,&quot;prescriptor&quot;,&quot;auditor&quot;],&quot;default&quot;:&quot;administrador&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Rol&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const ml = this.props.mlTreatment ?? "panel";
+    const role = this.props.role ?? "administrador";
+    return {
+      mlPanel: ml === "panel",
+      mlInline: ml === "inline",
+      mlActual: ml === "actual",
+      showStates: true,
+      isAdmin: role === "administrador",
+      isPrescriptor: role === "prescriptor",
+      isAuditor: role === "auditor",
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# crypto-config.yaml — Material criptográfico de la red MedChain (cryptogen).
+#
+# Tres organizaciones de aplicación, cada una con 1 peer y 1 usuario (User1)
+# además del Admin. User1@<org> es la identidad que usa fabric-gateway-svc:
+#   - PrescriptorMSP  (prescriptor.medchain.com) : centro prescriptor
+#   - MedChainMSP     (auditoria.medchain.com)   : empresa auditora MedChain
+#   - PrepagaMSP      (prepaga.medchain.com)     : financiador / prepaga
+# ─────────────────────────────────────────────────────────────────────────────
+OrdererOrgs:
+  - Name: Orderer
+    Domain: medchain.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+          - 127.0.0.1
+
+PeerOrgs:
+  - Name: Prescriptor
+    Domain: prescriptor.medchain.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1
+
+  - Name: MedChain
+    Domain: auditoria.medchain.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1
+
+  - Name: Prepaga
+    Domain: prepaga.medchain.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1

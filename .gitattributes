@@ -1,0 +1,2 @@
+# Los scripts corren en Linux (contenedor, EC2, CI): siempre LF.
+*.sh text eol=lf

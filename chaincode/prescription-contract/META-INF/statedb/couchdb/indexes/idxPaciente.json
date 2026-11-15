@@ -1,0 +1,1 @@
+{"index":{"fields":["docType","clinical.patient_id","created_at"]},"ddoc":"idxPacienteDoc","name":"idxPaciente","type":"json"}

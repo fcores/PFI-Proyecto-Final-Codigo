@@ -1,0 +1,69 @@
+[project]
+name = "medchain-ai"
+version = "0.7.0"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+
+# Alcance de la meta de cobertura del 85 % (RNF-18): backend de emision de
+# recetas = alta, validacion hibrida, dosis, firma electronica, registro en
+# Fabric y endpoints de prescripciones.
+[tool.coverage.run]
+source = [
+    "backend.services.prescription_service",
+    "backend.services.validation_service",
+    "backend.services.signing_service",
+    "backend.services.dosis_service",
+    "backend.repositories.fabric_prescription_repo",
+    "backend.repositories.signing_key_repo",
+    "backend.blockchain.fabric_client",
+    "backend.security.canonical",
+    "backend.security.signing",
+    "backend.security.crypto",
+    "backend.ml.reglas",
+    "backend.ml.guias",
+    "backend.ml.dosis",
+    "backend.ml.regimenes",
+    "backend.ml.feature_mapper",
+    "backend.ml.codificacion",
+    "backend.ml.model_loader",
+    "backend.routers.prescription_router",
+    "backend.services.surge",
+    "backend.services.plazos",
+    "backend.services.financiador_service",
+    "backend.routers.financiador_router",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "T20"]
+ignore = ["S101", "S311", "B008", "UP031", "B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "T20", "B017"]
+"alembic/*" = ["T20", "E501"]
+"backend/blockchain/*" = ["S310"]
+"backend/config.py" = ["S105"]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["alembic/", "tests/"]

@@ -1,0 +1,155 @@
+name: CI — Tests & Lint
+
+on:
+  pull_request:
+    branches: [desarrollo, main]
+  push:
+    branches: [desarrollo]
+
+jobs:
+  backend-lint:
+    name: Backend Lint (ruff + black)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linters
+        run: pip install ruff black
+
+      - name: Ruff check
+        run: ruff check backend/ tests/
+
+      - name: Black check
+        run: black --check backend/ tests/
+
+  backend-tests:
+    name: Backend Tests (pytest)
+    runs-on: ubuntu-latest
+
+    # Postgres real para el test anti-drift entre sql/schema.sql y alembic/versions
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: medchain_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests
+        env:
+          ENVIRONMENT: test
+          ENCRYPTION_KEY_DEV: "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleT0="
+          TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/medchain_test"
+        # El alcance y el umbral (85 %) de la cobertura viven en pyproject.toml.
+        run: |
+          pytest tests/ --cov --cov-report=term-missing --cov-report=xml
+
+  chaincode-tests:
+    name: Chaincode Tests (go test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: chaincode/prescription-contract/go.mod
+
+      - name: Resolver dependencias
+        working-directory: chaincode/prescription-contract
+        run: go mod tidy
+
+      - name: Vet
+        working-directory: chaincode/prescription-contract
+        run: go vet ./...
+
+      - name: Tests (transiciones, MSP, vectores de hash compartidos)
+        working-directory: chaincode/prescription-contract
+        run: go test ./...
+
+  gateway-build:
+    name: Gateway Build (fabric-gateway-svc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # fabric-gateway v1.11.0 exige Go >= 1.25. Mantener alineado con
+          # fabric-gateway-svc/go.mod y con su Dockerfile.
+          go-version: "1.25"
+          cache-dependency-path: fabric-gateway-svc/go.mod
+
+      - name: Resolver dependencias
+        working-directory: fabric-gateway-svc
+        run: go mod tidy
+
+      - name: Vet + build
+        working-directory: fabric-gateway-svc
+        run: |
+          go vet ./...
+          go build ./...
+
+  frontend-lint:
+    name: Frontend Lint (ESLint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: ESLint
+        working-directory: frontend
+        run: npx eslint src/ --max-warnings=0 || true
+
+  frontend-build:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_API_URL: ""
+        run: npm run build

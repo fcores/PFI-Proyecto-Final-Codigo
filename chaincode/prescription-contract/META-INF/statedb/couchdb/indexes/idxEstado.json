@@ -1,0 +1,1 @@
+{"index":{"fields":["docType","estado","created_at"]},"ddoc":"idxEstadoDoc","name":"idxEstado","type":"json"}

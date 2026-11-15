@@ -1,0 +1,53 @@
+{
+  "sexo": {
+    "female": 0,
+    "male": 1
+  },
+  "lateralidad": {
+    "derecho": 0,
+    "izquierdo": 1,
+    "transverso": 2
+  },
+  "histologia": {
+    "adenocarcinoma_nos": 0,
+    "mucinoso": 1,
+    "otros": 2
+  },
+  "msi": {
+    "MSS": 0,
+    "MSI-H": 1,
+    "no_evaluado": 2
+  },
+  "ras": {
+    "wild_type": 0,
+    "mutado": 1,
+    "no_evaluado": 2
+  },
+  "braf_v600e": {
+    "ausente": 0,
+    "presente": 1,
+    "no_evaluado": 2,
+    "wild_type": 0
+  },
+  "m": {
+    "M0": 0,
+    "M1": 1,
+    "MX": 2
+  },
+  "id_regimen": {
+    "R00": 0,
+    "R01": 1,
+    "R02": 2,
+    "R03": 3,
+    "R04": 4,
+    "R05": 5,
+    "R06": 6,
+    "R07": 7,
+    "R08": 8,
+    "R09": 9,
+    "R10": 10,
+    "R11": 11,
+    "R12": 12,
+    "R13": 13
+  }
+}

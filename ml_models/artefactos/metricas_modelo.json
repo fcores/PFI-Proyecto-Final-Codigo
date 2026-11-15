@@ -1,0 +1,75 @@
+{
+  "lgbm_recall_no_concordante": 0.7325,
+  "recall_por_alcance_reglas": {
+    "dentro": {
+      "n": 270,
+      "recall_ml": 0.8185,
+      "recall_reglas": 0.5926
+    },
+    "fuera": {
+      "n": 145,
+      "recall_ml": 0.5724,
+      "recall_reglas": 0.0
+    }
+  },
+  "lgbm_auc_roc": 0.9256,
+  "lgbm_auc_pr": 0.9162,
+  "lgbm_brier_score": 0.1028,
+  "lgbm_recall_at_20pct_revision": 0.4434,
+  "reglas_recall_no_concordante": 0.3855,
+  "delta_ml_sobre_reglas": 0.347,
+  "umbral_bajo": 0.3,
+  "umbral_alto": 0.8198,
+  "umbrales_por_fallback": false,
+  "deteccion_reglas": {
+    "recall": 0.3855,
+    "precision": 0.6178,
+    "verdaderos_positivos": 160,
+    "falsos_positivos": 99
+  },
+  "deteccion_ml": {
+    "recall": 0.7325,
+    "precision": 0.9102,
+    "verdaderos_positivos": 304,
+    "falsos_positivos": 30
+  },
+  "deteccion_hibrido": {
+    "recall": 0.7759,
+    "precision": 0.7171,
+    "verdaderos_positivos": 322,
+    "falsos_positivos": 127
+  },
+  "delta_hibrido_sobre_reglas": 0.3904,
+  "politica_tres_estados": {
+    "tasa_aprobacion_automatica": 0.4648,
+    "tasa_derivacion_revision": 0.1593,
+    "tasa_no_autorizacion": 0.3759
+  },
+  "n_features": 21,
+  "n_filas_entrenamiento": 923,
+  "shap_importance": {
+    "excedente_relativo": 0.8974,
+    "id_regimen": 0.4315,
+    "n_farmacos": 0.376,
+    "estadio": 0.3649,
+    "m": 0.3534,
+    "msi": 0.2241,
+    "superficie_corporal_m2": 0.1938,
+    "tiene_anti_egfr": 0.1651,
+    "lateralidad": 0.1271,
+    "es_inmunoterapia": 0.1101,
+    "n": 0.0879,
+    "tiene_antiangiogenico": 0.0759,
+    "ras": 0.0751,
+    "peso_kg": 0.0711,
+    "edad": 0.0565,
+    "t": 0.0166,
+    "braf_v600e": 0.0078,
+    "histologia": 0.0059,
+    "sexo": 0.0057,
+    "es_dirigido": 0.0,
+    "linea_tratamiento": 0.0
+  },
+  "version_modelo": "1.0.0",
+  "semilla": 42
+}

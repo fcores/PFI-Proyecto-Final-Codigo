@@ -1,0 +1,322 @@
+name: Deploy to AWS
+
+on:
+  # Permite redesplegar sin commitear (p. ej. tras recrear la red Fabric o
+  # rotar un secreto). Los filtros de paths no aplican en este modo: se puede
+  # elegir explicitamente que desplegar.
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: "Desplegar backend (ECR + ECS)"
+        type: boolean
+        default: true
+      frontend:
+        description: "Desplegar frontend (S3 + CloudFront)"
+        type: boolean
+        default: false
+      blockchain:
+        description: "Desplegar chaincode y gateway en la EC2"
+        type: boolean
+        default: false
+  push:
+    branches:
+      - desarrollo
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "chaincode/**"
+      - "fabric-gateway-svc/**"
+      - "fabric/**"
+      - "ml_models/artefactos/**"
+      - "sql/**"
+      - "alembic/**"
+      - "alembic.ini"
+      - "Dockerfile"
+      - "docker-entrypoint.sh"
+      - "requirements.txt"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: medchain-backend
+  ECS_CLUSTER: medchain-cluster
+  ECS_SERVICE: medchain-backend-svc
+  ECS_TASK_FAMILY: medchain-backend
+  S3_BUCKET: medchain-frontend-007072540405-007072540405-us-east-1-an
+  CLOUDFRONT_DISTRIBUTION_ID: E3UXMQZNKANQDB
+  AWS_ACCOUNT_ID: "007072540405"
+  EC2_SG_ID: sg-0c6d00bf321b64291
+  EC2_INSTANCE_ID: i-0331b3fbeaadee294
+
+jobs:
+  security-scan:
+    name: Security scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      # En push manda el filtro de paths (comportamiento de siempre); en
+      # workflow_dispatch no hay diff contra el cual filtrar, asi que manda lo
+      # que eligio quien dispara.
+      #
+      # Las dos ramas se escriben completas a proposito. El atajo
+      # "cond && inputs.x || steps.filter..." parece equivalente pero no lo es:
+      # cuando inputs.x es false, el && da false y la expresion cae al || ,
+      # devolviendo el valor del filtro y desplegando algo que se pidio NO
+      # desplegar.
+      backend: ${{ (github.event_name == 'workflow_dispatch' && inputs.backend) || (github.event_name != 'workflow_dispatch' && steps.filter.outputs.backend == 'true') }}
+      frontend: ${{ (github.event_name == 'workflow_dispatch' && inputs.frontend) || (github.event_name != 'workflow_dispatch' && steps.filter.outputs.frontend == 'true') }}
+      blockchain: ${{ (github.event_name == 'workflow_dispatch' && inputs.blockchain) || (github.event_name != 'workflow_dispatch' && steps.filter.outputs.blockchain == 'true') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'ml_models/artefactos/**'
+              - 'sql/**'
+              - 'alembic/**'
+              - 'alembic.ini'
+              - 'Dockerfile'
+              - 'requirements.txt'
+            frontend:
+              - 'frontend/**'
+            blockchain:
+              - 'chaincode/**'
+              - 'fabric-gateway-svc/**'
+              - 'fabric/**'
+
+  deploy-backend:
+    name: Deploy Backend (ECR + ECS)
+    needs: [changes, security-scan]
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push Docker image
+        run: |
+          IMAGE_URI="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest"
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+
+      - name: Force new ECS deployment
+        id: ecs-deploy
+        run: |
+          DEPLOY_ID=$(aws ecs update-service \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --service "${{ env.ECS_SERVICE }}" \
+            --force-new-deployment \
+            --region "${{ env.AWS_REGION }}" \
+            --query "service.deployments[?status=='PRIMARY'].id | [0]" --output text)
+          echo "Deployment nuevo: ${DEPLOY_ID}"
+          echo "deployment_id=${DEPLOY_ID}" >> "$GITHUB_OUTPUT"
+
+      # El contenedor corre 'alembic upgrade head' al arrancar. Si una migracion
+      # falla, la task no llega a estado healthy y este paso marca el job en rojo
+      # en vez de reportar un deploy exitoso.
+      - name: Esperar a que el servicio quede estable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "${{ env.ECS_CLUSTER }}" \
+            --services "${{ env.ECS_SERVICE }}" \
+            --region "${{ env.AWS_REGION }}"
+
+      # 'services-stable' NO alcanza como criterio de exito: el servicio tiene
+      # deploymentCircuitBreaker.rollback=true, asi que si las tasks nuevas no
+      # arrancan ECS revierte a la revision anterior y el servicio igual llega a
+      # steady state. El wait retorna 0 y el deploy fallado queda en verde.
+      # (Paso el 2026-08-17: el backend nuevo crasheaba por falta de
+      # FABRIC_GATEWAY_URL, ECS rollbackeo y el pipeline no lo reporto.)
+      - name: Verificar que el deployment no haya sido revertido
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ steps.ecs-deploy.outputs.deployment_id }}"
+
+          # 'services-stable' vuelve en cuanto runningCount == desiredCount, pero
+          # ECS marca rolloutState=COMPLETED unos segundos despues. Sin este poll
+          # el paso leia IN_PROGRESS y fallaba un deploy perfectamente sano.
+          for _ in $(seq 1 40); do
+            read -r CURRENT STATE REASON <<< "$(aws ecs describe-services \
+              --cluster "${{ env.ECS_CLUSTER }}" \
+              --services "${{ env.ECS_SERVICE }}" \
+              --region "${{ env.AWS_REGION }}" \
+              --query "services[0].deployments[?status=='PRIMARY'].[id,rolloutState,rolloutStateReason] | [0]" \
+              --output text)"
+            # Un rollback cambia el PRIMARY: no tiene sentido seguir esperando.
+            [ "${CURRENT}" != "${EXPECTED}" ] && break
+            [ "${STATE}" != "IN_PROGRESS" ] && break
+            sleep 15
+          done
+
+          echo "Deployment esperado: ${EXPECTED}"
+          echo "Deployment actual:   ${CURRENT} (${STATE})"
+
+          if [ "${CURRENT}" != "${EXPECTED}" ]; then
+            echo "::error::ECS revirtio el deployment (circuit breaker). El codigo nuevo NO esta corriendo."
+            echo "Motivo reportado: ${REASON}"
+            echo "--- Ultimos eventos del servicio ---"
+            aws ecs describe-services --cluster "${{ env.ECS_CLUSTER }}" \
+              --services "${{ env.ECS_SERVICE }}" --region "${{ env.AWS_REGION }}" \
+              --query 'services[0].events[0:10].message' --output text
+            echo "--- Logs de la ultima task detenida ---"
+            STREAM=$(aws logs describe-log-streams \
+              --log-group-name "/ecs/${{ env.ECS_TASK_FAMILY }}" \
+              --region "${{ env.AWS_REGION }}" \
+              --order-by LastEventTime --descending --limit 1 \
+              --query 'logStreams[0].logStreamName' --output text)
+            aws logs get-log-events --log-group-name "/ecs/${{ env.ECS_TASK_FAMILY }}" \
+              --log-stream-name "${STREAM}" --region "${{ env.AWS_REGION }}" \
+              --start-from-head --limit 50 --query 'events[].message' --output text || true
+            exit 1
+          fi
+
+          if [ "${STATE}" != "COMPLETED" ]; then
+            echo "::error::rolloutState=${STATE}: ${REASON}"
+            exit 1
+          fi
+          echo "Deployment ${CURRENT} completado sin rollback."
+
+  deploy-frontend:
+    name: Deploy Frontend (S3 + CloudFront)
+    needs: [changes, security-scan]
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: ""
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync frontend/dist/ "s3://${{ env.S3_BUCKET }}/" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
+
+  deploy-blockchain:
+    name: Deploy Blockchain (EC2 chaincode + gateway)
+    needs: [changes, security-scan]
+    if: needs.changes.outputs.blockchain == 'true'
+    # Sin continue-on-error: la red Fabric es la fuente de verdad de las
+    # prescripciones; un deploy fallido debe marcar el pipeline en rojo.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure EC2 is running
+        run: |
+          STATE=$(aws ec2 describe-instances \
+            --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text)
+          if [ "$STATE" = "stopped" ]; then
+            echo "Starting EC2 instance..."
+            aws ec2 start-instances --instance-ids "${{ env.EC2_INSTANCE_ID }}"
+            aws ec2 wait instance-running --instance-ids "${{ env.EC2_INSTANCE_ID }}"
+            echo "Waiting 30s for SSH to be ready..."
+            sleep 30
+          fi
+
+      - name: Deploy chaincode via SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["set -e","export HOME=/root","export PATH=$PATH:/usr/local/bin:/usr/local/go/bin","sudo -u ubuntu -H bash -lc \"export PATH=\\$PATH:/usr/local/bin:/usr/local/go/bin; cd ~/PFI-Proyecto-Final && git fetch origin desarrollo && git checkout desarrollo && git reset --hard origin/desarrollo && cd fabric && ./network.sh deployCC\"","echo \"Rebuild del gateway...\"","cd /home/ubuntu/PFI-Proyecto-Final/fabric","docker compose --env-file network/.env -f network/compose/compose-net.yaml up -d --build fabric-gateway","sleep 15","curl -sf --cacert /home/ubuntu/PFI-Proyecto-Final/fabric/network/gateway-tls/ca.crt https://localhost:8443/health || (docker logs --tail 50 fabric-gateway; exit 1)"]' \
+            --timeout-seconds 900 \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # No se usa 'aws ssm wait command-executed': agota sus reintentos a los
+          # ~100s y devuelve con el comando todavia InProgress, con lo cual el
+          # paso siguiente leia un estado no-Success y marcaba en rojo un deploy
+          # que en realidad terminaba bien. deployCC instala en 3 peers y
+          # construye 3 contenedores de chaincode: tarda varios minutos.
+          STATUS=""
+          for _ in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.EC2_INSTANCE_ID }}" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 15
+          done
+
+          echo "Command status: $STATUS"
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::El despliegue de la red Fabric fallo (estado: $STATUS)"
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.EC2_INSTANCE_ID }}" \
+              --query "StandardOutputContent" --output text | tail -40
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.EC2_INSTANCE_ID }}" \
+              --query "StandardErrorContent" --output text | tail -40
+            exit 1
+          fi
