@@ -423,8 +423,9 @@ saltos tambien van cifrados (ver `docs/06-deploy-cambios-onchain.md`, seccion 11
 
 ### Actualizar en produccion
 
-> Lo normal es **pushear a `desarrollo`** y dejar que el pipeline haga el
-> trabajo, o usar *Run workflow* si no hay cambios de codigo. Los comandos
+> Lo normal es **integrar los cambios en `main`** y dejar que el pipeline haga
+> el trabajo, o usar *Run workflow* si no hay cambios de codigo. Un push a
+> `desarrollo` corre solo el CI, no despliega. Los comandos
 > manuales de abajo quedan como via de escape: no verifican rollback ni corren
 > los tests.
 
@@ -518,8 +519,9 @@ bash deploy/99-cleanup.sh
 
 ### CI/CD (GitHub Actions)
 
-Hay dos workflows. **`ci.yml`** corre en cada push a `desarrollo` y en cada PR;
-**`deploy.yml`** solo cuando cambian rutas que afectan a produccion.
+Hay dos workflows. **`ci.yml`** corre en cada push a `desarrollo` o a `main` y en
+cada PR; **`deploy.yml`** solo en push a `main`, y solo cuando cambian rutas que
+afectan a produccion.
 
 #### Orden de ejecucion de `deploy.yml`
 

@@ -54,7 +54,7 @@ $TRUST_POLICY = @"
     "Action": "sts:AssumeRoleWithWebIdentity",
     "Condition": {
       "StringEquals": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"},
-      "StringLike": {"token.actions.githubusercontent.com:sub": "repo:fcores/PFI-Proyecto-Final:ref:refs/heads/desarrollo"}
+      "StringLike": {"token.actions.githubusercontent.com:sub": ["repo:fcores/PFI-Proyecto-Final:ref:refs/heads/main", "repo:fcores/PFI-Proyecto-Final:ref:refs/heads/desarrollo"]}
     }
   }]
 }
