@@ -85,7 +85,7 @@ El sistema tiene tres componentes principales desplegados en AWS de forma indepe
 PFI-Proyecto-Final/
 |
 |-- .github/workflows/       CI/CD con GitHub Actions
-|   |-- deploy.yml           Deploy automatico a AWS al pushear a desarrollo
+|   |-- deploy.yml           Deploy automatico a AWS al pushear a main
 |
 |-- backend/                  Servidor API en Python
 |   |-- main.py               Punto de entrada (FastAPI + Uvicorn, version 0.5.0)
@@ -628,12 +628,12 @@ aws cloudfront create-invalidation --distribution-id E3UXMQZNKANQDB --paths "/*"
 
 ### Que es
 
-Un pipeline de integracion y despliegue continuo que **automaticamente** construye y despliega la aplicacion cada vez que se pushea a la rama `desarrollo`.
+Un pipeline de integracion y despliegue continuo que **automaticamente** construye y despliega la aplicacion cada vez que se pushea a la rama `main`. Un push a `desarrollo` corre solo el CI (tests y lint).
 
 ### Como funciona
 
 ```
-Push a rama "desarrollo"
+Push a rama "main"
          |
          v
 GitHub Actions detecta que archivos cambiaron

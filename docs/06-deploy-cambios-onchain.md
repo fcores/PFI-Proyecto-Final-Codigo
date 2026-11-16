@@ -339,7 +339,7 @@ IP=$(aws ec2 describe-instances --instance-ids i-0331b3fbeaadee294 --region us-e
 
 ssh -i mi-key.pem ubuntu@"$IP"
 cd ~/PFI-Proyecto-Final
-git fetch origin desarrollo && git checkout desarrollo && git pull
+git fetch origin main && git checkout main && git pull
 
 cd fabric
 cp network/.env.example network/.env
@@ -483,7 +483,7 @@ aws servicediscovery deregister-instance --service-id srv-ndgsq7branjc4pek \
    DB_SECRET_ARN y ENCRYPTION_SECRET_ARN                       [4.3]
 6. Registrar la nueva task definition y update-service         [4.3, 4.6]
 7. Repuntar API Gateway al Cloud Map correcto                  [4.7]
-8. Push a `desarrollo` → CI (tests Go + Python) y deploy
+8. Push a `main` → CI (tests Go + Python) y deploy
    automático de backend, frontend y blockchain
 9. Verificación end-to-end                                     [7]
 10. Rotar las 4 contraseñas por defecto                        [4.5, 4.6]
@@ -504,7 +504,7 @@ deploy vuelve a fallar por fail-fast y ECS lo revierte (sección 3.1).
 
 ## 6. Qué hace el CI/CD con estos cambios
 
-**`ci.yml`** (en PRs y push a `desarrollo`) — jobs nuevos:
+**`ci.yml`** (en PRs y push a `desarrollo` o `main`) — jobs nuevos:
 - `chaincode-tests`: `go mod tidy`, `go vet`, `go test` del chaincode
   (transiciones de estado, control por MSP, vectores de hash compartidos,
   guard-rail anti-`time.Now()` y cobertura de índices CouchDB).
@@ -512,7 +512,9 @@ deploy vuelve a fallar por fail-fast y ECS lo revierte (sección 3.1).
 - `backend-tests` levanta un Postgres real para correr `test_schema_drift.py`,
   que verifica que `sql/schema.sql` y las migraciones Alembic no se desincronicen.
 
-**`deploy.yml`** (push a `desarrollo`):
+**`deploy.yml`** (push a `main`):
+- `deploy-blockchain` despliega en la EC2 la rama que disparó el workflow
+  (`main` en push, o la elegida en *Run workflow*), en lugar de `desarrollo` fijo.
 - Filtro de paths actualizado: `blockchain/**` → `chaincode/**` +
   `fabric-gateway-svc/**` + `fabric/**`.
 - `deploy-blockchain` ya no es `continue-on-error` y ahora también rebuildea el

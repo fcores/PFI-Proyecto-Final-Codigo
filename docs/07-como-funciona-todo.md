@@ -518,9 +518,10 @@ apellido en claro.
 ## 9. Cómo se despliega
 
 ```
-git push a `desarrollo`
+git push a `main`
         │
         ├─► CI (ci.yml)      tests Python + Go, lint, anti-drift del esquema
+        │                    (también corre en cada push a `desarrollo`)
         │
         └─► Deploy (deploy.yml), según qué cambió:
               ├─ backend/**      → build, push a ECR, nueva tarea en ECS

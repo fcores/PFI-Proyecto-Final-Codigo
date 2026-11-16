@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [desarrollo, main]
   push:
-    branches: [desarrollo]
+    branches: [desarrollo, main]
 
 jobs:
   backend-lint:

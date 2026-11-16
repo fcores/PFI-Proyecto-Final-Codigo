@@ -21,7 +21,7 @@ on:
   # Un cambio en este archivo dispara una corrida (p. ej. la primera emision
   # al configurar el dominio). Solo emite si hace falta o si se fuerza.
   push:
-    branches: [desarrollo]
+    branches: [desarrollo, main]
     paths: [".github/workflows/renew-backend-cert.yml"]
   schedule:
     - cron: "17 6 * * 1"
