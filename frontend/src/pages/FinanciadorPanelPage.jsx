@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TopBar from "../components/TopBar";
-import CardHeader from "../components/CardHeader";
 import FormField from "../components/FormField";
 import DataTable from "../components/DataTable";
-import SimpleTable from "../components/SimpleTable";
 import StatusChip from "../components/StatusChip";
 import { fetchExpedientesFinanciador, fetchResumenFinanciador } from "../api/financiador";
 import { ESTADO_VARIANT, PLAZO_LABEL, PLAZO_VARIANT, estadoLabel, plazoTexto } from "../constants/estadoVariant";
@@ -29,77 +27,154 @@ const TIPO_PLAZO = {
   resolucion: "Resolución (30 días hábiles)",
 };
 
-function indicadores(resumen) {
-  if (!resumen) return [];
-  return [
-    {
-      key: "ahorro_potencial",
-      indicador: "Ahorro potencial detectado",
-      valor: formatCurrency(resumen.ahorro_potencial),
-      detalle: `${resumen.alertas_alternativa} prescripciones con una alternativa equivalente de menor costo`,
-    },
-    {
-      key: "ahorro_efectivo",
-      indicador: "Ahorro efectivo",
-      valor: formatCurrency(resumen.ahorro_efectivo),
-      detalle: `${resumen.alternativas_adoptadas} alternativas adoptadas por el prescriptor`,
-    },
-    {
-      key: "errores",
-      indicador: "Errores detectados por la capa de reglas",
-      valor: String(resumen.errores_detectados),
-      detalle: `${resumen.errores_confirmados} confirmados por el auditor con un rechazo`,
-    },
-    {
-      key: "surge",
-      indicador: "Potencialmente recuperables ante el SURGE",
-      valor: String(resumen.surge_potencialmente_recuperables),
-      detalle: "Res. SSSalud 731/2023: el auditor debe constatar ECOG 0-1 antes de solicitar el reintegro",
-    },
-    {
-      key: "plazos",
-      indicador: "Gestiones por vencer o vencidas",
-      valor: `${resumen.plazos.por_vencer} / ${resumen.plazos.vencido}`,
-      detalle: `${resumen.plazos.en_plazo} en plazo · ${resumen.plazos.cumplido} cumplidas · ${resumen.plazos.cumplido_fuera_de_plazo} cumplidas fuera de plazo`,
-    },
-  ];
+// Orden de la barra de plazos: primero lo que sigue abierto, después lo cerrado.
+const ESTADOS_PLAZO = [
+  { estado: "en_plazo", etiqueta: "En plazo" },
+  { estado: "por_vencer", etiqueta: "Por vencer" },
+  { estado: "vencido", etiqueta: "Vencidas" },
+  { estado: "cumplido", etiqueta: "Cumplidas" },
+  { estado: "cumplido_fuera_de_plazo", etiqueta: "Cumplidas fuera de plazo" },
+];
+
+function IndicadorFiltro({ valor, etiqueta, detalle, activo, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`fin-kpi${activo ? " is-active" : ""}`}
+      aria-pressed={activo}
+      onClick={onClick}
+      title={activo ? "Quitar este filtro" : "Filtrar la tabla por este indicador"}
+    >
+      <strong className="fin-kpi__valor">{valor}</strong>
+      <span className="fin-kpi__etiqueta">{etiqueta}</span>
+      {detalle && <span className="fin-kpi__detalle">{detalle}</span>}
+    </button>
+  );
+}
+
+function IndicadorFijo({ valor, etiqueta, detalle }) {
+  return (
+    <div className="fin-kpi fin-kpi--static">
+      <strong className="fin-kpi__valor">{valor}</strong>
+      <span className="fin-kpi__etiqueta">{etiqueta}</span>
+      {detalle && <span className="fin-kpi__detalle">{detalle}</span>}
+    </div>
+  );
+}
+
+function BarraPlazos({ plazos, activo, onSelect }) {
+  const total = ESTADOS_PLAZO.reduce((suma, { estado }) => suma + (plazos[estado] || 0), 0);
+  const descripcion = ESTADOS_PLAZO.map(({ estado, etiqueta }) => `${plazos[estado] || 0} ${etiqueta.toLowerCase()}`).join(
+    ", "
+  );
+  return (
+    <>
+      <div className="fin-plazos-bar" role="img" aria-label={`Gestiones por plazo: ${descripcion}`}>
+        {total > 0 &&
+          ESTADOS_PLAZO.filter(({ estado }) => plazos[estado] > 0).map(({ estado }) => (
+            <span
+              key={estado}
+              className={`fin-plazos-seg fin-plazos-seg--${estado}`}
+              style={{ width: `${(plazos[estado] / total) * 100}%` }}
+            />
+          ))}
+      </div>
+      <ul className="fin-plazos-legend">
+        {ESTADOS_PLAZO.map(({ estado, etiqueta }) => {
+          const cantidad = plazos[estado] || 0;
+          const esActivo = activo === estado;
+          return (
+            <li key={estado}>
+              <button
+                type="button"
+                className={`fin-plazos-item${esActivo ? " is-active" : ""}${cantidad === 0 ? " is-empty" : ""}`}
+                aria-pressed={esActivo}
+                onClick={() => onSelect(estado)}
+                title={esActivo ? "Quitar este filtro" : `Filtrar: ${PLAZO_LABEL[estado]}`}
+              >
+                <span className={`fin-plazos-dot fin-plazos-seg--${estado}`} aria-hidden="true" />
+                <strong>{cantidad}</strong>
+                <span>{etiqueta}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
 }
 
 export default function FinanciadorPanelPage() {
   const [resumen, setResumen] = useState(null);
   const [expedientes, setExpedientes] = useState([]);
-  const [alcanzoTope, setAlcanzoTope] = useState(false);
+  const [topeResumen, setTopeResumen] = useState(false);
+  const [topeExpedientes, setTopeExpedientes] = useState(false);
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [cargandoResumen, setCargandoResumen] = useState(false);
+  const [cargandoExpedientes, setCargandoExpedientes] = useState(false);
+  const [errorResumen, setErrorResumen] = useState(null);
+  const [errorExpedientes, setErrorExpedientes] = useState(null);
+  // Si se cambian los filtros rapido, solo vale la respuesta del ultimo pedido.
+  const pedidoExpedientes = useRef(0);
 
-  const load = useCallback(async (filtrosActuales) => {
+  const cargarResumen = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const [res, exp] = await Promise.all([
-        fetchResumenFinanciador(),
-        fetchExpedientesFinanciador(filtrosActuales),
-      ]);
+      setCargandoResumen(true);
+      setErrorResumen(null);
+      const res = await fetchResumenFinanciador();
       setResumen(res);
-      setExpedientes(exp.expedientes);
-      setAlcanzoTope(Boolean(res.alcanzo_tope) || exp.alcanzoTope);
+      setTopeResumen(Boolean(res.alcanzo_tope));
     } catch (err) {
-      setError(err.message || "No se pudo leer el panel desde la red blockchain.");
+      setErrorResumen(err.message || "No se pudieron leer los indicadores desde la red blockchain.");
       setResumen(null);
+    } finally {
+      setCargandoResumen(false);
+    }
+  }, []);
+
+  const cargarExpedientes = useCallback(async (filtrosActuales) => {
+    const pedido = ++pedidoExpedientes.current;
+    try {
+      setCargandoExpedientes(true);
+      setErrorExpedientes(null);
+      const exp = await fetchExpedientesFinanciador(filtrosActuales);
+      if (pedido !== pedidoExpedientes.current) return;
+      setExpedientes(exp.expedientes);
+      setTopeExpedientes(exp.alcanzoTope);
+    } catch (err) {
+      if (pedido !== pedidoExpedientes.current) return;
+      setErrorExpedientes(err.message || "No se pudieron leer los expedientes desde la red blockchain.");
       setExpedientes([]);
     } finally {
-      setLoading(false);
+      if (pedido === pedidoExpedientes.current) setCargandoExpedientes(false);
     }
   }, []);
 
   useEffect(() => {
-    load(filtros);
-  }, [filtros, load]);
+    cargarResumen();
+  }, [cargarResumen]);
+
+  useEffect(() => {
+    cargarExpedientes(filtros);
+  }, [filtros, cargarExpedientes]);
+
+  function actualizar() {
+    cargarResumen();
+    cargarExpedientes(filtros);
+  }
 
   function actualizarFiltro(campo, valor) {
     setFiltros((actual) => ({ ...actual, [campo]: valor }));
   }
+
+  function alternarFiltro(campo, valor) {
+    setFiltros((actual) => ({ ...actual, [campo]: actual[campo] === valor ? "" : valor }));
+  }
+
+  const loading = cargandoResumen || cargandoExpedientes;
+  const alcanzoTope = topeResumen || topeExpedientes;
+  const hayFiltros = Object.values(filtros).some(Boolean);
+  const error = errorResumen || errorExpedientes;
 
   function renderRow(exp) {
     const plazo = exp.plazo_estado
@@ -145,25 +220,20 @@ export default function FinanciadorPanelPage() {
 
       <main className="page page--wide">
         <section className="layout layout--single">
-          <section className="card card-form">
-            <CardHeader
-              split
-              eyebrow="Indicadores"
-              title="Resumen"
-              description="Ahorro por alternativas terapéuticas de menor costo, errores detectados antes de la autorización, recupero potencial ante el SURGE y cumplimiento de los plazos regulatorios."
-              badge={resumen ? `${resumen.prescripciones_analizadas} prescripciones` : undefined}
-            />
-
-            <div className="toolbar-row">
-              <span className="muted">
-                {alcanzoTope
-                  ? "Se alcanzó el tope de lectura configurado: los indicadores cubren solo las prescripciones leídas."
-                  : "Los indicadores cubren todas las prescripciones registradas."}
-              </span>
-              <button type="button" className="btn-secondary" onClick={() => load(filtros)} disabled={loading}>
-                {loading ? "Actualizando…" : "Actualizar"}
-              </button>
-            </div>
+          <section className="card card-table">
+            <header className="agreements-header">
+              <div>
+                <span className="card-eyebrow">Expedientes</span>
+                <h2>Gestiones del financiador</h2>
+                <p className="muted">Sin datos clínicos de detalle: régimen, costos, recupero y plazos.</p>
+              </div>
+              <div className="fin-header-actions">
+                {resumen && <span className="card-badge">{resumen.prescripciones_analizadas} prescripciones</span>}
+                <button type="button" className="btn-secondary" onClick={actualizar} disabled={loading}>
+                  {loading ? "Actualizando…" : "Actualizar"}
+                </button>
+              </div>
+            </header>
 
             {error && (
               <p className="status error status--block" role="alert">
@@ -172,31 +242,66 @@ export default function FinanciadorPanelPage() {
             )}
 
             {resumen && (
-              <SimpleTable
-                caption="Indicadores del financiador"
-                columns={["Indicador", "Valor", "Detalle"]}
-                rows={indicadores(resumen)}
-                renderRow={(fila) => (
-                  <tr key={fila.key}>
-                    <td>{fila.indicador}</td>
-                    <td className="num">
-                      <strong>{fila.valor}</strong>
-                    </td>
-                    <td className="cell-text">{fila.detalle}</td>
-                  </tr>
-                )}
-              />
-            )}
-          </section>
+              <>
+                <div className="fin-kpis">
+                  <section className="fin-kpi-group" aria-labelledby="fin-grupo-ahorro">
+                    <h3 id="fin-grupo-ahorro" className="fin-kpi-group__titulo">
+                      Ahorro
+                    </h3>
+                    <IndicadorFiltro
+                      valor={formatCurrency(resumen.ahorro_efectivo)}
+                      etiqueta="Ahorro efectivo"
+                      detalle={`${resumen.alternativas_adoptadas} alternativas adoptadas por el prescriptor`}
+                      activo={filtros.alternativa === "adoptada"}
+                      onClick={() => alternarFiltro("alternativa", "adoptada")}
+                    />
+                    <IndicadorFiltro
+                      valor={formatCurrency(resumen.ahorro_potencial)}
+                      etiqueta="Ahorro potencial detectado"
+                      detalle={`${resumen.alertas_alternativa} prescripciones con una alternativa equivalente de menor costo`}
+                      activo={filtros.alternativa === "alerta"}
+                      onClick={() => alternarFiltro("alternativa", "alerta")}
+                    />
+                  </section>
 
-          <section className="card card-table">
-            <header className="agreements-header">
-              <div>
-                <span className="card-eyebrow">Expedientes</span>
-                <h2>Gestiones del financiador</h2>
-                <p className="muted">Sin datos clínicos de detalle: régimen, costos, recupero y plazos.</p>
-              </div>
-            </header>
+                  <section className="fin-kpi-group" aria-labelledby="fin-grupo-calidad">
+                    <h3 id="fin-grupo-calidad" className="fin-kpi-group__titulo">
+                      Calidad y recupero
+                    </h3>
+                    <IndicadorFijo
+                      valor={resumen.errores_detectados}
+                      etiqueta="Errores detectados por la capa de reglas"
+                      detalle={`${resumen.errores_confirmados} confirmados por el auditor con un rechazo`}
+                    />
+                    <IndicadorFiltro
+                      valor={resumen.surge_potencialmente_recuperables}
+                      etiqueta="Potencialmente recuperables ante el SURGE"
+                      detalle="Res. SSSalud 731/2023: el auditor debe constatar ECOG 0-1 antes de solicitar el reintegro"
+                      activo={filtros.surge === "true"}
+                      onClick={() => alternarFiltro("surge", "true")}
+                    />
+                  </section>
+
+                  <section className="fin-kpi-group" aria-labelledby="fin-grupo-plazos">
+                    <h3 id="fin-grupo-plazos" className="fin-kpi-group__titulo">
+                      Plazos · Res. 951/2025
+                    </h3>
+                    <BarraPlazos
+                      plazos={resumen.plazos}
+                      activo={filtros.plazo}
+                      onSelect={(estado) => alternarFiltro("plazo", estado)}
+                    />
+                  </section>
+                </div>
+
+                <p className={`fin-kpis-note${alcanzoTope ? " fin-kpis-note--warning" : ""}`}>
+                  {alcanzoTope
+                    ? "Se alcanzó el tope de lectura configurado: los indicadores cubren solo las prescripciones leídas."
+                    : "Los indicadores cubren todas las prescripciones registradas."}{" "}
+                  Hacé clic en uno para filtrar la tabla.
+                </p>
+              </>
+            )}
 
             <div className="history-toolbar">
               <div className="form-grid history-filters">
@@ -237,13 +342,29 @@ export default function FinanciadorPanelPage() {
                   </select>
                 </FormField>
               </div>
+              <div className="fin-filtros-estado">
+                <span className="muted">
+                  {cargandoExpedientes
+                    ? "Cargando expedientes…"
+                    : resumen
+                      ? `Mostrando ${expedientes.length} de ${resumen.prescripciones_analizadas}`
+                      : `Mostrando ${expedientes.length}`}
+                </span>
+                {hayFiltros && (
+                  <button type="button" className="btn-link" onClick={() => setFiltros(FILTROS_INICIALES)}>
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
             </div>
 
             <DataTable
               columns={COLUMNAS}
               rows={expedientes}
               renderRow={renderRow}
-              emptyText={loading ? "Cargando desde la red Fabric..." : "No hay expedientes para los filtros elegidos."}
+              emptyText={
+                cargandoExpedientes ? "Cargando desde la red Fabric..." : "No hay expedientes para los filtros elegidos."
+              }
             />
           </section>
         </section>
