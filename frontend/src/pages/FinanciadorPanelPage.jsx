@@ -68,7 +68,7 @@ function BarraPlazos({ plazos, activo, onSelect }) {
     ", "
   );
   return (
-    <>
+    <div className="fin-plazos-body">
       <div className="fin-plazos-bar" role="img" aria-label={`Gestiones por plazo: ${descripcion}`}>
         {total > 0 &&
           ESTADOS_PLAZO.filter(({ estado }) => plazos[estado] > 0).map(({ estado }) => (
@@ -100,7 +100,7 @@ function BarraPlazos({ plazos, activo, onSelect }) {
           );
         })}
       </ul>
-    </>
+    </div>
   );
 }
 

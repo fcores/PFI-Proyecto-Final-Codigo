@@ -2531,16 +2531,22 @@ textarea.is-required-now {
   justify-content: flex-end;
 }
 
+/* Cada bloque ocupa 3 filas de la grilla padre (titulo, 1ra tarjeta, 2da
+   tarjeta) y las comparte por subgrid: las tarjetas de una misma fila miden lo
+   mismo en los tres bloques aunque un detalle ocupe mas renglones. */
 .fin-kpis {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-rows: auto auto auto;
+  column-gap: 18px;
+  row-gap: 10px;
   margin-top: 4px;
 }
 
 .fin-kpi-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
   gap: 10px;
   padding: 16px;
   border-radius: var(--radius-md);
@@ -2666,8 +2672,10 @@ textarea.is-required-now {
 }
 
 .fin-plazos-legend {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -2742,8 +2750,22 @@ textarea.is-required-now {
   gap: 14px;
 }
 
+/* La barra y la leyenda ocupan juntas las dos filas de tarjetas. */
+.fin-plazos-body {
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 1024px) {
   .fin-kpis {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .fin-kpi-group {
+    display: flex;
+    flex-direction: column;
   }
 }
