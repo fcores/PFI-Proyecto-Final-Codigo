@@ -142,6 +142,29 @@ def test_cola_de_auditoria_filtra_por_estado(repo, audit):
     assert [p.prescription_id for p in en_revision.prescriptions] == ["01B"]
 
 
+def test_cola_de_auditoria_mas_recientes_primero(repo, audit):
+    _crear(repo, "01A", created_at="2026-03-01T00:00:00Z")
+    _crear(repo, "01B", created_at="2026-03-02T00:00:00Z")
+    _crear(repo, "01C", created_at="2026-03-03T00:00:00Z")
+
+    cola = audit.queue(estado="PENDIENTE_AUDITORIA")
+    assert [p.prescription_id for p in cola.prescriptions] == ["01C", "01B", "01A"]
+    assert cola.bookmark is None
+    assert cola.fetched_count == 3
+
+
+def test_cola_de_auditoria_lee_todas_las_paginas(repo, audit, monkeypatch):
+    # Con paginas de 2, la mas nueva queda en la ultima pagina de Fabric: si la
+    # cola no recorriera todas, no apareceria arriba.
+    monkeypatch.setattr("backend.services.audit_service._PAGINA_COLA", 2)
+    for i in range(5):
+        _crear(repo, f"01{chr(65 + i)}", created_at=f"2026-03-0{i + 1}T00:00:00Z")
+
+    cola = audit.queue(estado="PENDIENTE_AUDITORIA")
+    assert [p.prescription_id for p in cola.prescriptions] == ["01E", "01D", "01C", "01B", "01A"]
+    assert cola.bookmark is None
+
+
 def test_cola_rechaza_estados_terminales(audit):
     with pytest.raises(DomainError) as exc_info:
         audit.queue(estado="APROBADA")

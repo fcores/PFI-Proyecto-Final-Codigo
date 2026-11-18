@@ -16,11 +16,17 @@ from backend.models.audit import AuditDetail
 from backend.models.prescription import Prescription, PrescriptionList
 from backend.repositories.fabric_prescription_repo import FabricPrescriptionRepository
 from backend.security.canonical import ACCION_A_ESTADO
-from backend.services.prescription_service import _asset_to_prescription, _paged_to_list
+from backend.services.prescription_service import _asset_to_prescription
 
 logger = logging.getLogger(__name__)
 
 ESTADOS_COLA = ("PENDIENTE_AUDITORIA", "EN_REVISION")
+# La cola se lee completa de Fabric para poder ordenarla mas recientes primero:
+# el chaincode la entrega mas antiguas primero, asi que ordenar solo la primera
+# pagina dejaria afuera justamente los casos nuevos.
+_PAGINA_COLA = 200
+# Resguardo contra un bucle infinito de bookmarks (50 x 200 = 10.000 casos).
+_MAX_PAGINAS_COLA = 50
 
 
 class AuditService:
@@ -29,13 +35,8 @@ class AuditService:
     def __init__(self, fabric_repo: FabricPrescriptionRepository) -> None:
         self._repo = fabric_repo
 
-    def queue(
-        self,
-        estado: str = "PENDIENTE_AUDITORIA",
-        page_size: int = 50,
-        bookmark: str = "",
-    ) -> PrescriptionList:
-        """Cola de auditoria: prescripciones por estado, FIFO."""
+    def queue(self, estado: str = "PENDIENTE_AUDITORIA") -> PrescriptionList:
+        """Cola de auditoria completa por estado, mas recientes primero (sin paginar)."""
         try:
             if estado not in ESTADOS_COLA:
                 raise DomainError(
@@ -43,11 +44,35 @@ class AuditService:
                     status_code=422,
                     error_type="validation_error",
                 )
-            paged = self._repo.list_by_estado(estado, page_size, bookmark, actor="auditor")
-            return _paged_to_list(paged)
+            items = self._leer_cola_completa(estado)
+            items.sort(
+                key=lambda a: (a.get("created_at") or "", a.get("prescription_id") or ""),
+                reverse=True,
+            )
+            prescriptions = [_asset_to_prescription(item) for item in items]
+            return PrescriptionList(prescriptions=prescriptions, bookmark=None, fetched_count=len(prescriptions))
         except Exception as exc:
             logger.error("Error al listar cola de auditoria: %s", exc, exc_info=True)
             raise
+
+    def _leer_cola_completa(self, estado: str) -> list[dict]:
+        """Recorre todas las paginas de la cola en Fabric y devuelve los assets."""
+        items: list[dict] = []
+        bookmark = ""
+        for _ in range(_MAX_PAGINAS_COLA):
+            pagina = self._repo.list_by_estado(estado, _PAGINA_COLA, bookmark, actor="auditor")
+            items.extend(pagina.get("items") or [])
+            bookmark = pagina.get("bookmark") or ""
+            # CouchDB devuelve un bookmark no vacio aun en la ultima pagina.
+            if not bookmark or not pagina.get("items"):
+                return items
+        logger.error(
+            "La cola %s supero %s paginas de %s; se muestra lo leido hasta ahi",
+            estado,
+            _MAX_PAGINAS_COLA,
+            _PAGINA_COLA,
+        )
+        return items
 
     def detail(self, prescription_id: str) -> AuditDetail:
         """Detalle para el auditor: asset completo + historial de transacciones."""

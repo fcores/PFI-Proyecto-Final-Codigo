@@ -88,7 +88,7 @@ class FabricPrescriptionRepository:
         bookmark: str = "",
         actor: str = "prepaga",
     ) -> dict[str, Any]:
-        """Cola por estado del ciclo de auditoria (FIFO)."""
+        """Prescripciones por estado, mas antiguas primero (orden del chaincode)."""
         payload = self._client.query("QueryPrescriptionsByEstado", [estado, str(page_size), bookmark], actor=actor)
         return _parse_paged(payload)
 

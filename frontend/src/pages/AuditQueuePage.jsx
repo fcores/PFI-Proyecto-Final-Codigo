@@ -147,7 +147,7 @@ export default function AuditQueuePage() {
                 <span className="card-eyebrow">Auditoría</span>
                 <h2>{ESTADO_LABEL[estado]}</h2>
                 <p className="muted">
-                  Prescripciones en estado {ESTADO_LABEL[estado].toLowerCase()} leídas de la red Fabric (FIFO).
+                  Prescripciones en estado {ESTADO_LABEL[estado].toLowerCase()} leídas de la red Fabric, las más recientes primero.
                 </p>
               </div>
               <PanelStat

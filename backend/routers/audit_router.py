@@ -19,15 +19,13 @@ _ROLES_AUDITORIA = ["auditor", "super_admin"]
 @router.get("/queue", response_model=PrescriptionList)
 def audit_queue(
     estado: str = Query("PENDIENTE_AUDITORIA", description="PENDIENTE_AUDITORIA o EN_REVISION"),
-    page_size: int = Query(50, ge=1, le=200),
-    bookmark: str = Query(""),
     authorization: str | None = Header(default=None),
 ):
-    """Cola de auditoria: prescripciones pendientes o en revision (FIFO)."""
+    """Cola de auditoria completa: pendientes o en revision, mas recientes primero."""
     user = require_auth(authorization)
     require_role(user, _ROLES_AUDITORIA)
     svc = get_audit_service()
-    return svc.queue(estado=estado, page_size=page_size, bookmark=bookmark)
+    return svc.queue(estado=estado)
 
 
 @router.get("/{prescription_id}", response_model=AuditDetail)
